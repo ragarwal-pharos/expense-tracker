@@ -1,0 +1,73 @@
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1040;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.mobile-menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  color: white;
+  text-decoration: none;
+}
+
+.menu-icon {
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-btn:hover .menu-icon {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.menu-text {
+  font-weight: 500;
+}
+
+/* Ensure mobile menu button is hidden on desktop */
+@media (min-width: 992px) {
+  .mobile-menu-btn {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+}
+
+/* Additional specificity to override any conflicting styles */
+@media (min-width: 992px) {
+  button.mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .mobile-menu-btn {
+  background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+  box-shadow: 0 4px 15px rgba(26, 35, 126, 0.3);
+}
+
+[data-theme="dark"] .mobile-menu-btn:hover {
+  box-shadow: 0 6px 20px rgba(26, 35, 126, 0.4);
+}

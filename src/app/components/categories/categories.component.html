@@ -1,0 +1,118 @@
+<div class="categories-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">📂</div>
+      <div class="header-text">
+        <h1 class="page-title">Categories</h1>
+        <p class="page-description">Manage your expense categories and organize your spending</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Category Card -->
+  <div class="add-category-card">
+    <div class="card-header-modern">
+      <div class="header-content">
+        <span class="header-icon">➕</span>
+        <h3 class="header-title">Add New Category</h3>
+      </div>
+    </div>
+    <div class="card-body-modern">
+      <form (ngSubmit)="addCategory()" class="add-category-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="categoryName" class="form-label">Category Name</label>
+            <input 
+              type="text" 
+              id="categoryName"
+              [(ngModel)]="newCategory.name" 
+              name="categoryName"
+              class="form-control"
+              placeholder="Enter category name"
+              [class.error]="isDuplicateCategory"
+              (input)="clearValidationErrors()"
+              required>
+            <div *ngIf="isDuplicateCategory" class="error-message">
+              <span class="error-icon">⚠️</span>
+              Category name already exists!
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="categoryColor" class="form-label">Color</label>
+            <div class="color-group">
+              <input 
+                type="color" 
+                id="categoryColor"
+                [(ngModel)]="newCategory.color" 
+                name="categoryColor"
+                class="color-input">
+              <button type="button" class="btn-random-color" (click)="setRandomColor()">
+                <span class="random-icon">🎲</span>
+                Random
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="button-container">
+          <button type="submit" class="btn-add-category" [disabled]="!newCategory.name.trim() || isDuplicateCategory">
+            <span class="btn-icon">➕</span>
+            <span class="btn-text">Add Category</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Categories Section -->
+  <div class="categories-section">
+    <div class="section-header">
+      <div class="section-content">
+        <span class="section-icon">📂</span>
+        <h3 class="section-title">Your Categories</h3>
+      </div>
+      <div class="category-count">{{ categories.length }} {{ categories.length === 1 ? 'Category' : 'Categories' }}</div>
+    </div>
+    
+    <!-- Initialize Default Categories Button -->
+    <div class="initialize-section" *ngIf="categories.length === 0" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+      <p style="margin-bottom: 15px; color: #6c757d;">No categories found. Would you like to initialize default categories?</p>
+      <button (click)="initializeDefaultCategories()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+        <span style="margin-right: 8px;">📂</span>
+        Initialize Default Categories
+      </button>
+    </div>
+    
+    <div class="categories-grid" *ngIf="categories.length > 0">
+      <div class="category-card" *ngFor="let category of categories">
+        <div class="category-content">
+          <div class="category-info">
+            <div class="category-color-indicator" [ngStyle]="{'background': category.color}"></div>
+            <div class="category-icon">{{category.icon}}</div>
+            <div class="category-name">{{category.name}}</div>
+          </div>
+          
+          <div class="category-actions">
+            <button class="btn-edit" (click)="updateCategory(category)" title="Edit category">
+              <span class="edit-icon">✏️</span>
+              <span class="edit-text">Edit</span>
+            </button>
+            <button class="btn-delete" (click)="confirmDelete(category)" title="Delete category">
+              <span class="delete-icon">🗑️</span>
+              <span class="delete-text">Delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="empty-state" *ngIf="categories.length === 0">
+      <div class="empty-icon">📂</div>
+      <h6 class="empty-title">No Categories Yet</h6>
+      <p class="empty-description">Start by adding your first expense category above.</p>
+    </div>
+  </div>
+
+</div> 

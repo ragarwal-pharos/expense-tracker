@@ -1,0 +1,40 @@
+<!-- Desktop Navbar -->
+<app-navbar class="d-none d-lg-block" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1030;"></app-navbar>
+
+<!-- Mobile Navbar -->
+<div class="mobile-navbar d-lg-none" *ngIf="isMobile">
+  <div class="mobile-navbar-content">
+    <button class="sidebar-toggle-btn" (click)="openSidebar()">
+      <span class="toggle-icon">☰</span>
+    </button>
+    
+    <div class="mobile-brand">
+      <span class="brand-icon">💰</span>
+      <span class="brand-text">Expense Tracker</span>
+    </div>
+    
+    <button class="mobile-theme-toggle" (click)="toggleTheme()">
+      <span class="theme-icon">{{ getThemeIcon() }}</span>
+    </button>
+  </div>
+</div>
+
+<!-- Mobile Sidebar -->
+<app-sidebar *ngIf="sidebarOpen" (close)="closeSidebar()" class="d-lg-none"></app-sidebar>
+
+<!-- Loading Overlay -->
+<app-loading></app-loading>
+
+<!-- Main Content -->
+<div class="main-content" [class.blurred]="sidebarOpen">
+  <div class="container-fluid mt-3">
+    <div class="row">
+      <div class="col-12">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Component -->
+<app-notifications></app-notifications>

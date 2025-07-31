@@ -1,0 +1,187 @@
+<div class="container-fluid px-4 py-3">
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="d-flex align-items-center">
+      <div class="header-icon me-3">
+        <span class="fs-1">💸</span>
+      </div>
+      <div>
+        <h1 class="page-title mb-1">Expenses</h1>
+        <p class="text-muted mb-0">Track and manage your daily expenses</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Expense Form -->
+  <div class="add-expense-card mb-4">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center">
+        <span class="header-icon-small me-2">➕</span>
+        <h5 class="mb-0">Add New Expense</h5>
+      </div>
+    </div>
+    <div class="card-body-modern">
+      <form (ngSubmit)="addExpense()" #expenseForm="ngForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expenseAmount" class="form-label-modern">Amount</label>
+            <div class="input-group-modern">
+              <span class="input-group-text-modern">₹</span>
+              <input 
+                type="number" 
+                class="form-control-modern" 
+                id="expenseAmount"
+                placeholder="0.00"
+                [(ngModel)]="newExpense.amount" 
+                name="amount" 
+                step="0.01"
+                min="0"
+                required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="expenseDate" class="form-label-modern">Date</label>
+            <input 
+              type="date" 
+              class="form-control-modern" 
+              id="expenseDate"
+              [(ngModel)]="newExpense.date" 
+              name="date" 
+              required>
+          </div>
+          <div class="form-group">
+            <label for="expenseCategory" class="form-label-modern">Category</label>
+            <div class="position-relative category-select-container">
+              <select 
+                class="form-select" 
+                id="expenseCategory"
+                [(ngModel)]="newExpense.categoryId" 
+                name="categoryId" 
+                required>
+                <option value="" [selected]="!newExpense.categoryId">🏷️ Select a category</option>
+                <option *ngFor="let cat of categories" [value]="cat.id">
+                  {{cat.icon}} {{cat.name}}
+                </option>
+              </select>
+              <button 
+                *ngIf="newExpense.categoryId" 
+                type="button"
+                class="btn btn-sm btn-outline-danger position-absolute clear-category-btn"
+                (click)="clearCategory()"
+                title="Clear selection">
+                ✕
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="expenseDescription" class="form-label-modern">Description</label>
+            <input 
+              type="text" 
+              class="form-control-modern" 
+              id="expenseDescription"
+              placeholder="e.g., Lunch at restaurant, Uber ride, Movie ticket, Groceries, etc."
+              [(ngModel)]="newExpense.description" 
+              name="description">
+          </div>
+          <div class="form-group button-group">
+            <label class="form-label-modern">&nbsp;</label>
+            <button type="submit" class="btn-add-expense" [disabled]="!expenseForm.form.valid">
+              <span class="btn-icon">➕</span>
+              <span class="btn-text">Add Expense</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-card mb-4">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center">
+        <span class="header-icon-small me-2">🔍</span>
+        <h5 class="mb-0">Filters</h5>
+      </div>
+    </div>
+    <div class="card-body-modern">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="filterCategory" class="form-label-modern">Category</label>
+          <select class="form-select" id="filterCategory" [(ngModel)]="filterCategory">
+            <option value="">🏷️ All Categories</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">{{cat.icon}} {{cat.name}}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterDateFrom" class="form-label-modern">From Date</label>
+          <input type="date" class="form-control-modern" id="filterDateFrom" [(ngModel)]="filterDateFrom">
+        </div>
+        <div class="filter-group">
+          <label for="filterDateTo" class="form-label-modern">To Date</label>
+          <input type="date" class="form-control-modern" id="filterDateTo" [(ngModel)]="filterDateTo">
+        </div>
+        <div class="filter-group">
+          <label for="filterAmount" class="form-label-modern">Min Amount</label>
+          <input type="number" class="form-control-modern" id="filterAmount" [(ngModel)]="filterAmount" placeholder="0">
+        </div>
+        <div class="filter-group button-group">
+          <label class="form-label-modern">&nbsp;</label>
+          <button type="button" class="btn-clear-filters" (click)="clearFilters()">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-text">Clear Filters</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expenses List -->
+  <div class="expenses-list-card">
+    <div class="card-header-modern">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">📋</span>
+          <h5 class="mb-0">All Expenses</h5>
+        </div>
+        <div class="expenses-summary">
+          <div class="total-amount">{{getTotalAmount() | currency:'INR'}}</div>
+          <div class="expenses-count">{{getFilteredExpenses().length}} expenses</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body-modern">
+      <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0; else noExpenses">
+        <div class="expense-item" *ngFor="let expense of getFilteredExpenses(); let i = index" 
+             [style.animation-delay]="i * 0.1 + 's'">
+          <div class="expense-main">
+            <div class="expense-amount">{{expense.amount | currency:'INR'}}</div>
+            <div class="expense-category">
+              <span class="category-badge" [ngStyle]="{'background': getCategoryColor(expense.categoryId)}">
+                {{getCategoryIcon(expense.categoryId)}} {{getCategoryName(expense.categoryId)}}
+              </span>
+            </div>
+          </div>
+          <div class="expense-details">
+            <div class="expense-date">{{expense.date | date}}</div>
+            <div class="expense-description">{{expense.description || 'No description'}}</div>
+          </div>
+          <div class="expense-actions">
+            <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit">
+              <span class="action-icon">✏️</span>
+            </button>
+            <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete">
+              <span class="action-icon">🗑️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noExpenses>
+        <div class="no-expenses">
+          <div class="no-expenses-icon">📋</div>
+          <h6>No expenses found</h6>
+          <p>Add your first expense using the form above!</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div> 

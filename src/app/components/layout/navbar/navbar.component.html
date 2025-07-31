@@ -1,0 +1,47 @@
+<nav class="navbar navbar-expand-lg navbar-modern fixed-top" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; z-index: 1030 !important; width: 100% !important;">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand-modern" routerLink="/dashboard" (click)="onNavClick()">
+      <span class="brand-icon">💰</span>
+      <span class="brand-text">Expense Tracker</span>
+    </a>
+    
+    <button class="navbar-toggler-modern d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link-modern" routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link-modern" routerLink="/expenses" routerLinkActive="active" (click)="onNavClick()">
+            <span class="nav-icon">💸</span>
+            <span class="nav-text">Expenses</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link-modern" routerLink="/categories" routerLinkActive="active" (click)="onNavClick()">
+            <span class="nav-icon">🏷️</span>
+            <span class="nav-text">Categories</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link-modern" routerLink="/reports" routerLinkActive="active" (click)="onNavClick()">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Reports</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <button class="btn-theme-toggle" (click)="toggleTheme()">
+            <span class="theme-icon">{{ themeService.getTheme() === 'light' ? '🌙' : '☀️' }}</span>
+            <span class="theme-text">Theme</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav> 

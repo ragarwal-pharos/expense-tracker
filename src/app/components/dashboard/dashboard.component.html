@@ -1,0 +1,410 @@
+<div class="container-fluid px-4 py-3">
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <div class="header-icon me-3">
+          <span class="fs-1">📊</span>
+        </div>
+        <div>
+          <h1 class="page-title mb-1">Financial Dashboard</h1>
+          <p class="text-muted mb-0">Your complete financial overview and insights</p>
+        </div>
+      </div>
+      <div class="budget-setup">
+        <button class="btn btn-outline-primary" (click)="setBudgetWithPrompt()">
+          <span class="budget-icon">💰</span>
+          {{ budgetLimit > 0 ? '₹' + (budgetLimit | number) : 'Set Budget' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Alerts Section -->
+  <div class="alerts-section mb-4" *ngIf="alerts.length > 0">
+    <div class="alerts-container">
+      <div class="alert-item" *ngFor="let alert of alerts.slice(0, 3)" [class]="'alert-' + alert.type">
+        <span class="alert-icon">{{ alert.icon }}</span>
+        <span class="alert-message">{{ alert.message }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Health Score -->
+  <div class="health-score-section mb-4">
+    <div class="health-card">
+      <div class="health-header">
+        <h3>Financial Health Score</h3>
+        <div class="health-score">{{ financialHealthScore | number:'1.0-0' }}/100</div>
+      </div>
+      <div class="health-bar">
+        <div class="health-fill" [style.width.%]="financialHealthScore"></div>
+      </div>
+      <div class="health-status">
+        <span class="status-text" [class]="financialHealthScore >= 70 ? 'excellent' : financialHealthScore >= 50 ? 'good' : 'needs-improvement'">
+          {{ financialHealthScore >= 70 ? 'Excellent' : financialHealthScore >= 50 ? 'Good' : 'Needs Improvement' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Status Card -->
+  <div class="budget-status-section mb-4" *ngIf="budgetLimit > 0">
+    <div class="budget-card">
+      <div class="budget-header">
+        <div class="budget-title">
+          <span class="budget-icon">💰</span>
+          <h3>Monthly Budget</h3>
+        </div>
+        <div class="budget-amount">₹{{ budgetLimit | number }}</div>
+      </div>
+      
+      <div class="budget-progress-section">
+        <div class="budget-progress-bar">
+          <div class="budget-progress-fill" 
+               [style.width.%]="getBudgetPercentage()"
+               [style.background-color]="getBudgetStatusColor()">
+          </div>
+        </div>
+        <div class="budget-stats">
+          <div class="budget-stat">
+            <span class="stat-label">Spent:</span>
+            <span class="stat-value">₹{{ monthlyTotal | number }}</span>
+          </div>
+          <div class="budget-stat">
+            <span class="stat-label">Remaining:</span>
+            <span class="stat-value" [class]="getBudgetRemaining() < 0 ? 'negative' : 'positive'">
+              ₹{{ getBudgetRemaining() | number }}
+            </span>
+          </div>
+          <div class="budget-stat">
+            <span class="stat-label">Status:</span>
+            <span class="stat-value" [style.color]="getBudgetStatusColor()">
+              {{ getBudgetStatusText() }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="budget-actions">
+        <button class="btn btn-sm btn-outline-primary" (click)="setBudgetWithPrompt()">
+          <span class="action-icon">✏️</span>
+          Edit Budget
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-cards mb-4">
+    <div class="summary-card total-spent hover-lift">
+      <div class="card-icon">💸</div>
+      <div class="card-content">
+        <h3 class="card-title">Total Spent</h3>
+        <div class="card-amount">₹{{ totalSpent | number }}</div>
+        <div class="card-subtitle">{{ getFilterLabel() }}</div>
+      </div>
+    </div>
+    
+    <div class="summary-card monthly-spent hover-lift">
+      <div class="card-icon">📅</div>
+      <div class="card-content">
+        <h3 class="card-title">This Month</h3>
+        <div class="card-amount">₹{{ monthlyTotal | number }}</div>
+        <div class="card-subtitle">Current Month</div>
+      </div>
+    </div>
+    
+    <div class="summary-card weekly-spent hover-lift">
+      <div class="card-icon">📊</div>
+      <div class="card-content">
+        <h3 class="card-title">This Week</h3>
+        <div class="card-amount">₹{{ weeklyTotal | number }}</div>
+        <div class="card-subtitle">Current Week</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Comparison -->
+  <div class="monthly-comparison mb-4" *ngIf="getMonthlyComparison().hasPreviousData || monthlyTotal > 0">
+    <div class="comparison-card">
+      <div class="comparison-header">
+        <h3>Monthly Comparison</h3>
+        <span class="comparison-period">vs Last Month</span>
+      </div>
+      <div class="comparison-content">
+        <div class="comparison-stat">
+          <div class="stat-value" [class]="getMonthlyComparison().change < 0 ? 'positive' : 'negative'">
+            {{ getMonthlyComparison().change | currency:'INR' }}
+          </div>
+          <div class="stat-label">Change</div>
+        </div>
+        <div class="comparison-stat">
+          <div class="stat-value" [class]="getMonthlyComparison().percentage < 0 ? 'positive' : 'negative'">
+            {{ getMonthlyComparison().percentage | number:'1.0-1' }}%
+          </div>
+          <div class="stat-label">Percentage</div>
+        </div>
+        <div class="comparison-stat">
+          <div class="stat-value new-month" *ngIf="!getMonthlyComparison().hasPreviousData && monthlyTotal > 0">
+            First Month
+          </div>
+          <div class="stat-label">Status</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <div class="filter-controls mb-4">
+    <div class="filter-buttons">
+      <button class="filter-btn" 
+              [class.active]="selectedFilter === 'all'"
+              (click)="selectedFilter = 'all'; onFilterChange()">
+        All Time
+      </button>
+      <button class="filter-btn" 
+              [class.active]="selectedFilter === 'monthly'"
+              (click)="selectedFilter = 'monthly'; onFilterChange()">
+        Monthly
+      </button>
+      <button class="filter-btn" 
+              [class.active]="selectedFilter === 'yearly'"
+              (click)="selectedFilter = 'yearly'; onFilterChange()">
+        Yearly
+      </button>
+      <button class="filter-btn" 
+              [class.active]="selectedFilter === 'custom'"
+              (click)="selectedFilter = 'custom'; onFilterChange()">
+        Custom
+      </button>
+    </div>
+    
+    <!-- Custom Date Range Inputs -->
+    <div class="custom-date-inputs" *ngIf="selectedFilter === 'custom'">
+      <div class="date-input-group">
+        <label class="date-label">Start Date:</label>
+        <input type="date" 
+               class="date-input" 
+               [(ngModel)]="customStartDate"
+               (change)="onFilterChange()">
+      </div>
+      <div class="date-input-group">
+        <label class="date-label">End Date:</label>
+        <input type="date" 
+               class="date-input" 
+               [(ngModel)]="customEndDate"
+               (change)="onFilterChange()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights Section -->
+  <div class="insights-section mb-4">
+    <div class="insights-card">
+      <div class="insights-header">
+        <h3>Financial Insights</h3>
+        <span class="insights-subtitle">Personalized recommendations</span>
+      </div>
+      <div class="insights-grid">
+        <div class="insight-item">
+          <div class="insight-label">Average Daily</div>
+          <div class="insight-value">₹{{ averageDailySpending | number:'1.0-0' }}</div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-label">Spending Trend</div>
+          <div class="insight-value">
+            <span class="trend-icon" [class]="spendingTrend">
+              {{ spendingTrend === 'increasing' ? '📈' : spendingTrend === 'decreasing' ? '📉' : '➡️' }}
+            </span>
+            <span class="trend-text">
+              {{ spendingTrend === 'increasing' ? 'Increasing' : spendingTrend === 'decreasing' ? 'Decreasing' : 'Stable' }}
+            </span>
+          </div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-label">Projected Monthly</div>
+          <div class="insight-value">
+            {{projectedMonthlySpending | currency:'INR'}}
+          </div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-label">Top Spending Day</div>
+          <div class="insight-value">
+            {{topSpendingDay || 'N/A'}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spending Patterns -->
+  <div class="patterns-section mb-4" *ngIf="spendingPatterns.length > 0">
+    <div class="patterns-card">
+      <div class="patterns-header">
+        <h3>Spending Patterns</h3>
+        <span class="patterns-subtitle">Category-wise analysis</span>
+      </div>
+      <div class="patterns-list">
+        <div class="pattern-item" *ngFor="let pattern of spendingPatterns.slice(0, 5)">
+          <div class="pattern-category">
+            <span class="category-icon" [style.background-color]="pattern.category.color">{{ pattern.category.icon }}</span>
+            <div class="category-info">
+              <div class="category-name">{{ pattern.category.name }}</div>
+              <div class="category-stats">
+                {{ pattern.frequency }} expenses • ₹{{ pattern.averageAmount | number:'1.0-0' }} avg
+              </div>
+            </div>
+          </div>
+          <div class="pattern-amount">
+            <div class="amount-value">₹{{ pattern.totalAmount | number }}</div>
+            <div class="amount-percentage">{{ pattern.percentageOfTotal | number:'1.0-1' }}%</div>
+          </div>
+          <div class="pattern-trend" [class]="pattern.trend">
+            <span class="trend-icon">
+              {{ pattern.trend === 'increasing' ? '📈' : pattern.trend === 'decreasing' ? '📉' : '➡️' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Savings Opportunities -->
+  <div class="savings-section mb-4" *ngIf="savingsOpportunities.length > 0">
+    <div class="savings-card">
+      <div class="savings-header">
+        <h3>Savings Opportunities</h3>
+        <span class="savings-subtitle">Potential savings by category</span>
+      </div>
+      <div class="savings-list">
+        <div class="savings-item" *ngFor="let opportunity of savingsOpportunities.slice(0, 3)">
+          <div class="savings-category">
+            <span class="category-icon" [style.background-color]="opportunity.category.color">{{ opportunity.category.icon }}</span>
+            <div class="category-info">
+              <div class="category-name">{{ opportunity.category.name }}</div>
+              <div class="category-current">₹{{ opportunity.currentSpending | number }} spent</div>
+            </div>
+          </div>
+          <div class="savings-potential">
+            <div class="potential-amount">₹{{ opportunity.potentialSavings | number }}</div>
+            <div class="potential-label">Potential Savings</div>
+          </div>
+          <div class="savings-priority" [class]="opportunity.priority">
+            {{ opportunity.priority | titlecase }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Goals -->
+  <div class="goals-section mb-4" *ngIf="financialGoals.length > 0">
+    <div class="goals-card">
+      <div class="goals-header">
+        <h3>Financial Goals</h3>
+        <span class="goals-subtitle">Track your progress</span>
+      </div>
+      <div class="goals-list">
+        <div class="goal-card" *ngFor="let goal of financialGoals">
+          <div class="goal-header">
+            <h6 class="goal-name">{{ goal?.name || 'Unknown Goal' }}</h6>
+            <div class="goal-actions">
+              <span class="goal-progress">{{ goalProgress[goal?.id || ''] | number:'1.0-0' }}%</span>
+              <button class="btn btn-sm btn-outline-primary goal-edit-btn" 
+                      (click)="goal?.id === 'emergency' ? updateEmergencyFundWithPrompt() : 
+                               goal?.id === 'vacation' ? updateVacationFundWithPrompt() : null"
+                      *ngIf="goal?.id === 'emergency' || goal?.id === 'vacation'">
+                ✏️
+              </button>
+            </div>
+          </div>
+          <div class="goal-bar">
+            <div class="goal-fill" [style.width.%]="goalProgress[goal?.id || '']"></div>
+          </div>
+          <div class="goal-amounts">
+            <span class="current-amount">₹{{ goal?.current || 0 | number }}</span>
+            <span class="target-amount">of ₹{{ goal?.target || 0 | number }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="dashboard-content">
+    <div class="content-grid">
+      <!-- Category Breakdown -->
+      <div class="content-card category-breakdown">
+        <div class="card-header-modern">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <span class="header-icon-small me-2">🏷️</span>
+              <h5 class="mb-0">Category-wise Spending</h5>
+            </div>
+            <div class="filter-info">
+              <span class="filter-label">{{ getFilterLabel() }}</span>
+              <span class="filter-total">{{ getFilteredTotal() | currency:'INR' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-list" *ngIf="categories.length > 0">
+          <div class="category-item" *ngFor="let category of categories">
+            <div class="category-info">
+              <span class="category-icon" [style.background-color]="category?.color || '#999'">{{ category?.icon || '📌' }}</span>
+              <div class="category-details">
+                <div class="category-name">{{ category?.name || 'Unknown' }}</div>
+                <div class="category-count">
+                  {{ getExpensesByCategory(category?.id || '').length }} expenses
+                </div>
+              </div>
+            </div>
+            <div class="category-amount">
+              ₹{{ categoryTotals[category?.id || ''] || 0 | number }}
+            </div>
+          </div>
+        </div>
+        
+        <div class="empty-state" *ngIf="categories.length === 0">
+          <div class="empty-icon">🏷️</div>
+          <h6>No Categories Found</h6>
+          <p>Add some categories to start tracking your expenses!</p>
+        </div>
+      </div>
+
+      <!-- Recent Expenses -->
+      <div class="content-card recent-expenses">
+        <div class="card-header-modern">
+          <div class="d-flex align-items-center">
+            <span class="header-icon-small me-2">📝</span>
+            <h5 class="mb-0">Recent Expenses</h5>
+          </div>
+        </div>
+        
+        <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0">
+          <div class="expense-item" *ngFor="let expense of getFilteredExpenses().slice(0, 5)">
+            <div class="expense-info">
+              <span class="expense-category-icon" [style.background-color]="getCategoryColor(expense.categoryId)">
+                {{ getCategoryIcon(expense.categoryId) }}
+              </span>
+              <div class="expense-details">
+                <div class="expense-description">{{ expense.description || 'No description' }}</div>
+                <div class="expense-date">{{ expense.date | date:'MMM dd' }}</div>
+              </div>
+            </div>
+            <div class="expense-amount">₹{{ expense.amount | number }}</div>
+          </div>
+        </div>
+        
+        <div class="empty-state" *ngIf="getFilteredExpenses().length === 0">
+          <div class="empty-icon">📝</div>
+          <h6>No Expenses Found</h6>
+          <p>Add some expenses to see them here!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+ 
