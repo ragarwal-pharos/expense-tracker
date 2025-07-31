@@ -51,7 +51,7 @@
           </div>
           <div class="form-group">
             <label for="expenseCategory" class="form-label-modern">Category</label>
-            <div class="position-relative category-select-container">
+            <div class="category-select-container">
               <select 
                 class="form-select" 
                 id="expenseCategory"
@@ -66,7 +66,7 @@
               <button 
                 *ngIf="newExpense.categoryId" 
                 type="button"
-                class="btn btn-sm btn-outline-danger position-absolute clear-category-btn"
+                class="clear-category-btn"
                 (click)="clearCategory()"
                 title="Clear selection">
                 ✕

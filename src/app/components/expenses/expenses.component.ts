@@ -3,11 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
-import { LoadingService } from '../../core/services/loading.service';
-import { NotificationService } from '../../core/services/notification.service';
+import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-expenses',
@@ -46,9 +44,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   constructor(
     private expenseService: ExpenseService,
-    private categoryService: CategoryService,
-    private loadingService: LoadingService,
-    private notificationService: NotificationService
+    private categoryService: CategoryService
   ) {}
 
   ngOnInit() {
@@ -60,7 +56,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   async loadData() {
-    this.loadingService.show('Loading expenses...');
     
     try {
       console.log('Loading data from Firebase...');
@@ -74,16 +69,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       
       console.log(`Loaded ${this.expenses.length} expenses and ${this.categories.length} categories`);
       
-      this.notificationService.success(
-        'Expenses Loaded! 📝',
-        `Found ${this.expenses.length} expenses in your records.`,
-        '✅'
-      );
     } catch (error) {
       console.error('Error loading data:', error);
-      this.notificationService.handleError(error, 'Expenses');
     } finally {
-      this.loadingService.hide();
+      
     }
   }
 
@@ -92,7 +81,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.loadingService.show('Adding expense...');
     
     try {
       const expenseData: Omit<Expense, 'id'> = {
@@ -115,19 +103,17 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       await this.loadData();
       
       this.resetForm();
-      this.notificationService.expenseAdded(expenseData.amount);
       
       // Check for achievements
       this.checkAchievements();
     } catch (error) {
-      this.notificationService.handleError(error, 'Add Expense');
+      console.error('Error adding expense:', error);
     } finally {
-      this.loadingService.hide();
+      
     }
   }
 
   async editExpense(expense: Expense) {
-    this.loadingService.show('Opening expense editor...');
     
     try {
       // Simplified edit - only description and amount
@@ -137,7 +123,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       // Validate amount
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) {
-        this.notificationService.error('Invalid Amount!', 'Please enter a valid number greater than 0.');
+        alert('Invalid Amount! Please enter a valid number greater than 0.');
         return;
       }
 
@@ -150,11 +136,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       await this.expenseService.update(updatedExpense);
       await this.loadData(); // Reload data after updating
       
-      this.notificationService.expenseUpdated(updatedExpense.amount);
     } catch (error) {
-      this.notificationService.handleError(error, 'Edit Expense');
+      console.error('Error editing expense:', error);
     } finally {
-      this.loadingService.hide();
+      
     }
   }
 
@@ -162,38 +147,36 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     const confirmed = window.confirm(`Are you sure you want to delete "${expense.description}" (₹${expense.amount})?`);
     if (!confirmed) return;
 
-    this.loadingService.show('Deleting expense...');
-
+    
     try {
       await this.expenseService.delete(expense.id);
       await this.loadData(); // Reload data after deleting
       
-      this.notificationService.expenseDeleted();
     } catch (error) {
-      this.notificationService.handleError(error, 'Delete Expense');
+      console.error('Error deleting expense:', error);
     } finally {
-      this.loadingService.hide();
+      
     }
   }
 
   validateExpense(): boolean {
     if (!this.newExpense.description?.trim()) {
-      this.notificationService.error('Validation Error', 'Please enter a description.');
+      alert('Please enter a description.');
       return false;
     }
 
     if (!this.newExpense.amount || this.newExpense.amount <= 0) {
-      this.notificationService.error('Validation Error', 'Please enter a valid amount greater than 0.');
+      alert('Please enter a valid amount greater than 0.');
       return false;
     }
 
     if (!this.newExpense.categoryId) {
-      this.notificationService.error('Validation Error', 'Please select a category.');
+      alert('Please select a category.');
       return false;
     }
 
     if (!this.newExpense.date) {
-      this.notificationService.error('Validation Error', 'Please select a date.');
+      alert('Please select a date.');
       return false;
     }
 
@@ -330,23 +313,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     
     // Check for milestone achievements
     if (totalExpenses === 10) {
-      this.notificationService.achievement(
-        '10 Expenses Milestone! 🎯',
-        'Congratulations! You\'ve logged your 10th expense. Keep up the great tracking!',
-        '🎉'
-      );
+      alert('Congratulations! You\'ve logged your 10th expense. Keep up the great tracking!');
     } else if (totalExpenses === 50) {
-      this.notificationService.achievement(
-        '50 Expenses Milestone! 🏆',
-        'Amazing! You\'ve logged 50 expenses. You\'re becoming a tracking expert!',
-        '🏆'
-      );
+      alert('Amazing! You\'ve logged 50 expenses. You\'re becoming a tracking expert!');
     } else if (totalExpenses === 100) {
-      this.notificationService.achievement(
-        '100 Expenses Milestone! 💎',
-        'Incredible! You\'ve logged 100 expenses. You\'re a financial tracking master!',
-        '💎'
-      );
+      alert('Incredible! You\'ve logged 100 expenses. You\'re a financial tracking master!');
     }
 
     // Check for category mastery
@@ -358,7 +329,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     Object.entries(categoryCounts).forEach(([categoryId, count]) => {
       if (count === 10) {
         const categoryName = this.getCategoryName(categoryId);
-        this.notificationService.categoryMastery(categoryName);
+        alert(`${categoryName} mastery achieved! You\'ve logged 10 expenses in this category.`);
       }
     });
 
@@ -391,7 +362,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
       
       if (streak >= 7) {
-        this.notificationService.streakAchievement(streak);
+        alert(`Daily streak of ${streak} days achieved! Keep it up!`);
       }
     }
   }

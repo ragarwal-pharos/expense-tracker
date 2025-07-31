@@ -1,40 +1,74 @@
-<!-- Desktop Navbar -->
-<app-navbar class="d-none d-lg-block" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1030;"></app-navbar>
-
-<!-- Mobile Navbar -->
-<div class="mobile-navbar d-lg-none" *ngIf="isMobile">
-  <div class="mobile-navbar-content">
-    <button class="sidebar-toggle-btn" (click)="openSidebar()">
-      <span class="toggle-icon">☰</span>
-    </button>
-    
-    <div class="mobile-brand">
-      <span class="brand-icon">💰</span>
-      <span class="brand-text">Expense Tracker</span>
+<!-- Main App Container -->
+<div class="app-container">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+          <span class="hamburger-icon">☰</span>
+        </button>
+        <div class="brand">
+          <span class="brand-icon">💰</span>
+          <span class="brand-text">Expense Tracker</span>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a class="nav-link" routerLink="/expenses" routerLinkActive="active" (click)="onNavClick()">
+          <span class="nav-icon">💸</span>
+          <span class="nav-text">Expenses</span>
+        </a>
+        <a class="nav-link" routerLink="/categories" routerLinkActive="active" (click)="onNavClick()">
+          <span class="nav-icon">🏷️</span>
+          <span class="nav-text">Categories</span>
+        </a>
+        <a class="nav-link" routerLink="/reports" routerLinkActive="active" (click)="onNavClick()">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Reports</span>
+        </a>
+      </nav>
     </div>
-    
-    <button class="mobile-theme-toggle" (click)="toggleTheme()">
-      <span class="theme-icon">{{ getThemeIcon() }}</span>
-    </button>
-  </div>
-</div>
+  </header>
 
-<!-- Mobile Sidebar -->
-<app-sidebar *ngIf="sidebarOpen" (close)="closeSidebar()" class="d-lg-none"></app-sidebar>
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
 
-<!-- Loading Overlay -->
-<app-loading></app-loading>
-
-<!-- Main Content -->
-<div class="main-content" [class.blurred]="sidebarOpen">
-  <div class="container-fluid mt-3">
-    <div class="row">
-      <div class="col-12">
-        <router-outlet></router-outlet>
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.sidebar-open]="sidebarOpen">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="brand-icon">💰</span>
+        <span class="brand-text">Expense Tracker</span>
       </div>
     </div>
-  </div>
-</div>
+    
+    <nav class="sidebar-nav">
+      <a class="sidebar-link" routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+        <span class="link-icon">📊</span>
+        <span class="link-text">Dashboard</span>
+      </a>
+      <a class="sidebar-link" routerLink="/expenses" routerLinkActive="active" (click)="onNavClick()">
+        <span class="link-icon">💸</span>
+        <span class="link-text">Expenses</span>
+      </a>
+      <a class="sidebar-link" routerLink="/categories" routerLinkActive="active" (click)="onNavClick()">
+        <span class="link-icon">🏷️</span>
+        <span class="link-text">Categories</span>
+      </a>
+      <a class="sidebar-link" routerLink="/reports" routerLinkActive="active" (click)="onNavClick()">
+        <span class="link-icon">📊</span>
+        <span class="link-text">Reports</span>
+      </a>
+    </nav>
+  </aside>
 
-<!-- Notification Component -->
-<app-notifications></app-notifications>
+  <!-- Main Content -->
+  <main class="main-content" [class.content-blurred]="sidebarOpen">
+    <div class="content-container">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

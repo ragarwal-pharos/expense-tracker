@@ -2,8 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
-import { LoadingService } from '../../core/services/loading.service';
-import { NotificationService } from '../../core/services/notification.service';
 import { Category } from '../../core/models/category.model';
 import { Subscription } from 'rxjs';
 
@@ -34,9 +32,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   private subscription: Subscription = new Subscription();
 
   constructor(
-    private categoryService: CategoryService,
-    private loadingService: LoadingService,
-    private notificationService: NotificationService
+    private categoryService: CategoryService
   ) {}
 
   ngOnInit() {
@@ -48,35 +44,25 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   async loadData() {
-    this.loadingService.show('Loading categories...');
     try {
       this.categories = await this.categoryService.getAll();
-      this.notificationService.success(
-        'Categories Loaded! 📂',
-        `Found ${this.categories.length} categories.`,
-        '✅'
-      );
+      // Removed notificationService.success
     } catch (error) {
-      this.notificationService.handleError(error, 'Categories');
+      // Removed notificationService.handleError
     } finally {
-      this.loadingService.hide();
+      // Removed loadingService.hide();
     }
   }
 
   async initializeDefaultCategories() {
-    this.loadingService.show('Initializing default categories...');
     try {
       await this.categoryService.forceInitializeDefaultCategories();
       await this.loadData();
-      this.notificationService.success(
-        'Default Categories Added! 📂',
-        'Default categories have been initialized successfully.',
-        '✅'
-      );
+      // Removed notificationService.success
     } catch (error) {
-      this.notificationService.handleError(error, 'Initialize Categories');
+      // Removed notificationService.handleError
     } finally {
-      this.loadingService.hide();
+      // Removed loadingService.hide();
     }
   }
 
@@ -85,8 +71,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.loadingService.show('Adding category...');
-    
     try {
       const categoryData: Omit<Category, 'id'> = {
         name: this.newCategory.name.trim(),
@@ -99,17 +83,15 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       
       await this.loadData();
       this.resetForm();
-      this.notificationService.categoryAdded(categoryData.name);
+      // Removed notificationService.categoryAdded
     } catch (error) {
-      this.notificationService.handleError(error, 'Add Category');
+      // Removed notificationService.handleError
     } finally {
-      this.loadingService.hide();
+      // Removed loadingService.hide();
     }
   }
 
   async updateCategory(category: Category) {
-    this.loadingService.show('Opening category editor...');
-    
     try {
       console.log(`Updating category: ${category.name} (ID: ${category.id}, length: ${category.id.length})`);
       
@@ -119,7 +101,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
       // Validate inputs
       if (!name.trim()) {
-        this.notificationService.error('Invalid Name!', 'Please enter a valid category name.');
+        // Removed notificationService.error
         return;
       }
 
@@ -135,20 +117,18 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       
       await this.loadData(); // Reload data after updating
       
-      this.notificationService.categoryUpdated(updatedCategory.name);
+      // Removed notificationService.categoryUpdated
     } catch (error) {
       console.error('Error updating category:', error);
-      this.notificationService.handleError(error, 'Update Category');
+      // Removed notificationService.handleError
     } finally {
-      this.loadingService.hide();
+      // Removed loadingService.hide();
     }
   }
 
   async deleteCategory(category: Category) {
     const confirmed = window.confirm(`Are you sure you want to delete "${category.name}"? This will also delete all associated expenses.`);
     if (!confirmed) return;
-
-    this.loadingService.show('Deleting category...');
 
     try {
       console.log(`Deleting category: ${category.name} (ID: ${category.id})`);
@@ -158,12 +138,12 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       
       await this.loadData(); // Reload data after deleting
       
-      this.notificationService.categoryDeleted(category.name);
+      // Removed notificationService.categoryDeleted
     } catch (error) {
       console.error('Error deleting category:', error);
-      this.notificationService.handleError(error, 'Delete Category');
+      // Removed notificationService.handleError
     } finally {
-      this.loadingService.hide();
+      // Removed loadingService.hide();
     }
   }
 
@@ -173,7 +153,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   validateCategory(): boolean {
     if (!this.newCategory.name?.trim()) {
-      this.notificationService.error('Validation Error', 'Please enter a category name.');
+      // Removed notificationService.error
       return false;
     }
 
@@ -185,7 +165,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     this.isDuplicateCategory = !!existingCategory;
     
     if (this.isDuplicateCategory) {
-      this.notificationService.error('Duplicate Category', 'A category with this name already exists. Please choose a different name.');
+      // Removed notificationService.error
       return false;
     }
 
@@ -317,5 +297,18 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       const currentUsage = this.getCategoryUsage(current.id);
       return currentUsage < leastUsedUsage ? current : leastUsed;
     });
+  }
+
+  async cleanupDuplicates() {
+    try {
+      console.log('Starting duplicate cleanup...');
+      await this.categoryService.triggerDuplicateCleanup();
+      await this.loadData();
+      console.log('Duplicate cleanup completed');
+      alert('Duplicate categories have been cleaned up successfully!');
+    } catch (error) {
+      console.error('Error during duplicate cleanup:', error);
+      alert('Error cleaning up duplicate categories. Please try again.');
+    }
   }
 } 

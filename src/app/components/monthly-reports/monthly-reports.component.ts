@@ -1,11 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
-import { LoadingService } from '../../core/services/loading.service';
-import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-monthly-reports',
@@ -24,8 +24,6 @@ export class MonthlyReportsComponent implements OnInit {
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
-    private loadingService: LoadingService,
-    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -33,7 +31,6 @@ export class MonthlyReportsComponent implements OnInit {
   }
 
   async loadData() {
-    this.loadingService.show('Loading reports...');
     
     try {
       this.expenses = await this.expenseService.getAll();
@@ -42,15 +39,10 @@ export class MonthlyReportsComponent implements OnInit {
       // Generate monthly reports after loading data
       this.generateMonthlyReports();
       
-      this.notificationService.success(
-        'Reports Loaded! 📊',
-        `Found ${this.expenses.length} expenses for analysis.`,
-        '✅'
-      );
     } catch (error) {
-      this.notificationService.handleError(error, 'Reports');
+      console.error('Error loading reports:', error);
     } finally {
-      this.loadingService.hide();
+      // this.loadingService.hide(); // Removed LoadingService
     }
   }
 

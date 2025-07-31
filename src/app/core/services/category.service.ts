@@ -103,7 +103,70 @@ export class CategoryService {
   async getAll(): Promise<Category[]> {
     // Always reload from Firebase to ensure fresh data
     await this.loadCategories();
-    return [...this.categories];
+    
+    // Remove duplicates based on name (case-insensitive)
+    const uniqueCategories = this.removeDuplicateCategories(this.categories);
+    
+    // If we found duplicates, update the Firebase collection
+    if (uniqueCategories.length !== this.categories.length) {
+      console.log(`Found ${this.categories.length - uniqueCategories.length} duplicate categories. Cleaning up...`);
+      await this.cleanupDuplicateCategories(uniqueCategories);
+    }
+    
+    return [...uniqueCategories];
+  }
+
+  private removeDuplicateCategories(categories: Category[]): Category[] {
+    const seen = new Set<string>();
+    const uniqueCategories: Category[] = [];
+    
+    for (const category of categories) {
+      const normalizedName = category.name.toLowerCase().trim();
+      if (!seen.has(normalizedName)) {
+        seen.add(normalizedName);
+        uniqueCategories.push(category);
+      } else {
+        console.log(`Duplicate category found: "${category.name}" (ID: ${category.id})`);
+      }
+    }
+    
+    return uniqueCategories;
+  }
+
+  private async cleanupDuplicateCategories(uniqueCategories: Category[]): Promise<void> {
+    try {
+      // Get all categories from Firebase
+      const allCategories = await this.firebaseService.loadCategories();
+      
+      // Find duplicates to delete
+      const seen = new Set<string>();
+      const duplicatesToDelete: string[] = [];
+      
+      for (const category of allCategories) {
+        const normalizedName = category.name.toLowerCase().trim();
+        if (seen.has(normalizedName)) {
+          duplicatesToDelete.push(category.id);
+          console.log(`Marking duplicate for deletion: "${category.name}" (ID: ${category.id})`);
+        } else {
+          seen.add(normalizedName);
+        }
+      }
+      
+      // Delete duplicates from Firebase
+      for (const duplicateId of duplicatesToDelete) {
+        try {
+          await this.firebaseService.deleteCategory(duplicateId);
+          console.log(`Deleted duplicate category with ID: ${duplicateId}`);
+        } catch (error) {
+          console.error(`Error deleting duplicate category ${duplicateId}:`, error);
+        }
+      }
+      
+      // Reload categories after cleanup
+      await this.loadCategories();
+    } catch (error) {
+      console.error('Error cleaning up duplicate categories:', error);
+    }
   }
 
   async add(category: Omit<Category, 'id'>): Promise<string> {
@@ -202,5 +265,11 @@ export class CategoryService {
   async getById(id: string): Promise<Category | undefined> {
     const categories = await this.firebaseService.loadCategories();
     return categories.find(c => c.id === id);
+  }
+
+  async triggerDuplicateCleanup(): Promise<void> {
+    console.log('Manual duplicate cleanup triggered...');
+    const categories = await this.getAll();
+    console.log(`Categories after cleanup: ${categories.length}`);
   }
 } 

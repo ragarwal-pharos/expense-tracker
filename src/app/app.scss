@@ -61,13 +61,3 @@
     display: none !important;
   }
 }
-
-/* Dark theme adjustments */
-[data-theme="dark"] .mobile-menu-btn {
-  background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
-  box-shadow: 0 4px 15px rgba(26, 35, 126, 0.3);
-}
-
-[data-theme="dark"] .mobile-menu-btn:hover {
-  box-shadow: 0 6px 20px rgba(26, 35, 126, 0.4);
-}
