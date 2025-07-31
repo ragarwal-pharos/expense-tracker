@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { Category } from '../../core/models/category.model';
 import { Subscription } from 'rxjs';
 
@@ -32,10 +33,19 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   private subscription: Subscription = new Subscription();
 
   constructor(
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private firebaseService: FirebaseService
   ) {}
 
   ngOnInit() {
+    // Subscribe to Firebase observables for real-time updates
+    this.subscription.add(
+      this.firebaseService.categories$.subscribe(categories => {
+        this.categories = categories;
+        console.log(`Received ${categories.length} categories from Firebase`);
+      })
+    );
+
     this.loadData();
   }
 
@@ -81,7 +91,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       const id = await this.categoryService.add(categoryData);
       console.log(`Category added with Firebase ID: ${id}`);
       
-      await this.loadData();
       this.resetForm();
       // Removed notificationService.categoryAdded
     } catch (error) {

@@ -1,37 +1,51 @@
+<!-- Loading State -->
+<div class="loading-container" *ngIf="(currentUser$ | async) === undefined">
+  <div class="loading-spinner">⏳</div>
+  <p>Loading...</p>
+</div>
+
 <!-- Main App Container -->
-<div class="app-container">
+<div class="app-container" *ngIf="(currentUser$ | async) as user">
   <!-- Header -->
   <header class="app-header">
-    <div class="header-content">
-      <div class="header-left">
-        <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
-          <span class="hamburger-icon">☰</span>
-        </button>
-        <div class="brand">
-          <span class="brand-icon">💰</span>
-          <span class="brand-text">Expense Tracker</span>
-        </div>
-      </div>
-      <nav class="header-nav">
-        <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
-          <span class="nav-icon">📊</span>
-          <span class="nav-text">Dashboard</span>
-        </a>
-        <a class="nav-link" routerLink="/expenses" routerLinkActive="active" (click)="onNavClick()">
-          <span class="nav-icon">💸</span>
-          <span class="nav-text">Expenses</span>
-        </a>
-        <a class="nav-link" routerLink="/categories" routerLinkActive="active" (click)="onNavClick()">
-          <span class="nav-icon">🏷️</span>
-          <span class="nav-text">Categories</span>
-        </a>
-        <a class="nav-link" routerLink="/reports" routerLinkActive="active" (click)="onNavClick()">
-          <span class="nav-icon">📊</span>
-          <span class="nav-text">Reports</span>
-        </a>
-      </nav>
-    </div>
-  </header>
+            <div class="header-content">
+              <div class="header-left">
+                <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+                  <span class="hamburger-icon">☰</span>
+                </button>
+                <div class="brand">
+                  <span class="brand-icon">💰</span>
+                  <span class="brand-text">Expense Tracker</span>
+                </div>
+              </div>
+              <nav class="header-nav">
+                <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+                  <span class="nav-icon">📊</span>
+                  <span class="nav-text">Dashboard</span>
+                </a>
+                <a class="nav-link" routerLink="/expenses" routerLinkActive="active" (click)="onNavClick()">
+                  <span class="nav-icon">💸</span>
+                  <span class="nav-text">Expenses</span>
+                </a>
+                <a class="nav-link" routerLink="/categories" routerLinkActive="active" (click)="onNavClick()">
+                  <span class="nav-icon">🏷️</span>
+                  <span class="nav-text">Categories</span>
+                </a>
+                <a class="nav-link" routerLink="/reports" routerLinkActive="active" (click)="onNavClick()">
+                  <span class="nav-icon">📊</span>
+                  <span class="nav-text">Reports</span>
+                </a>
+              </nav>
+              <div class="user-section" *ngIf="currentUser$ | async as user">
+                <div class="user-info">
+                  <span class="user-name">{{ user.displayName || user.email }}</span>
+                  <button class="sign-out-btn" (click)="signOut()" title="Sign out">
+                    <span class="sign-out-icon">🚪</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
 
   <!-- Sidebar Overlay -->
   <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
@@ -65,10 +79,15 @@
     </nav>
   </aside>
 
-  <!-- Main Content -->
-  <main class="main-content" [class.content-blurred]="sidebarOpen">
-    <div class="content-container">
-      <router-outlet></router-outlet>
-    </div>
-  </main>
+            <!-- Main Content -->
+          <main class="main-content" [class.content-blurred]="sidebarOpen">
+            <div class="content-container">
+              <router-outlet></router-outlet>
+            </div>
+          </main>
+        </div>
+
+<!-- Auth Container (shown when not authenticated) -->
+<div class="auth-container" *ngIf="(currentUser$ | async) === null">
+  <router-outlet></router-outlet>
 </div>

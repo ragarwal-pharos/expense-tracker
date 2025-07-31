@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -44,10 +45,26 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   constructor(
     private expenseService: ExpenseService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private firebaseService: FirebaseService
   ) {}
 
   ngOnInit() {
+    // Subscribe to Firebase observables for real-time updates
+    this.subscription.add(
+      this.firebaseService.expenses$.subscribe(expenses => {
+        this.expenses = expenses;
+        console.log(`Received ${expenses.length} expenses from Firebase`);
+      })
+    );
+
+    this.subscription.add(
+      this.firebaseService.categories$.subscribe(categories => {
+        this.categories = categories;
+        console.log(`Received ${categories.length} categories from Firebase`);
+      })
+    );
+
     this.loadData();
   }
 
@@ -99,9 +116,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       const id = await this.expenseService.add(expenseData);
       console.log(`Expense added with Firebase ID: ${id}`);
       
-      // Reload data to update the component immediately
-      await this.loadData();
-      
       this.resetForm();
       
       // Check for achievements
@@ -134,7 +148,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       };
 
       await this.expenseService.update(updatedExpense);
-      await this.loadData(); // Reload data after updating
       
     } catch (error) {
       console.error('Error editing expense:', error);
@@ -150,7 +163,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     
     try {
       await this.expenseService.delete(expense.id);
-      await this.loadData(); // Reload data after deleting
       
     } catch (error) {
       console.error('Error deleting expense:', error);

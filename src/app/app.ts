@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ScrollService } from './core/services/scroll.service';
+import { AuthService } from './core/services/auth.service';
+import { take, filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -150,9 +152,64 @@ import { ScrollService } from './core/services/scroll.service';
       font-size: 1rem;
     }
 
-    .nav-text {
-      font-size: 0.9rem;
-    }
+                .nav-text {
+              font-size: 0.9rem;
+            }
+
+            /* User Section */
+            .user-section {
+              display: flex;
+              align-items: center;
+              margin-left: 1rem;
+            }
+
+            .user-info {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 0.5rem 1rem;
+              border-radius: 8px;
+              backdrop-filter: blur(10px);
+            }
+
+            .user-name {
+              color: white;
+              font-weight: 500;
+              font-size: 0.9rem;
+              max-width: 150px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .sign-out-btn {
+              background: rgba(255, 255, 255, 0.2);
+              border: none;
+              border-radius: 6px;
+              padding: 0.25rem 0.5rem;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .sign-out-btn:hover {
+              background: rgba(255, 255, 255, 0.3);
+              transform: scale(1.05);
+            }
+
+            .sign-out-icon {
+              font-size: 0.9rem;
+              color: white;
+            }
+
+            /* Auth Container */
+            .auth-container {
+              min-height: 100vh;
+              width: 100%;
+            }
 
     /* Sidebar */
     .sidebar-overlay {
@@ -304,6 +361,19 @@ import { ScrollService } from './core/services/scroll.service';
       .brand-text {
         font-size: 1.1rem;
       }
+
+      .user-section {
+        margin-left: 0.5rem;
+      }
+
+      .user-info {
+        padding: 0.25rem 0.5rem;
+      }
+
+      .user-name {
+        max-width: 100px;
+        font-size: 0.8rem;
+      }
     }
 
     @media (max-width: 480px) {
@@ -331,12 +401,51 @@ import { ScrollService } from './core/services/scroll.service';
         padding: 0.75rem;
       }
     }
+
+    /* Loading Container */
+    .loading-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .loading-spinner {
+      font-size: 3rem;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   `]
 })
 export class App {
   sidebarOpen = false;
 
-  constructor(private scrollService: ScrollService) {}
+  constructor(
+    private scrollService: ScrollService,
+    private authService: AuthService,
+    private router: Router
+  ) {
+    // Restore the last visited route on app initialization
+    this.restoreLastRoute();
+    
+    // Save route on every navigation
+    this.router.events.subscribe(() => {
+      this.saveCurrentRoute();
+    });
+  }
+
+  get currentUser$() {
+    return this.authService.currentUser$;
+  }
 
   toggleSidebar() {
     console.log('Toggle sidebar called');
@@ -355,8 +464,44 @@ export class App {
     document.body.style.overflow = '';
   }
 
+  async signOut() {
+    try {
+      await this.authService.signOut();
+      this.router.navigate(['/login']);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  }
+
+  // Route persistence methods
+  private saveCurrentRoute() {
+    const currentRoute = this.router.url;
+    if (currentRoute && currentRoute !== '/login' && currentRoute !== '/register') {
+      localStorage.setItem('lastRoute', currentRoute);
+    }
+  }
+
+  private restoreLastRoute() {
+    const lastRoute = localStorage.getItem('lastRoute');
+    if (lastRoute && lastRoute !== '/login' && lastRoute !== '/register') {
+      // Check if user is authenticated before restoring route
+      this.authService.currentUser$.pipe(
+        filter(user => user !== undefined),
+        take(1)
+      ).subscribe(user => {
+        if (user) {
+          // Use setTimeout to ensure navigation happens after route initialization
+          setTimeout(() => {
+            this.router.navigate([lastRoute]);
+          }, 100);
+        }
+      });
+    }
+  }
+
   onNavClick() {
     this.closeSidebar();
     this.scrollService.scrollToTop();
+    this.saveCurrentRoute();
   }
 }

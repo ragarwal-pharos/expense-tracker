@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { 
   collection, 
   doc, 
@@ -15,15 +15,17 @@ import {
   QuerySnapshot,
   setDoc
 } from 'firebase/firestore';
-import { db } from '../config/firebase.config';
+import { Firestore } from '@angular/fire/firestore';
 import { Expense } from '../models/expense.model';
 import { Category } from '../models/category.model';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FirebaseService {
+  private firestore = inject(Firestore);
   private expensesSubject = new BehaviorSubject<Expense[]>([]);
   private categoriesSubject = new BehaviorSubject<Category[]>([]);
   private userSettingsSubject = new BehaviorSubject<any>({});
@@ -32,8 +34,18 @@ export class FirebaseService {
   public categories$ = this.categoriesSubject.asObservable();
   public userSettings$ = this.userSettingsSubject.asObservable();
 
-  constructor() {
-    this.loadData();
+  constructor(private authService: AuthService) {
+    // Subscribe to auth state changes to reload data when user changes
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.loadData();
+      } else {
+        // Clear data when user logs out
+        this.expensesSubject.next([]);
+        this.categoriesSubject.next([]);
+        this.userSettingsSubject.next({});
+      }
+    });
   }
 
   // Load all data from Firebase
@@ -48,8 +60,19 @@ export class FirebaseService {
   // Expenses Operations
   async loadExpenses(): Promise<Expense[]> {
     try {
-      const expensesRef = collection(db, 'expenses');
-      const q = query(expensesRef, orderBy('date', 'desc'));
+      const userId = this.authService.getCurrentUserId();
+      
+      if (!userId) {
+        this.expensesSubject.next([]);
+        return [];
+      }
+
+      const expensesRef = collection(this.firestore, 'expenses');
+      const q = query(
+        expensesRef, 
+        where('userId', '==', userId),
+        orderBy('date', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       
       const expenses: Expense[] = [];
@@ -67,8 +90,16 @@ export class FirebaseService {
 
   async addExpense(expense: Omit<Expense, 'id'>): Promise<string> {
     try {
-      const expensesRef = collection(db, 'expenses');
-      const docRef = await addDoc(expensesRef, expense);
+      const userId = this.authService.getCurrentUserId();
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const expensesRef = collection(this.firestore, 'expenses');
+      const expenseWithUserId = { ...expense, userId };
+      
+      const docRef = await addDoc(expensesRef, expenseWithUserId);
       
       // Reload expenses to update the list
       await this.loadExpenses();
@@ -82,7 +113,7 @@ export class FirebaseService {
   async updateExpense(expense: Expense): Promise<void> {
     try {
       console.log(`Attempting to update expense with ID: ${expense.id}`);
-      const expenseRef = doc(db, 'expenses', expense.id);
+      const expenseRef = doc(this.firestore, 'expenses', expense.id);
       
       // Check if document exists first
       const docSnap = await getDoc(expenseRef);
@@ -109,7 +140,7 @@ export class FirebaseService {
   async deleteExpense(expenseId: string): Promise<void> {
     try {
       console.log(`Attempting to delete expense with ID: ${expenseId}`);
-      const expenseRef = doc(db, 'expenses', expenseId);
+      const expenseRef = doc(this.firestore, 'expenses', expenseId);
       
       // Check if document exists first
       const docSnap = await getDoc(expenseRef);
@@ -168,8 +199,16 @@ export class FirebaseService {
   // Categories Operations
   async loadCategories(): Promise<Category[]> {
     try {
-      const categoriesRef = collection(db, 'categories');
-      const querySnapshot = await getDocs(categoriesRef);
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) {
+        console.log('No user authenticated, returning empty categories');
+        this.categoriesSubject.next([]);
+        return [];
+      }
+
+      const categoriesRef = collection(this.firestore, 'categories');
+      const q = query(categoriesRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
       
       const categories: Category[] = [];
       querySnapshot.forEach((doc) => {
@@ -186,8 +225,14 @@ export class FirebaseService {
 
   async addCategory(category: Omit<Category, 'id'>): Promise<string> {
     try {
-      const categoriesRef = collection(db, 'categories');
-      const docRef = await addDoc(categoriesRef, category);
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const categoriesRef = collection(this.firestore, 'categories');
+      const categoryWithUserId = { ...category, userId };
+      const docRef = await addDoc(categoriesRef, categoryWithUserId);
       
       // Reload categories to update the list
       await this.loadCategories();
@@ -201,7 +246,7 @@ export class FirebaseService {
   async updateCategory(category: Category): Promise<void> {
     try {
       console.log(`Attempting to update category with ID: ${category.id}`);
-      const categoryRef = doc(db, 'categories', category.id);
+      const categoryRef = doc(this.firestore, 'categories', category.id);
       
       // Check if document exists first
       const docSnap = await getDoc(categoryRef);
@@ -227,7 +272,7 @@ export class FirebaseService {
   async deleteCategory(categoryId: string): Promise<void> {
     try {
       console.log(`Attempting to delete category with ID: ${categoryId} (length: ${categoryId.length})`);
-      const categoryRef = doc(db, 'categories', categoryId);
+      const categoryRef = doc(this.firestore, 'categories', categoryId);
       
       // Check if document exists first
       const docSnap = await getDoc(categoryRef);
@@ -259,7 +304,7 @@ export class FirebaseService {
   // User Settings Operations
   async loadUserSettings(): Promise<any> {
     try {
-      const settingsRef = doc(db, 'userSettings', 'default');
+      const settingsRef = doc(this.firestore, 'userSettings', 'default');
       const docSnap = await getDoc(settingsRef);
       
       if (docSnap.exists()) {
@@ -292,7 +337,7 @@ export class FirebaseService {
 
   async saveUserSettings(settings: any): Promise<void> {
     try {
-      const settingsRef = doc(db, 'userSettings', 'default');
+      const settingsRef = doc(this.firestore, 'userSettings', 'default');
       // Use setDoc with merge option instead of updateDoc
       await setDoc(settingsRef, settings, { merge: true });
       
@@ -305,7 +350,7 @@ export class FirebaseService {
 
   // Real-time listeners
   subscribeToExpenses(): Observable<Expense[]> {
-    const expensesRef = collection(db, 'expenses');
+    const expensesRef = collection(this.firestore, 'expenses');
     const q = query(expensesRef, orderBy('date', 'desc'));
     
     return new Observable(observer => {
@@ -322,7 +367,7 @@ export class FirebaseService {
   }
 
   subscribeToCategories(): Observable<Category[]> {
-    const categoriesRef = collection(db, 'categories');
+    const categoriesRef = collection(this.firestore, 'categories');
     
     return new Observable(observer => {
       const unsubscribe = onSnapshot(categoriesRef, (querySnapshot) => {
@@ -340,7 +385,7 @@ export class FirebaseService {
   // Utility methods
   async getExpensesByCategory(categoryId: string): Promise<Expense[]> {
     try {
-      const expensesRef = collection(db, 'expenses');
+      const expensesRef = collection(this.firestore, 'expenses');
       const q = query(expensesRef, where('categoryId', '==', categoryId));
       const querySnapshot = await getDocs(q);
       
@@ -358,7 +403,7 @@ export class FirebaseService {
 
   async getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]> {
     try {
-      const expensesRef = collection(db, 'expenses');
+      const expensesRef = collection(this.firestore, 'expenses');
       const q = query(
         expensesRef, 
         where('date', '>=', startDate),

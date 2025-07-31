@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -48,10 +49,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private expenseService: ExpenseService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private firebaseService: FirebaseService
   ) {}
 
   ngOnInit() {
+    // Subscribe to Firebase observables for real-time updates
+    this.subscription.add(
+      this.firebaseService.expenses$.subscribe(expenses => {
+        this.expenses = expenses;
+        this.calculateTotals();
+        this.calculateCategoryBreakdown();
+        this.getRecentExpenses();
+        this.calculateMonthlyData();
+        this.calculateWeeklyData();
+        console.log(`Received ${expenses.length} expenses from Firebase`);
+      })
+    );
+
+    this.subscription.add(
+      this.firebaseService.categories$.subscribe(categories => {
+        this.categories = categories;
+        console.log(`Received ${categories.length} categories from Firebase`);
+      })
+    );
+
     this.loadData();
   }
 
