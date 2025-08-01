@@ -130,9 +130,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async editExpense(expense: Expense) {
     
     try {
-      // Simplified edit - only description and amount
+      // Simplified edit - description, amount, and date
       const description = window.prompt('Description:', expense.description) || expense.description;
       const amountStr = window.prompt('Amount (₹):', expense.amount.toString()) || expense.amount.toString();
+      const dateStr = window.prompt('Date (YYYY-MM-DD):', expense.date) || expense.date;
       
       // Validate amount
       const amount = parseFloat(amountStr);
@@ -141,10 +142,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Validate date
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dateStr)) {
+        alert('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
+        return;
+      }
+
       const updatedExpense: Expense = {
         ...expense,
         description,
-        amount: amount
+        amount: amount,
+        date: dateStr
       };
 
       await this.expenseService.update(updatedExpense);

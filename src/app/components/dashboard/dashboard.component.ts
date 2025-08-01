@@ -208,17 +208,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Apply period filter
     if (this.selectedPeriod !== 'all') {
       const now = new Date();
-      const startDate = new Date();
       
       switch (this.selectedPeriod) {
-        case 'today':
-          startDate.setHours(0, 0, 0, 0);
+        case 'monthly':
+          // Current month expenses
+          filtered = filtered.filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate.getMonth() === now.getMonth() && 
+                   expenseDate.getFullYear() === now.getFullYear();
+          });
           break;
-        case 'week':
-          startDate.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          startDate.setMonth(now.getMonth() - 1);
+        case 'yearly':
+          // Current year expenses
+          filtered = filtered.filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate.getFullYear() === now.getFullYear();
+          });
           break;
         case 'custom':
           if (this.customStartDate && this.customEndDate) {
@@ -231,13 +236,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
           break;
       }
-      
-      if (this.selectedPeriod !== 'custom') {
-        filtered = filtered.filter(expense => {
-          const expenseDate = new Date(expense.date);
-          return expenseDate >= startDate;
-        });
-      }
     }
     
     return filtered;
@@ -249,9 +247,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getFilterLabel(): string {
     switch (this.selectedPeriod) {
-      case 'today': return 'Today';
-      case 'week': return 'This Week';
-      case 'month': return 'This Month';
+      case 'monthly': return 'This Month';
+      case 'yearly': return 'This Year';
       case 'custom': return 'Custom Period';
       default: return 'All Time';
     }
@@ -262,13 +259,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getExpensesByCategory(categoryId: string): Expense[] {
-    return this.expenses.filter(expense => expense.categoryId === categoryId);
+    return this.getFilteredExpenses().filter(expense => expense.categoryId === categoryId);
   }
 
   get categoryTotals(): { [key: string]: number } {
     const totals: { [key: string]: number } = {};
+    const filteredExpenses = this.getFilteredExpenses();
     this.categories.forEach(category => {
-      totals[category.id] = this.getExpensesByCategory(category.id).reduce((sum, expense) => sum + expense.amount, 0);
+      totals[category.id] = filteredExpenses
+        .filter(expense => expense.categoryId === category.id)
+        .reduce((sum, expense) => sum + expense.amount, 0);
     });
     return totals;
   }
