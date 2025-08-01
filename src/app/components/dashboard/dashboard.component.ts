@@ -238,9 +238,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
     return filtered;
   }
 
