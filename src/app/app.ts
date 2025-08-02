@@ -489,7 +489,8 @@ export class App {
         filter(user => user !== undefined),
         take(1)
       ).subscribe(user => {
-        if (user) {
+        if (user && this.router.url === '/dashboard') {
+          // Only restore route if we're currently on dashboard (initial load)
           // Use setTimeout to ensure navigation happens after route initialization
           setTimeout(() => {
             this.router.navigate([lastRoute]);

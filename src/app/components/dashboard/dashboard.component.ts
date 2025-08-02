@@ -1,12 +1,49 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
+
+interface Alert {
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
+}
+
+interface SpendingTrend {
+  direction: 'up' | 'down' | 'stable';
+  percentage: number;
+  icon: string;
+}
+
+interface BudgetProgress {
+  percentage: number;
+  remaining: number;
+  status: 'good' | 'warning' | 'danger';
+}
+
+interface CategoryTrend {
+  direction: 'up' | 'down' | 'stable';
+  percentage: number;
+  icon: string;
+}
+
+interface MonthlyTrend {
+  name: string;
+  amount: number;
+  percentage: number;
+  color: string;
+}
+
+interface Insight {
+  title: string;
+  description: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -45,12 +82,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Weekly data
   weeklyTotal: number = 0;
   
+  // New features
+  showInsights: boolean = false;
+  
   private subscription: Subscription = new Subscription();
 
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -273,16 +314,310 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return totals;
   }
 
-  getMonthlyComparison(): { change: number; percentage: number; hasPreviousData: boolean } {
+  getMonthlyComparison(): { change: number; percentage: number; hasPreviousData: boolean; status: string } {
     const hasPreviousData = this.previousMonthTotal > 0;
+    let status = '';
+    
+    if (!hasPreviousData && this.currentMonthTotal > 0) {
+      status = 'First Month';
+    } else if (hasPreviousData) {
+      if (this.monthlyChange > 0) {
+        status = 'Increased';
+      } else if (this.monthlyChange < 0) {
+        status = 'Decreased';
+      } else {
+        status = 'No Change';
+      }
+    }
+    
     return {
       change: this.monthlyChange,
-      percentage: this.monthlyChangePercentage,
-      hasPreviousData: hasPreviousData
+      percentage: parseFloat(this.monthlyChangePercentage.toFixed(2)),
+      hasPreviousData: hasPreviousData,
+      status: status
     };
   }
 
   get monthlyTotal(): number {
     return this.currentMonthTotal;
+  }
+
+  // Get recent expenses sorted by amount in descending order
+  getRecentExpensesSorted(): Expense[] {
+    return [...this.expenses]
+      .sort((a, b) => b.amount - a.amount) // Sort by amount descending
+      .slice(0, 5);
+  }
+
+  // Get filtered expenses sorted by amount in descending order
+  getFilteredExpensesSorted(): Expense[] {
+    return this.getFilteredExpenses()
+      .sort((a, b) => b.amount - a.amount); // Sort by amount descending
+  }
+
+  // New enhanced functionality
+
+  // Smart Alerts
+  getAlerts(): Alert[] {
+    const alerts: Alert[] = [];
+    
+    // High spending alert - show actual percentage
+    if (this.previousMonthTotal > 0 && this.currentMonthTotal > this.previousMonthTotal) {
+      const increasePercentage = ((this.currentMonthTotal - this.previousMonthTotal) / this.previousMonthTotal) * 100;
+      if (increasePercentage > 10) {
+        alerts.push({
+          type: 'error',
+          message: `Your spending is ${increasePercentage.toFixed(2)}% higher than last month`,
+          icon: '📈'
+        });
+      }
+    }
+    
+    // Good spending alert - show actual percentage
+    if (this.previousMonthTotal > 0 && this.currentMonthTotal < this.previousMonthTotal) {
+      const decreasePercentage = ((this.previousMonthTotal - this.currentMonthTotal) / this.previousMonthTotal) * 100;
+      if (decreasePercentage > 10) {
+        alerts.push({
+          type: 'success',
+          message: `Great job! You've reduced spending by ${decreasePercentage.toFixed(2)}% compared to last month`,
+          icon: '🎉'
+        });
+      }
+    }
+    
+    return alerts;
+  }
+
+  // Spending Trends
+  getSpendingTrend(): SpendingTrend | null {
+    if (this.previousMonthTotal === 0) return null;
+    
+    const percentage = this.monthlyChangePercentage;
+    if (percentage > 10) {
+      return { direction: 'up', percentage: parseFloat(percentage.toFixed(2)), icon: '📈' };
+    } else if (percentage < -10) {
+      return { direction: 'down', percentage: parseFloat(Math.abs(percentage).toFixed(2)), icon: '📉' };
+    } else {
+      return { direction: 'stable', percentage: parseFloat(Math.abs(percentage).toFixed(2)), icon: '➡️' };
+    }
+  }
+
+  // Budget Progress - Return null since no budget is set
+  getBudgetProgress(): BudgetProgress | null {
+    return null; // No budget set by user
+  }
+
+  // Daily Average
+  getDailyAverage(): number | null {
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const daysPassed = new Date().getDate();
+    return this.currentMonthTotal / daysPassed;
+  }
+
+  // Potential Savings - Return 0 since no budget is set
+  getPotentialSavings(): number {
+    return 0; // No budget set by user
+  }
+
+  // Savings Tip - Return null since no budget is set
+  getSavingsTip(): string | null {
+    return null; // No budget set by user
+  }
+
+  // Category Percentage
+  getCategoryPercentage(categoryId: string): number {
+    const total = this.getFilteredTotal();
+    if (total === 0) return 0;
+    const categoryTotal = this.categoryTotals[categoryId] || 0;
+    return parseFloat(((categoryTotal / total) * 100).toFixed(2));
+  }
+
+  // Category Trend - Return null to hide trend percentages
+  getCategoryTrend(categoryId: string): CategoryTrend | null {
+    return null; // Hide trend percentages
+  }
+
+  // Insights
+  getTopSpendingCategory(): { name: string; amount: number } | null {
+    const sortedCategories = this.categoryBreakdown.sort((a, b) => b.amount - a.amount);
+    if (sortedCategories.length === 0) return null;
+    
+    return {
+      name: sortedCategories[0].categoryName,
+      amount: sortedCategories[0].amount
+    };
+  }
+
+  getSpendingPattern(): string {
+    const avgAmount = this.getFilteredTotal() / Math.max(this.getFilteredExpenses().length, 1);
+    if (avgAmount > 1000) return 'High Value';
+    if (avgAmount > 500) return 'Medium Value';
+    return 'Low Value';
+  }
+
+  getPatternDescription(): string {
+    const pattern = this.getSpendingPattern();
+    switch (pattern) {
+      case 'High Value': return 'Large individual expenses';
+      case 'Medium Value': return 'Moderate spending pattern';
+      case 'Low Value': return 'Small frequent expenses';
+      default: return 'Balanced spending';
+    }
+  }
+
+  getQuickWin(): Insight | null {
+    const topCategory = this.getTopSpendingCategory();
+    if (topCategory && topCategory.amount > this.monthlyTotal * 0.4) {
+      return {
+        title: `Reduce ${topCategory.name} spending`,
+        description: `This category represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your expenses`
+      };
+    }
+    return null;
+  }
+
+  getAchievement(): Insight | null {
+    if (this.currentMonthTotal < this.previousMonthTotal * 0.8 && this.previousMonthTotal > 0) {
+      return {
+        title: 'Spending Reduction Champion!',
+        description: 'You\'ve reduced spending by over 20% this month'
+      };
+    }
+    if (this.currentMonthTotal < this.monthlyTotal * 0.5) {
+      return {
+        title: 'Budget Master!',
+        description: 'You\'re under 50% of your monthly budget'
+      };
+    }
+    return null;
+  }
+
+  // Monthly Trends Chart
+  getMonthlyTrends(): MonthlyTrend[] {
+    const months = [];
+    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      
+      const monthExpenses = this.expenses.filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.getMonth() === date.getMonth() && 
+               expenseDate.getFullYear() === date.getFullYear();
+      });
+      
+      const amount = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+      const maxAmount = Math.max(...this.getMonthlyAmounts());
+      const percentage = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+      
+      months.push({
+        name: date.toLocaleDateString('en-US', { month: 'short' }),
+        amount,
+        percentage,
+        color: colors[i]
+      });
+    }
+    
+    return months;
+  }
+
+  private getMonthlyAmounts(): number[] {
+    const amounts = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      
+      const monthExpenses = this.expenses.filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.getMonth() === date.getMonth() && 
+               expenseDate.getFullYear() === date.getFullYear();
+      });
+      
+      amounts.push(monthExpenses.reduce((sum, expense) => sum + expense.amount, 0));
+    }
+    return amounts;
+  }
+
+  // Actions
+  exportData(): void {
+    const data = {
+      expenses: this.expenses,
+      categories: this.categories,
+      summary: {
+        totalSpent: this.totalSpent,
+        monthlyTotal: this.monthlyTotal,
+        weeklyTotal: this.weeklyTotal
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expense-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  viewAllExpenses(): void {
+    // Navigate to expenses page
+    this.router.navigate(['/expenses']);
+  }
+
+  editExpense(expense: Expense): void {
+    try {
+      // Simplified edit - description, amount, and date
+      const description = window.prompt('Description:', expense.description) || expense.description;
+      const amountStr = window.prompt('Amount (₹):', expense.amount.toString()) || expense.amount.toString();
+      const dateStr = window.prompt('Date (YYYY-MM-DD):', expense.date) || expense.date;
+      
+      // Validate amount
+      const amount = parseFloat(amountStr);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Invalid Amount! Please enter a valid number greater than 0.');
+        return;
+      }
+
+      // Validate date
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dateStr)) {
+        alert('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
+        return;
+      }
+
+      const updatedExpense: Expense = {
+        ...expense,
+        description,
+        amount: amount,
+        date: dateStr
+      };
+
+      this.expenseService.update(updatedExpense).then(() => {
+        console.log('Expense updated successfully');
+      }).catch(error => {
+        console.error('Error updating expense:', error);
+        alert('Error updating expense. Please try again.');
+      });
+      
+    } catch (error) {
+      console.error('Error editing expense:', error);
+      alert('Error editing expense. Please try again.');
+    }
+  }
+
+  deleteExpense(expense: Expense): void {
+    // Show confirmation dialog
+    const confirmDelete = window.confirm(`Are you sure you want to delete this expense?\n\nDescription: ${expense.description}\nAmount: ₹${expense.amount}\nDate: ${expense.date}`);
+    
+    if (confirmDelete) {
+      this.expenseService.delete(expense.id).then(() => {
+        console.log('Expense deleted successfully');
+        alert('Expense deleted successfully!');
+      }).catch(error => {
+        console.error('Error deleting expense:', error);
+        alert('Error deleting expense. Please try again.');
+      });
+    }
   }
 } 

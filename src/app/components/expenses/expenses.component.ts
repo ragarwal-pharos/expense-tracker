@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
@@ -32,6 +33,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     receiptNumber: ''
   };
 
+  // Separate property for amount input (string)
+  amountInput: string = '';
+
   // Filter properties
   filterAmount: string = '';
   filterCategory: string = '';
@@ -41,20 +45,43 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   sortBy: 'date' | 'amount' | 'description' = 'date';
   sortOrder: 'asc' | 'desc' = 'desc';
 
+  // Edit mode properties
+  isEditMode: boolean = false;
+  editingExpenseId: string = '';
+
   private subscription: Subscription = new Subscription();
 
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
+    // Check for edit mode from query parameters
+    this.route.queryParams.subscribe(params => {
+      const editId = params['edit'];
+      const mode = params['mode'];
+      
+      if (editId && mode === 'edit') {
+        this.isEditMode = true;
+        this.editingExpenseId = editId;
+        console.log('Edit mode activated for expense:', editId);
+      }
+    });
+
     // Subscribe to Firebase observables for real-time updates
     this.subscription.add(
       this.firebaseService.expenses$.subscribe(expenses => {
         this.expenses = expenses;
         console.log(`Received ${expenses.length} expenses from Firebase`);
+        
+        // If in edit mode, load the expense for editing
+        if (this.isEditMode && this.editingExpenseId) {
+          this.loadExpenseForEditing();
+        }
       })
     );
 
@@ -93,16 +120,43 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
   }
 
+  loadExpenseForEditing() {
+    const expense = this.expenses.find(e => e.id === this.editingExpenseId);
+    if (expense) {
+      this.newExpense = { ...expense };
+      this.amountInput = expense.amount.toString();
+      console.log('Loaded expense for editing:', expense);
+    } else {
+      console.error('Expense not found for editing:', this.editingExpenseId);
+      // Clear edit mode if expense not found
+      this.isEditMode = false;
+      this.editingExpenseId = '';
+    }
+  }
+
   async addExpense() {
     if (!this.validateExpense()) {
       return;
     }
 
-    
+    if (this.isEditMode) {
+      await this.saveExpenseChanges();
+    } else {
+      await this.createNewExpense();
+    }
+  }
+
+  async createNewExpense() {
     try {
+      const amount = parseFloat(this.amountInput);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0.');
+        return;
+      }
+
       const expenseData: Omit<Expense, 'id'> = {
         description: this.newExpense.description,
-        amount: parseFloat(this.newExpense.amount.toString()),
+        amount: amount,
         date: this.newExpense.date,
         categoryId: this.newExpense.categoryId,
         paymentMethod: this.newExpense.paymentMethod || 'Cash',
@@ -122,9 +176,45 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       this.checkAchievements();
     } catch (error) {
       console.error('Error adding expense:', error);
-    } finally {
-      
     }
+  }
+
+  async saveExpenseChanges() {
+    try {
+      const amount = parseFloat(this.amountInput);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0.');
+        return;
+      }
+
+      const updatedExpense: Expense = {
+        ...this.newExpense,
+        amount: amount
+      };
+
+      await this.expenseService.update(updatedExpense);
+      console.log('Expense updated successfully');
+      
+      // Exit edit mode
+      this.isEditMode = false;
+      this.editingExpenseId = '';
+      this.resetForm();
+      
+      // Clear query parameters
+      this.router.navigate(['/expenses']);
+    } catch (error) {
+      console.error('Error updating expense:', error);
+    }
+  }
+
+  cancelEdit() {
+    // Exit edit mode
+    this.isEditMode = false;
+    this.editingExpenseId = '';
+    this.resetForm();
+    
+    // Clear query parameters
+    this.router.navigate(['/expenses']);
   }
 
   async editExpense(expense: Expense) {
@@ -204,6 +294,16 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  isFormValid(): boolean {
+    const amount = parseFloat(this.amountInput);
+    return !!(this.newExpense.description?.trim() && 
+              this.amountInput && 
+              !isNaN(amount) && 
+              amount > 0 && 
+              this.newExpense.categoryId && 
+              this.newExpense.date);
+  }
+
   resetForm() {
     this.newExpense = {
       id: '',
@@ -218,6 +318,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       location: '',
       receiptNumber: ''
     };
+    this.amountInput = '';
   }
 
   getFilteredExpenses(): Expense[] {

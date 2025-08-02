@@ -16,8 +16,8 @@
   <div class="add-expense-card mb-4">
     <div class="card-header-modern">
       <div class="d-flex align-items-center">
-        <span class="header-icon-small me-2">➕</span>
-        <h5 class="mb-0">Add New Expense</h5>
+        <span class="header-icon-small me-2">{{ isEditMode ? '✏️' : '➕' }}</span>
+        <h5 class="mb-0">{{ isEditMode ? 'Edit Expense' : 'Add New Expense' }}</h5>
       </div>
     </div>
     <div class="card-body-modern">
@@ -32,7 +32,7 @@
                 class="form-control-modern" 
                 id="expenseAmount"
                 placeholder="0.00"
-                [(ngModel)]="newExpense.amount" 
+                [(ngModel)]="amountInput" 
                 name="amount" 
                 step="0.01"
                 min="0"
@@ -85,10 +85,20 @@
           </div>
           <div class="form-group button-group">
             <label class="form-label-modern">&nbsp;</label>
-            <button type="submit" class="btn-add-expense" [disabled]="!expenseForm.form.valid">
-              <span class="btn-icon">➕</span>
-              <span class="btn-text">Add Expense</span>
-            </button>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn-add-expense" [disabled]="!isFormValid()">
+                <span class="btn-icon">{{ isEditMode ? '💾' : '➕' }}</span>
+                <span class="btn-text">{{ isEditMode ? 'Save Changes' : 'Add Expense' }}</span>
+              </button>
+              <button 
+                *ngIf="isEditMode" 
+                type="button" 
+                class="btn-cancel"
+                (click)="cancelEdit()">
+                <span class="btn-icon">❌</span>
+                <span class="btn-text">Cancel</span>
+              </button>
+            </div>
           </div>
         </div>
       </form>

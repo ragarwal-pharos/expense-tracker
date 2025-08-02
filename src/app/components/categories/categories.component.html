@@ -10,6 +10,47 @@
     </div>
   </div>
 
+  <!-- Analytics Overview -->
+  <div class="analytics-section" *ngIf="categories.length > 0">
+    <div class="analytics-header">
+      <h3>📊 Category Analytics</h3>
+    </div>
+    
+    <div class="analytics-grid">
+      <div class="analytics-card">
+        <div class="analytics-icon">📂</div>
+        <div class="analytics-content">
+          <div class="analytics-value">{{ totalCategories }}</div>
+          <div class="analytics-label">Total Categories</div>
+        </div>
+      </div>
+      
+      <div class="analytics-card">
+        <div class="analytics-icon">✅</div>
+        <div class="analytics-content">
+          <div class="analytics-value">{{ usedCategories }}</div>
+          <div class="analytics-label">Used Categories</div>
+        </div>
+      </div>
+      
+      <div class="analytics-card">
+        <div class="analytics-icon">❌</div>
+        <div class="analytics-content">
+          <div class="analytics-value">{{ unusedCategories }}</div>
+          <div class="analytics-label">Unused Categories</div>
+        </div>
+      </div>
+      
+      <div class="analytics-card" *ngFor="let insight of getAnalyticsInsights()">
+        <div class="analytics-icon">{{ insight.icon }}</div>
+        <div class="analytics-content">
+          <div class="analytics-value">{{ insight.value }}</div>
+          <div class="analytics-label">{{ insight.title }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Category Card -->
   <div class="add-category-card">
     <div class="card-header-modern">
@@ -40,6 +81,24 @@
           </div>
           
           <div class="form-group">
+            <label for="categoryIcon" class="form-label">Icon</label>
+            <div class="icon-group">
+              <input 
+                type="text" 
+                id="categoryIcon"
+                [(ngModel)]="newCategory.icon" 
+                name="categoryIcon"
+                class="icon-input"
+                placeholder="📌"
+                maxlength="2">
+              <button type="button" class="btn-random-icon" (click)="setRandomIcon()">
+                <span class="random-icon">🎲</span>
+                Random
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-group">
             <label for="categoryColor" class="form-label">Color</label>
             <div class="color-group">
               <input 
@@ -66,6 +125,52 @@
     </div>
   </div>
 
+  <!-- Search and Filters -->
+  <div class="search-filters-section" *ngIf="categories.length > 0">
+    <div class="search-filters-header">
+      <h3>🔍 Search & Filter</h3>
+      <button class="btn-clear-filters" (click)="clearSearch()">Clear All</button>
+    </div>
+    
+    <div class="search-filters-grid">
+      <div class="search-group">
+        <label for="searchTerm">Search</label>
+        <input 
+          type="text" 
+          id="searchTerm"
+          [(ngModel)]="searchTerm" 
+          class="form-control"
+          placeholder="Search categories...">
+      </div>
+      
+      <div class="filter-group">
+        <label for="filterByUsage">Usage</label>
+        <select id="filterByUsage" [(ngModel)]="filterByUsage" class="form-select">
+          <option value="all">All Categories</option>
+          <option value="used">Used Only</option>
+          <option value="unused">Unused Only</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="sortBy">Sort By</label>
+        <select id="sortBy" [(ngModel)]="sortBy" class="form-select">
+          <option value="name">Name</option>
+          <option value="usage">Usage</option>
+          <option value="color">Color</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="sortOrder">Order</label>
+        <select id="sortOrder" [(ngModel)]="sortOrder" class="form-select">
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <!-- Categories Section -->
   <div class="categories-section">
     <div class="section-header">
@@ -73,7 +178,7 @@
         <span class="section-icon">📂</span>
         <h3 class="section-title">Your Categories</h3>
       </div>
-      <div class="category-count">{{ categories.length }} {{ categories.length === 1 ? 'Category' : 'Categories' }}</div>
+      <div class="category-count">{{ getFilteredCategories().length }} of {{ categories.length }} Categories</div>
     </div>
     
     <!-- Initialize Default Categories Button -->
@@ -85,22 +190,16 @@
       </button>
     </div>
     
-    <!-- Cleanup Duplicates Button -->
-    <div class="cleanup-section" style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; text-align: center;">
-      <p style="margin-bottom: 15px; color: #856404;">Found duplicate categories? Clean them up automatically.</p>
-      <button (click)="cleanupDuplicates()" style="padding: 10px 20px; background: #ffc107; color: #212529; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-        <span style="margin-right: 8px;">🧹</span>
-        Cleanup Duplicate Categories
-      </button>
-    </div>
-    
-    <div class="categories-grid" *ngIf="categories.length > 0">
-      <div class="category-card" *ngFor="let category of categories">
+    <div class="categories-grid" *ngIf="getFilteredCategories().length > 0">
+      <div class="category-card" *ngFor="let category of getFilteredCategories()">
         <div class="category-content">
           <div class="category-info">
             <div class="category-color-indicator" [ngStyle]="{'background': category.color}"></div>
             <div class="category-icon">{{category.icon}}</div>
             <div class="category-name">{{category.name}}</div>
+            <div class="category-usage">
+              {{ getCategoryUsage(category.id) }} expenses
+            </div>
           </div>
           
           <div class="category-actions">
@@ -115,6 +214,12 @@
           </div>
         </div>
       </div>
+    </div>
+    
+    <div class="empty-state" *ngIf="getFilteredCategories().length === 0 && categories.length > 0">
+      <div class="empty-icon">🔍</div>
+      <h6 class="empty-title">No Categories Found</h6>
+      <p class="empty-description">Try adjusting your search or filters.</p>
     </div>
     
     <div class="empty-state" *ngIf="categories.length === 0">

@@ -2,8 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
+import { ExpenseService } from '../../core/services/expense.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { Category } from '../../core/models/category.model';
+import { Expense } from '../../core/models/expense.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -15,6 +17,7 @@ import { Subscription } from 'rxjs';
 })
 export class CategoriesComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
+  expenses: Expense[] = [];
   newCategory: Category = {
     id: '',
     name: '',
@@ -22,18 +25,30 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     icon: '📌'
   };
 
-  // Filter and search
+  // Enhanced filtering and search
   searchTerm: string = '';
-  sortBy: 'name' | 'usage' = 'name';
+  filterByUsage: 'all' | 'used' | 'unused' = 'all';
+  sortBy: 'name' | 'usage' | 'color' = 'name';
   sortOrder: 'asc' | 'desc' = 'asc';
+  showAdvancedOptions: boolean = false;
 
   // Validation properties
   isDuplicateCategory: boolean = false;
+  isEditMode: boolean = false;
+  editingCategoryId: string = '';
+
+  // Analytics
+  totalCategories: number = 0;
+  usedCategories: number = 0;
+  unusedCategories: number = 0;
+  mostUsedCategory: Category | null = null;
+  leastUsedCategory: Category | null = null;
 
   private subscription: Subscription = new Subscription();
 
   constructor(
     private categoryService: CategoryService,
+    private expenseService: ExpenseService,
     private firebaseService: FirebaseService
   ) {}
 
@@ -42,7 +57,16 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.firebaseService.categories$.subscribe(categories => {
         this.categories = categories;
+        this.calculateAnalytics();
         console.log(`Received ${categories.length} categories from Firebase`);
+      })
+    );
+
+    this.subscription.add(
+      this.firebaseService.expenses$.subscribe(expenses => {
+        this.expenses = expenses;
+        this.calculateAnalytics();
+        console.log(`Received ${expenses.length} expenses from Firebase`);
       })
     );
 
@@ -56,23 +80,50 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   async loadData() {
     try {
       this.categories = await this.categoryService.getAll();
-      // Removed notificationService.success
+      this.expenses = await this.expenseService.getAll();
+      this.calculateAnalytics();
     } catch (error) {
-      // Removed notificationService.handleError
-    } finally {
-      // Removed loadingService.hide();
+      console.error('Error loading data:', error);
     }
+  }
+
+  calculateAnalytics() {
+    this.totalCategories = this.categories.length;
+    
+    // Calculate usage statistics
+    const categoryUsage = this.getCategoryUsageStats();
+    this.usedCategories = Object.keys(categoryUsage).length;
+    this.unusedCategories = this.totalCategories - this.usedCategories;
+    
+    // Find most and least used categories
+    if (Object.keys(categoryUsage).length > 0) {
+      const sortedUsage = Object.entries(categoryUsage).sort((a, b) => b[1] - a[1]);
+      this.mostUsedCategory = this.categories.find(cat => cat.id === sortedUsage[0][0]) || null;
+      this.leastUsedCategory = this.categories.find(cat => cat.id === sortedUsage[sortedUsage.length - 1][0]) || null;
+    }
+  }
+
+  getCategoryUsageStats(): { [key: string]: number } {
+    const usage: { [key: string]: number } = {};
+    
+    // Count how many times each category is used in expenses
+    this.expenses.forEach(expense => {
+      if (expense.categoryId) {
+        usage[expense.categoryId] = (usage[expense.categoryId] || 0) + 1;
+      }
+    });
+    
+    return usage;
   }
 
   async initializeDefaultCategories() {
     try {
       await this.categoryService.forceInitializeDefaultCategories();
       await this.loadData();
-      // Removed notificationService.success
+      alert('Default categories initialized successfully!');
     } catch (error) {
-      // Removed notificationService.handleError
-    } finally {
-      // Removed loadingService.hide();
+      console.error('Error initializing default categories:', error);
+      alert('Error initializing default categories. Please try again.');
     }
   }
 
@@ -92,67 +143,57 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       console.log(`Category added with Firebase ID: ${id}`);
       
       this.resetForm();
-      // Removed notificationService.categoryAdded
+      alert('Category added successfully!');
     } catch (error) {
-      // Removed notificationService.handleError
-    } finally {
-      // Removed loadingService.hide();
+      console.error('Error adding category:', error);
+      alert('Error adding category. Please try again.');
     }
   }
 
   async updateCategory(category: Category) {
     try {
-      console.log(`Updating category: ${category.name} (ID: ${category.id}, length: ${category.id.length})`);
-      
-      // Simplified edit - only name and color
-      const name = window.prompt('Category name:', category.name) || category.name;
-      const color = window.prompt('Category color (hex):', category.color) || category.color;
+      const newName = window.prompt('Enter new category name:', category.name);
+      if (!newName || newName.trim() === '') {
+        return;
+      }
 
-      // Validate inputs
-      if (!name.trim()) {
-        // Removed notificationService.error
+      const newColor = window.prompt('Enter new color (hex code):', category.color || '#ff6b9d');
+      if (!newColor) {
+        return;
+      }
+
+      const newIcon = window.prompt('Enter new icon (emoji):', category.icon || '📌');
+      if (!newIcon) {
         return;
       }
 
       const updatedCategory: Category = {
         ...category,
-        name: name.trim(),
-        color: color
+        name: newName.trim(),
+        color: newColor,
+        icon: newIcon
       };
 
-      console.log(`Sending update to Firebase for category ID: ${updatedCategory.id}`);
       await this.categoryService.update(updatedCategory);
       console.log('Category updated successfully');
-      
-      await this.loadData(); // Reload data after updating
-      
-      // Removed notificationService.categoryUpdated
+      alert('Category updated successfully!');
     } catch (error) {
       console.error('Error updating category:', error);
-      // Removed notificationService.handleError
-    } finally {
-      // Removed loadingService.hide();
+      alert('Error updating category. Please try again.');
     }
   }
 
   async deleteCategory(category: Category) {
-    const confirmed = window.confirm(`Are you sure you want to delete "${category.name}"? This will also delete all associated expenses.`);
+    const confirmed = window.confirm(`Are you sure you want to delete "${category.name}"?\n\nThis will also remove all expenses in this category.`);
     if (!confirmed) return;
 
     try {
-      console.log(`Deleting category: ${category.name} (ID: ${category.id})`);
-      
       await this.categoryService.delete(category.id);
       console.log('Category deleted successfully');
-      
-      await this.loadData(); // Reload data after deleting
-      
-      // Removed notificationService.categoryDeleted
+      alert('Category deleted successfully!');
     } catch (error) {
       console.error('Error deleting category:', error);
-      // Removed notificationService.handleError
-    } finally {
-      // Removed loadingService.hide();
+      alert('Error deleting category. Please try again.');
     }
   }
 
@@ -162,22 +203,23 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   validateCategory(): boolean {
     if (!this.newCategory.name?.trim()) {
-      // Removed notificationService.error
+      alert('Please enter a category name.');
       return false;
     }
 
-    // Check for duplicate names
-    const existingCategory = this.categories.find(cat => 
-      cat.name.toLowerCase() === this.newCategory.name.toLowerCase()
+    // Check for duplicates
+    const isDuplicate = this.categories.some(cat => 
+      cat.name.toLowerCase().trim() === this.newCategory.name.toLowerCase().trim() &&
+      cat.id !== this.editingCategoryId
     );
-    
-    this.isDuplicateCategory = !!existingCategory;
-    
-    if (this.isDuplicateCategory) {
-      // Removed notificationService.error
+
+    if (isDuplicate) {
+      this.isDuplicateCategory = true;
+      alert('Category name already exists!');
       return false;
     }
 
+    this.isDuplicateCategory = false;
     return true;
   }
 
@@ -192,20 +234,32 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       color: '#ff6b9d',
       icon: '📌'
     };
+    this.isEditMode = false;
+    this.editingCategoryId = '';
     this.clearValidationErrors();
   }
 
   getFilteredCategories(): Category[] {
     let filtered = [...this.categories];
-
-    // Filter by search term
+    
+    // Search filter
     if (this.searchTerm) {
-      filtered = filtered.filter(cat => 
-        cat.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (cat.icon || '').includes(this.searchTerm)
+      filtered = filtered.filter(category => 
+        category.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        (category.icon || '').includes(this.searchTerm)
       );
     }
-
+    
+    // Usage filter
+    if (this.filterByUsage !== 'all') {
+      const usageStats = this.getCategoryUsageStats();
+      if (this.filterByUsage === 'used') {
+        filtered = filtered.filter(category => usageStats[category.id] > 0);
+      } else if (this.filterByUsage === 'unused') {
+        filtered = filtered.filter(category => !usageStats[category.id] || usageStats[category.id] === 0);
+      }
+    }
+    
     // Sort
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
@@ -216,28 +270,32 @@ export class CategoriesComponent implements OnInit, OnDestroy {
           bValue = b.name.toLowerCase();
           break;
         case 'usage':
-          aValue = this.getCategoryUsage(a.id);
-          bValue = this.getCategoryUsage(b.id);
+          const usageStats = this.getCategoryUsageStats();
+          aValue = usageStats[a.id] || 0;
+          bValue = usageStats[b.id] || 0;
+          break;
+        case 'color':
+          aValue = a.color || '';
+          bValue = b.color || '';
           break;
         default:
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
       }
-
+      
       if (this.sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
       } else {
-        return aValue < bValue ? 1 : -1;
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
-
+    
     return filtered;
   }
 
   getCategoryUsage(categoryId: string): number {
-    // This would typically come from the expense service
-    // For now, return a random number for demonstration
-    return Math.floor(Math.random() * 100);
+    const usageStats = this.getCategoryUsageStats();
+    return usageStats[categoryId] || 0;
   }
 
   clearSearch() {
@@ -245,24 +303,21 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 
-  // Color presets for easy selection
   getColorPresets(): string[] {
     return [
-      '#ff6b9d', '#4ecdc4', '#45b7d1', '#96ceb4', '#ff8e53',
-      '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#34495e',
-      '#1abc9c', '#e67e22', '#3498db', '#8e44ad', '#16a085'
+      '#ff6b9d', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57',
+      '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+      '#ff6348', '#2ed573', '#1e90ff', '#ffa502', '#ff3838'
     ];
   }
 
-  // Icon presets for easy selection
   getIconPresets(): string[] {
     return [
-      '🍽️', '🚗', '🛍️', '🎬', '💡', '🏥', '📚', '🏠', '🛡️', '💰',
-      '🍕', '☕', '🎵', '🎮', '🏃', '🧘', '📱', '💻', '📷', '🎨',
-      '🌱', '🐕', '🐱', '🦜', '🐠', '🌺', '🌲', '🌊', '⛰️', '🏖️'
+      '📌', '🍔', '🚗', '🏠', '💊', '🎬', '🛒', '✈️', '🎓', '💻',
+      '📱', '🎮', '🏋️', '🎨', '📚', '🎵', '🎪', '🏥', '💇', '💄'
     ];
   }
 
@@ -276,12 +331,16 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   setRandomColor() {
     const colors = this.getColorPresets();
-    const randomIndex = Math.floor(Math.random() * colors.length);
-    this.newCategory.color = colors[randomIndex];
+    this.newCategory.color = colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  setRandomIcon() {
+    const icons = this.getIconPresets();
+    this.newCategory.icon = icons[Math.floor(Math.random() * icons.length)];
   }
 
   getCategoryCount(): number {
-    return this.getFilteredCategories().length;
+    return this.categories.length;
   }
 
   getTotalCategories(): number {
@@ -289,35 +348,72 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   getMostUsedCategory(): Category | null {
-    if (this.categories.length === 0) return null;
-    
-    return this.categories.reduce((mostUsed, current) => {
-      const mostUsedUsage = this.getCategoryUsage(mostUsed.id);
-      const currentUsage = this.getCategoryUsage(current.id);
-      return currentUsage > mostUsedUsage ? current : mostUsed;
-    });
+    return this.mostUsedCategory;
   }
 
   getLeastUsedCategory(): Category | null {
-    if (this.categories.length === 0) return null;
-    
-    return this.categories.reduce((leastUsed, current) => {
-      const leastUsedUsage = this.getCategoryUsage(leastUsed.id);
-      const currentUsage = this.getCategoryUsage(current.id);
-      return currentUsage < leastUsedUsage ? current : leastUsed;
-    });
+    return this.leastUsedCategory;
   }
 
   async cleanupDuplicates() {
+    const confirmed = window.confirm('This will remove duplicate categories. Continue?');
+    if (!confirmed) return;
+
     try {
-      console.log('Starting duplicate cleanup...');
-      await this.categoryService.triggerDuplicateCleanup();
-      await this.loadData();
-      console.log('Duplicate cleanup completed');
-      alert('Duplicate categories have been cleaned up successfully!');
+      const uniqueCategories = this.categories.filter((category, index, self) => 
+        index === self.findIndex(c => c.name.toLowerCase() === category.name.toLowerCase())
+      );
+
+      // Delete all categories and re-add unique ones
+      for (const category of this.categories) {
+        await this.categoryService.delete(category.id);
+      }
+
+      for (const category of uniqueCategories) {
+        await this.categoryService.add({
+          name: category.name,
+          color: category.color || '#ff6b9d',
+          icon: category.icon || '📌'
+        });
+      }
+
+      alert('Duplicate categories cleaned up successfully!');
     } catch (error) {
-      console.error('Error during duplicate cleanup:', error);
-      alert('Error cleaning up duplicate categories. Please try again.');
+      console.error('Error cleaning up duplicates:', error);
+      alert('Error cleaning up duplicates. Please try again.');
     }
+  }
+
+  getAnalyticsInsights(): any[] {
+    const insights = [];
+    
+    if (this.mostUsedCategory) {
+      insights.push({
+        type: 'most-used',
+        title: 'Most Used Category',
+        value: this.mostUsedCategory.name,
+        icon: this.mostUsedCategory.icon,
+        color: this.mostUsedCategory.color
+      });
+    }
+    
+    if (this.leastUsedCategory) {
+      insights.push({
+        type: 'least-used',
+        title: 'Least Used Category',
+        value: this.leastUsedCategory.name,
+        icon: this.leastUsedCategory.icon,
+        color: this.leastUsedCategory.color
+      });
+    }
+    
+    insights.push({
+      type: 'stats',
+      title: 'Category Statistics',
+      value: `${this.usedCategories} used, ${this.unusedCategories} unused`,
+      icon: '📊'
+    });
+    
+    return insights;
   }
 } 
