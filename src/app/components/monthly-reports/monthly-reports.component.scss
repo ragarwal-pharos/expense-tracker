@@ -9,8 +9,8 @@
 
 /* Page Header */
 .page-header {
-  background: white;
-  color: #2c3e50;
+  background: linear-gradient(135deg, #9b6b9b 0%, #b76bb7 100%);
+  color: white;
   padding: 2rem;
   border-radius: 12px;
   margin-bottom: 1.5rem;
@@ -44,13 +44,13 @@
   font-size: 1.75rem;
   font-weight: 700;
   margin: 0 0 0.25rem 0;
-  color: #2c3e50;
+  color: white;
 }
 
 .page-description {
   font-size: 1rem;
   margin: 0;
-  color: #6c757d;
+  color: #2c3e50;
 }
 
 /* Analytics Section */
@@ -63,8 +63,8 @@
 }
 
 .analytics-header {
-  background: #f8f9fa;
-  color: #2c3e50;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%);
+  color: white;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
@@ -157,8 +157,8 @@
 }
 
 .overview-header {
-  background: #f8f9fa;
-  color: #2c3e50;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%);
+  color: white;
   padding: 1.5rem;
   display: flex;
   align-items: center;
@@ -239,32 +239,43 @@
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px 8px 0 0;
 }
 
 .filters-header h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
-  color: #2c3e50;
+  color: white;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .btn-clear-filters {
-  background: #6c757d;
+  background: linear-gradient(135deg, #ffd23f 0%, #3ec300 100%);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 5px 20px rgba(255, 210, 63, 0.3);
+  height: 50px;
+  white-space: nowrap;
 }
 
 .btn-clear-filters:hover {
-  background: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 210, 63, 0.4);
 }
 
 .filters-grid {
@@ -313,8 +324,8 @@
 }
 
 .section-header {
-  background: #f8f9fa;
-  color: #2c3e50;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%);
+  color: white;
   padding: 1.5rem;
   display: flex;
   align-items: center;
@@ -326,6 +337,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  color: white;
 }
 
 .section-header p {
@@ -453,8 +465,8 @@
 }
 
 .detailed-header {
-  background: #f8f9fa;
-  color: #2c3e50;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%);
+  color: white;
   padding: 1.5rem;
   display: flex;
   align-items: center;
@@ -482,6 +494,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  color: white;
 }
 
 .detailed-content {

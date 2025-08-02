@@ -10,12 +10,12 @@
 /* Enhanced Visual Design */
 app-dashboard .page-header,
 .dashboard-component .page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #9b6b9b 0%, #b76bb7 100%) !important;
   color: white !important;
   padding: 2rem !important;
   border-radius: 16px !important;
   margin-bottom: 2rem !important;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(155, 107, 155, 0.3) !important;
   
   .page-title {
     font-size: 2.5rem !important;
@@ -25,7 +25,7 @@ app-dashboard .page-header,
   }
   
   .text-muted {
-    color: rgba(255, 255, 255, 0.8) !important;
+    color: #2c3e50 !important;
     font-size: 1.1rem !important;
   }
   
@@ -33,30 +33,36 @@ app-dashboard .page-header,
     display: flex !important;
     gap: 0.75rem !important;
     
-    .btn {
-      background: rgba(255, 255, 255, 0.2) !important;
-      border: 2px solid rgba(255, 255, 255, 0.3) !important;
-      color: white !important;
-      font-weight: 600 !important;
-      padding: 0.75rem 1.5rem !important;
-      border-radius: 12px !important;
-      transition: all 0.3s ease !important;
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.3) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2) !important;
-      }
-      
-      &.btn-outline-primary {
-        background: transparent;
-        border-color: rgba(255, 255, 255, 0.5);
-        
-        &:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
-      }
-    }
+         .btn {
+       background: rgba(255, 255, 255, 0.2) !important;
+       border: 2px solid rgba(255, 255, 255, 0.3) !important;
+       color: white !important;
+       font-weight: 600 !important;
+       padding: 0.75rem 1.5rem !important;
+       border-radius: 12px !important;
+       transition: all 0.3s ease !important;
+       white-space: normal !important;
+       word-wrap: break-word !important;
+       word-break: break-word !important;
+       min-height: 44px !important;
+       max-width: 150px !important;
+       text-align: center !important;
+       
+       &:hover {
+         background: rgba(255, 255, 255, 0.3) !important;
+         transform: translateY(-2px) !important;
+         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2) !important;
+       }
+       
+       &.btn-outline-primary {
+         background: transparent;
+         border-color: rgba(255, 255, 255, 0.5);
+         
+         &:hover {
+           background: rgba(255, 255, 255, 0.1);
+         }
+       }
+     }
   }
 }
 
@@ -1102,28 +1108,30 @@ app-dashboard .monthly-comparison,
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
     }
     
-    .comparison-header {
-      display: flex !important;
-      justify-content: space-between !important;
-      align-items: center !important;
-      margin-bottom: 1.5rem !important;
-      padding-bottom: 1rem !important;
-      border-bottom: 2px solid #f8f9fa !important;
+         .comparison-header {
+       display: flex !important;
+       justify-content: space-between !important;
+       align-items: center !important;
+       margin-bottom: 1.5rem !important;
+       padding: 1.5rem !important;
+       background: linear-gradient(135deg, #ff6b9d 0%, #ffa726 50%, #ffeb3b 100%) !important;
+       border-radius: 12px 12px 0 0 !important;
+       border-bottom: 2px solid #f8f9fa !important;
       
-      h3 {
-        font-size: 1.5rem !important;
-        font-weight: 700 !important;
-        color: #2c3e50 !important;
-        margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-        
-        &::before {
-          content: '📊' !important;
-          font-size: 1.2rem !important;
-        }
-      }
+             h3 {
+         font-size: 1.5rem !important;
+         font-weight: 700 !important;
+         color: white !important;
+         margin: 0 !important;
+         display: flex !important;
+         align-items: center !important;
+         gap: 0.5rem !important;
+         
+         &::before {
+           content: '📊' !important;
+           font-size: 1.2rem !important;
+         }
+       }
       
       .comparison-period {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
@@ -1292,14 +1300,20 @@ app-dashboard .monthly-comparison,
     padding: 1rem !important;
     
     .quick-actions {
-      flex-direction: column !important;
-      gap: 0.5rem !important;
+      flex-direction: row !important;
+      gap: 0.4rem !important;
+      width: auto !important;
       
-      .btn {
-        padding: 0.6rem 1rem !important;
-        font-size: 0.85rem !important;
-        min-height: 40px !important;
-      }
+                           .btn {
+          padding: 0.4rem 0.8rem !important;
+          font-size: 0.75rem !important;
+          white-space: normal !important;
+          word-wrap: break-word !important;
+          word-break: break-word !important;
+          min-height: 32px !important;
+          max-width: 100px !important;
+          text-align: center !important;
+        }
     }
   }
   
@@ -1362,18 +1376,21 @@ app-dashboard .monthly-comparison,
     
     .quick-actions {
       flex-direction: row !important;
-      gap: 0.75rem !important;
-      width: 100% !important;
+      gap: 0.5rem !important;
+      width: auto !important;
       justify-content: flex-start !important;
       
-      .btn {
-        padding: 0.75rem 1.5rem !important;
-        font-size: 0.9rem !important;
-        flex: 1 !important;
-        text-align: center !important;
-        white-space: nowrap !important;
-        min-height: 44px !important;
-      }
+             .btn {
+         padding: 0.5rem 1rem !important;
+         font-size: 0.8rem !important;
+         flex: none !important;
+         text-align: center !important;
+         white-space: normal !important;
+         word-wrap: break-word !important;
+         word-break: break-word !important;
+         min-height: 36px !important;
+         max-width: 120px !important;
+       }
     }
   }
   
