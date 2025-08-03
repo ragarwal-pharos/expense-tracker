@@ -276,7 +276,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    if (!this.newExpense.amount || this.newExpense.amount <= 0) {
+    const amount = parseFloat(this.amountInput);
+    if (isNaN(amount) || amount <= 0) {
       alert('Please enter a valid amount greater than 0.');
       return false;
     }
