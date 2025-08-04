@@ -418,6 +418,116 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.newExpense.categoryId = '';
   }
 
+  // Amount input validation methods
+  onAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+    
+    // Remove all non-numeric characters except decimal point
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Ensure only one decimal point
+    const parts = value.split('.');
+    if (parts.length > 2) {
+      value = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Limit to 2 decimal places
+    if (parts.length === 2 && parts[1].length > 2) {
+      value = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Update the input value
+    input.value = value;
+    this.amountInput = value;
+  }
+
+  onAmountKeypress(event: KeyboardEvent): void {
+    const key = event.key;
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    
+    // Allow: backspace, delete, tab, escape, enter, and navigation keys
+    if ([8, 9, 27, 13, 46].indexOf(event.keyCode) !== -1 ||
+        // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (event.keyCode === 65 && event.ctrlKey === true) ||
+        (event.keyCode === 67 && event.ctrlKey === true) ||
+        (event.keyCode === 86 && event.ctrlKey === true) ||
+        (event.keyCode === 88 && event.ctrlKey === true) ||
+        // Allow navigation keys
+        (event.keyCode >= 35 && event.keyCode <= 39)) {
+      return;
+    }
+    
+    // Allow only numbers and decimal point
+    if ((key >= '0' && key <= '9') || key === '.') {
+      // Prevent multiple decimal points
+      if (key === '.' && value.includes('.')) {
+        event.preventDefault();
+        return;
+      }
+      return;
+    }
+    
+    // Prevent all other characters
+    event.preventDefault();
+  }
+
+  // Filter amount input validation methods
+  onFilterAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+    
+    // Remove all non-numeric characters except decimal point
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Ensure only one decimal point
+    const parts = value.split('.');
+    if (parts.length > 2) {
+      value = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Limit to 2 decimal places
+    if (parts.length === 2 && parts[1].length > 2) {
+      value = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Update the input value
+    input.value = value;
+    this.filterAmount = value;
+  }
+
+  onFilterAmountKeypress(event: KeyboardEvent): void {
+    const key = event.key;
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    
+    // Allow: backspace, delete, tab, escape, enter, and navigation keys
+    if ([8, 9, 27, 13, 46].indexOf(event.keyCode) !== -1 ||
+        // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (event.keyCode === 65 && event.ctrlKey === true) ||
+        (event.keyCode === 67 && event.ctrlKey === true) ||
+        (event.keyCode === 86 && event.ctrlKey === true) ||
+        (event.keyCode === 88 && event.ctrlKey === true) ||
+        // Allow navigation keys
+        (event.keyCode >= 35 && event.keyCode <= 39)) {
+      return;
+    }
+    
+    // Allow only numbers and decimal point
+    if ((key >= '0' && key <= '9') || key === '.') {
+      // Prevent multiple decimal points
+      if (key === '.' && value.includes('.')) {
+        event.preventDefault();
+        return;
+      }
+      return;
+    }
+    
+    // Prevent all other characters
+    event.preventDefault();
+  }
+
   getTotalAmount(): number {
     return this.getFilteredExpenses().reduce((sum, e) => sum + e.amount, 0);
   }

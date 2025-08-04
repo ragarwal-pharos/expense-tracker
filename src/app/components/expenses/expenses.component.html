@@ -28,14 +28,14 @@
             <div class="input-group-modern">
               <span class="input-group-text-modern">₹</span>
               <input 
-                type="number" 
+                type="text" 
                 class="form-control-modern" 
                 id="expenseAmount"
                 placeholder="0.00"
                 [(ngModel)]="amountInput" 
                 name="amount" 
-                step="0.01"
-                min="0"
+                (input)="onAmountInput($event)"
+                (keypress)="onAmountKeypress($event)"
                 required>
             </div>
           </div>
@@ -132,7 +132,7 @@
         </div>
         <div class="filter-group">
           <label for="filterAmount" class="form-label-modern">Min Amount</label>
-          <input type="number" class="form-control-modern" id="filterAmount" [(ngModel)]="filterAmount" placeholder="0">
+          <input type="text" class="form-control-modern" id="filterAmount" [(ngModel)]="filterAmount" placeholder="0" (input)="onFilterAmountInput($event)" (keypress)="onFilterAmountKeypress($event)">
         </div>
         <div class="filter-group button-group">
           <label class="form-label-modern">&nbsp;</label>
