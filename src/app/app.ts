@@ -65,7 +65,7 @@ import { take, filter } from 'rxjs/operators';
       align-items: center;
       justify-content: space-between;
       padding: 1rem 1.5rem;
-      max-width: 1200px;
+      // max-width: 1200px;
       margin: 0 auto;
     }
 
@@ -319,7 +319,7 @@ import { take, filter } from 'rxjs/operators';
     }
 
     .content-container {
-      max-width: 1200px;
+      // max-width: 1200px;
       margin: 0 auto;
       padding: 2rem 1.5rem;
     }
