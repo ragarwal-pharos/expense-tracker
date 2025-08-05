@@ -12,10 +12,7 @@
         </div>
       </div>
       <div class="quick-actions">
-        <button class="btn btn-primary btn-sm me-2" (click)="exportData()">
-          📊 Export Data
-        </button>
-        <button class="btn btn-outline-primary btn-sm" (click)="showInsights = !showInsights">
+        <button class="btn btn-outline-primary btn-sm" (click)="toggleInsights()">
           💡 {{ showInsights ? 'Hide' : 'Show' }} Insights
         </button>
       </div>
@@ -120,7 +117,7 @@
   </div>
 
   <!-- Spending Insights -->
-  <div class="insights-section mb-4" *ngIf="showInsights">
+  <div class="insights-section mb-4" *ngIf="showInsights" id="insights-section">
     <div class="insights-card">
       <div class="insights-header">
         <h3>💡 Smart Insights</h3>

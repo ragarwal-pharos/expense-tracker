@@ -554,24 +554,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Actions
-  exportData(): void {
-    const data = {
-      expenses: this.expenses,
-      categories: this.categories,
-      summary: {
-        totalSpent: this.totalSpent,
-        monthlyTotal: this.monthlyTotal,
-        weeklyTotal: this.weeklyTotal
-      }
-    };
+  toggleInsights(): void {
+    this.showInsights = !this.showInsights;
     
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `expense-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // Scroll to insights section if showing insights
+    if (this.showInsights) {
+      setTimeout(() => {
+        const insightsSection = document.getElementById('insights-section');
+        if (insightsSection) {
+          insightsSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100); // Small delay to ensure the section is rendered
+    }
   }
 
   viewAllExpenses(): void {

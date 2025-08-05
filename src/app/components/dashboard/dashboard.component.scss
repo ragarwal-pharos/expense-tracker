@@ -17,6 +17,13 @@ app-dashboard .page-header,
   margin-bottom: 2rem !important;
   box-shadow: 0 8px 32px rgba(155, 107, 155, 0.3) !important;
   
+  .d-flex {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 1rem !important;
+  }
+  
   .page-title {
     font-size: 2.5rem !important;
     font-weight: 700 !important;
@@ -31,6 +38,8 @@ app-dashboard .page-header,
   .quick-actions {
     display: flex !important;
     gap: 0.75rem !important;
+    justify-content: flex-end !important;
+    flex: 0 0 auto !important;
     
          .btn {
        background: rgba(255, 255, 255, 0.2) !important;
@@ -1298,10 +1307,20 @@ app-dashboard .monthly-comparison,
   .page-header {
     padding: 1rem !important;
     
+    .d-flex {
+      flex-direction: column !important;
+      gap: 1rem !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+    }
+    
     .quick-actions {
       flex-direction: row !important;
       gap: 0.4rem !important;
-      width: auto !important;
+      width: 100% !important;
+      justify-content: center !important;
+      flex: 0 0 auto !important;
+      display: flex !important;
       
                            .btn {
           padding: 0.4rem 0.8rem !important;
@@ -1312,6 +1331,8 @@ app-dashboard .monthly-comparison,
           min-height: 32px !important;
           max-width: 100px !important;
           text-align: center !important;
+          flex: 0 0 auto !important;
+          margin: 0 auto !important;
         }
     }
   }
@@ -1370,26 +1391,30 @@ app-dashboard .monthly-comparison,
     .d-flex {
       flex-direction: column !important;
       gap: 1rem !important;
-      align-items: flex-start !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
     }
     
     .quick-actions {
       flex-direction: row !important;
       gap: 0.5rem !important;
-      width: auto !important;
-      justify-content: flex-start !important;
+      width: 100% !important;
+      justify-content: center !important;
+      flex: 0 0 auto !important;
+      display: flex !important;
       
-             .btn {
-         padding: 0.5rem 1rem !important;
-         font-size: 0.8rem !important;
-         flex: none !important;
-         text-align: center !important;
-         white-space: normal !important;
-         word-wrap: break-word !important;
-         word-break: break-word !important;
-         min-height: 36px !important;
-         max-width: 120px !important;
-       }
+           .btn {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.8rem !important;
+        flex: 0 0 auto !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+        min-height: 36px !important;
+        max-width: 120px !important;
+        margin: 0 auto !important;
+      }
     }
   }
   
