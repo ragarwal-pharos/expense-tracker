@@ -8,7 +8,7 @@
         </div>
         <div>
           <h1 class="page-title mb-1">Financial Dashboard</h1>
-          <p class="text-muted mb-0">Your complete financial overview</p>
+          <p class="mb-0">Your complete financial overview</p>
         </div>
       </div>
       <div class="quick-actions">
@@ -274,8 +274,8 @@
         </div>
         
         <div class="card-body">
-          <div class="expenses-list" *ngIf="getFilteredExpensesSorted().length > 0">
-            <div class="expense-item" *ngFor="let expense of getFilteredExpensesSorted().slice(0, 5)">
+          <div class="expenses-list" *ngIf="getRecentExpensesSorted().length > 0">
+            <div class="expense-item" *ngFor="let expense of getRecentExpensesSorted()">
               <div class="expense-info">
                 <div class="expense-icon" [style.background-color]="getCategoryColor(expense.categoryId)">
                   {{ getCategoryIcon(expense.categoryId) }}
@@ -305,7 +305,7 @@
             </div>
           </div>
           
-                     <div class="empty-state" *ngIf="getFilteredExpensesSorted().length === 0">
+                     <div class="empty-state" *ngIf="getRecentExpensesSorted().length === 0">
              <div class="empty-icon">📝</div>
              <h6>No Expenses Found</h6>
              <p>Add some expenses to see them here!</p>

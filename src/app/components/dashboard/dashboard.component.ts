@@ -342,10 +342,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.currentMonthTotal;
   }
 
-  // Get recent expenses sorted by amount in descending order
+  // Get recent expenses sorted by date (most recent first)
   getRecentExpensesSorted(): Expense[] {
     return [...this.expenses]
-      .sort((a, b) => b.amount - a.amount) // Sort by amount descending
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by date descending
       .slice(0, 5);
   }
 
