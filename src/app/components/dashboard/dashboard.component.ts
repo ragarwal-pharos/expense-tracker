@@ -355,6 +355,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.amount - a.amount); // Sort by amount descending
   }
 
+  // Get categories sorted by total expense amount in descending order (only categories with expenses)
+  getCategoriesSortedByExpense(): Category[] {
+    return [...this.categories]
+      .filter(category => {
+        const total = this.categoryTotals[category.id] || 0;
+        return total > 0; // Only include categories with expenses
+      })
+      .sort((a, b) => {
+        const aTotal = this.categoryTotals[a.id] || 0;
+        const bTotal = this.categoryTotals[b.id] || 0;
+        return bTotal - aTotal; // Sort by amount descending
+      });
+  }
+
   // New enhanced functionality
 
   // Smart Alerts

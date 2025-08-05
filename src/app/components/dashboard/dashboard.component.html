@@ -224,9 +224,9 @@
         </div>
         
         <div class="card-body">
-                     <div class="category-list" *ngIf="categories.length > 0">
+                     <div class="category-list" *ngIf="getCategoriesSortedByExpense().length > 0">
              <div class="category-item" 
-                  *ngFor="let category of categories; let i = index"
+                  *ngFor="let category of getCategoriesSortedByExpense(); let i = index"
                   [class.empty-category]="categoryTotals[category?.id || ''] === 0">
                <div class="category-info">
                  <div class="category-icon" [style.background-color]="category?.color || '#999'">
@@ -248,7 +248,7 @@
              </div>
            </div>
            
-           <div class="empty-state" *ngIf="categories.length === 0">
+           <div class="empty-state" *ngIf="getCategoriesSortedByExpense().length === 0">
              <div class="empty-icon">🏷️</div>
              <h6>No Categories Found</h6>
              <p>Add some categories to start tracking your expenses!</p>
