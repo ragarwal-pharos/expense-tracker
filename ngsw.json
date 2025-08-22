@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1755870031818,
+  "timestamp": 1755873785178,
   "index": "/expense-tracker/index.html",
   "assetGroups": [
     {
@@ -13,11 +13,11 @@
       "urls": [
         "/expense-tracker/favicon.ico",
         "/expense-tracker/index.html",
-        "/expense-tracker/main-ZACUEQA2.js",
+        "/expense-tracker/main-YTHNS5AW.js",
         "/expense-tracker/manifest.webmanifest",
         "/expense-tracker/polyfills-B6TNHZQ6.js",
         "/expense-tracker/scripts-WL2QHKC5.js",
-        "/expense-tracker/styles-UXFHT467.css"
+        "/expense-tracker/styles-U5M7USNN.css"
       ],
       "patterns": []
     },
@@ -52,12 +52,12 @@
     "/expense-tracker/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/expense-tracker/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/expense-tracker/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/expense-tracker/index.html": "4265b5078213b13d072f2385ae17b9bed9a9ccba",
-    "/expense-tracker/main-ZACUEQA2.js": "5dac697bca26c5ff5c62b1e3fd9ef59e7754c03d",
+    "/expense-tracker/index.html": "d9a8b646d7bd9227128d19bdede1b62ae3efa629",
+    "/expense-tracker/main-YTHNS5AW.js": "77a28fbbd45c6adebf6a3d2ca7310317dae78923",
     "/expense-tracker/manifest.webmanifest": "f75fbfacd19f26a6c323c7efea01dd3dd25ec6aa",
     "/expense-tracker/polyfills-B6TNHZQ6.js": "bf76ac291d7f51c1139b7edcf86b359a30c08c64",
     "/expense-tracker/scripts-WL2QHKC5.js": "c1b0b7dbf9c9fb61cc4dc027d25f48b5a7b113ad",
-    "/expense-tracker/styles-UXFHT467.css": "aa1153009eeb5991a8ba0b63128e0cfdc9c9aac1"
+    "/expense-tracker/styles-U5M7USNN.css": "35eebdd32f4179b6601673dcf1b386769a63a67b"
   },
   "navigationUrls": [
     {
