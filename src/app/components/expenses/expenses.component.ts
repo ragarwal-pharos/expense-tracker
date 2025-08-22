@@ -60,15 +60,23 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Check for edit mode from query parameters
+    // Check for edit mode and category filter from query parameters
     this.route.queryParams.subscribe(params => {
       const editId = params['edit'];
       const mode = params['mode'];
+      const categoryFilter = params['category'];
+      const filterType = params['filter'];
       
       if (editId && mode === 'edit') {
         this.isEditMode = true;
         this.editingExpenseId = editId;
         console.log('Edit mode activated for expense:', editId);
+      }
+      
+      // Handle category filter from dashboard
+      if (categoryFilter && filterType === 'category') {
+        this.filterCategory = categoryFilter;
+        console.log('Category filter applied:', categoryFilter);
       }
     });
 
@@ -412,6 +420,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.filterDate = '';
     this.filterDateFrom = '';
     this.filterDateTo = '';
+  }
+
+  clearCategoryFilter() {
+    this.filterCategory = '';
+    // Clear the URL query parameters
+    this.router.navigate([], {
+      queryParams: {},
+      queryParamsHandling: 'merge'
+    });
   }
 
   clearCategory() {

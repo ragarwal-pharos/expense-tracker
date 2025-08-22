@@ -6,8 +6,12 @@
         <span class="fs-1">💸</span>
       </div>
       <div>
-        <h1 class="page-title mb-1">Expenses</h1>
-        <p class="mb-0">Track and manage your daily expenses</p>
+        <h1 class="page-title mb-1">
+          {{ filterCategory && getCategoryName(filterCategory) ? getCategoryName(filterCategory) + ' Expenses' : 'Expenses' }}
+        </h1>
+        <p class="mb-0">
+          {{ filterCategory && getCategoryName(filterCategory) ? 'Viewing expenses for ' + getCategoryName(filterCategory) : 'Track and manage your daily expenses' }}
+        </p>
       </div>
     </div>
   </div>
@@ -108,9 +112,20 @@
   <!-- Filters -->
   <div class="filters-card mb-4">
     <div class="card-header-modern">
-      <div class="d-flex align-items-center">
-        <span class="header-icon-small me-2">🔍</span>
-        <h5 class="mb-0">Filters</h5>
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">🔍</span>
+          <h5 class="mb-0">Filters</h5>
+        </div>
+        <!-- Active Category Filter Indicator -->
+        <div *ngIf="filterCategory && getCategoryName(filterCategory)" class="active-filter-indicator">
+          <span class="filter-badge">
+            {{getCategoryIcon(filterCategory)}} {{getCategoryName(filterCategory)}}
+            <button class="clear-filter-btn" (click)="clearCategoryFilter()" title="Clear category filter">
+              ✕
+            </button>
+          </span>
+        </div>
       </div>
     </div>
     <div class="card-body-modern">

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
@@ -15,11 +15,7 @@ interface Alert {
   icon: string;
 }
 
-interface SpendingTrend {
-  direction: 'up' | 'down' | 'stable';
-  percentage: number;
-  icon: string;
-}
+
 
 interface BudgetProgress {
   percentage: number;
@@ -48,7 +44,7 @@ interface Insight {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -64,6 +60,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   
   // Filter properties
   selectedPeriod: string = 'all';
+  selectedMonth: string = '';
+  selectedYear: string = '';
   customStartDate: string = '';
   customEndDate: string = '';
   
@@ -75,9 +73,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   
   // Monthly data
   currentMonthTotal: number = 0;
-  previousMonthTotal: number = 0;
-  monthlyChange: number = 0;
-  monthlyChangePercentage: number = 0;
   
   // Weekly data
   weeklyTotal: number = 0;
@@ -95,6 +90,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // Initialize month and year selection
+    const now = new Date();
+    this.selectedMonth = now.getMonth().toString();
+    this.selectedYear = now.getFullYear().toString();
+    
+    // Initialize available years
+    const currentYear = now.getFullYear();
+    for (let year = 2020; year <= currentYear + 1; year++) {
+      this.availableYears.push(year.toString());
+    }
+    
     // Subscribe to Firebase observables for real-time updates
     this.subscription.add(
       this.firebaseService.expenses$.subscribe(expenses => {
@@ -102,7 +108,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.calculateTotals();
         this.calculateCategoryBreakdown();
         this.getRecentExpenses();
-        this.calculateMonthlyData();
         this.calculateWeeklyData();
         console.log(`Received ${expenses.length} expenses from Firebase`);
       })
@@ -134,7 +139,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.calculateTotals();
       this.calculateCategoryBreakdown();
       this.getRecentExpenses();
-      this.calculateMonthlyData();
       this.calculateWeeklyData();
       
       console.log('Dashboard data loaded successfully');
@@ -178,40 +182,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getRecentExpenses() {
     this.recentExpenses = [...this.expenses]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => {
+        // Ensure proper date parsing and handle potential timezone issues
+        const dateA = new Date(a.date + 'T00:00:00');
+        const dateB = new Date(b.date + 'T00:00:00');
+        return dateB.getTime() - dateA.getTime(); // Sort by date descending (latest first)
+      })
       .slice(0, 5);
   }
 
-  calculateMonthlyData() {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    // Current month expenses
-    this.currentMonthTotal = this.expenses
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-      })
-      .reduce((sum, expense) => sum + expense.amount, 0);
-    
-    // Previous month expenses
-    const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    this.previousMonthTotal = this.expenses
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate.getMonth() === previousMonth && expenseDate.getFullYear() === previousYear;
-      })
-      .reduce((sum, expense) => sum + expense.amount, 0);
-    
-    // Calculate change
-    this.monthlyChange = this.currentMonthTotal - this.previousMonthTotal;
-    this.monthlyChangePercentage = this.previousMonthTotal > 0 
-      ? (this.monthlyChange / this.previousMonthTotal) * 100 
-      : 0;
-  }
+
 
   calculateWeeklyData() {
     const now = new Date();
@@ -252,11 +232,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       
       switch (this.selectedPeriod) {
         case 'monthly':
-          // Current month expenses
+          // Selected month expenses
+          const selectedMonthIndex = parseInt(this.selectedMonth);
+          const selectedYear = parseInt(this.selectedYear);
           filtered = filtered.filter(expense => {
             const expenseDate = new Date(expense.date);
-            return expenseDate.getMonth() === now.getMonth() && 
-                   expenseDate.getFullYear() === now.getFullYear();
+            return expenseDate.getMonth() === selectedMonthIndex && 
+                   expenseDate.getFullYear() === selectedYear;
           });
           break;
         case 'yearly':
@@ -264,6 +246,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
           filtered = filtered.filter(expense => {
             const expenseDate = new Date(expense.date);
             return expenseDate.getFullYear() === now.getFullYear();
+          });
+          break;
+        case 'last30':
+          // Last 30 days
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(now.getDate() - 30);
+          filtered = filtered.filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate >= thirtyDaysAgo;
+          });
+          break;
+        case 'last7':
+          // Last 7 days
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          filtered = filtered.filter(expense => {
+            const expenseDate = new Date(expense.date);
+            return expenseDate >= sevenDaysAgo;
           });
           break;
         case 'custom':
@@ -290,6 +290,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (this.selectedPeriod) {
       case 'monthly': return 'This Month';
       case 'yearly': return 'This Year';
+      case 'last30': return 'Last 30 Days';
+      case 'last7': return 'Last 7 Days';
       case 'custom': return 'Custom Period';
       default: return 'All Time';
     }
@@ -298,6 +300,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onFilterChange() {
     // Trigger change detection
   }
+
+
 
   getExpensesByCategory(categoryId: string): Expense[] {
     return this.getFilteredExpenses().filter(expense => expense.categoryId === categoryId);
@@ -314,29 +318,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return totals;
   }
 
-  getMonthlyComparison(): { change: number; percentage: number; hasPreviousData: boolean; status: string } {
-    const hasPreviousData = this.previousMonthTotal > 0;
-    let status = '';
-    
-    if (!hasPreviousData && this.currentMonthTotal > 0) {
-      status = 'First Month';
-    } else if (hasPreviousData) {
-      if (this.monthlyChange > 0) {
-        status = 'Increased';
-      } else if (this.monthlyChange < 0) {
-        status = 'Decreased';
-      } else {
-        status = 'No Change';
-      }
-    }
-    
-    return {
-      change: this.monthlyChange,
-      percentage: parseFloat(this.monthlyChangePercentage.toFixed(2)),
-      hasPreviousData: hasPreviousData,
-      status: status
-    };
-  }
+
 
   get monthlyTotal(): number {
     return this.currentMonthTotal;
@@ -344,9 +326,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Get recent expenses sorted by date (most recent first)
   getRecentExpensesSorted(): Expense[] {
-    return [...this.expenses]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Sort by date descending
+    const sortedExpenses = [...this.expenses]
+      .sort((a, b) => {
+        // Ensure proper date parsing and handle potential timezone issues
+        const dateA = new Date(a.date + 'T00:00:00');
+        const dateB = new Date(b.date + 'T00:00:00');
+        return dateB.getTime() - dateA.getTime(); // Sort by date descending (latest first)
+      })
       .slice(0, 5);
+    
+    // Debug logging to verify sorting
+    if (sortedExpenses.length > 0) {
+      console.log('Recent expenses sorted by date (latest first):', 
+        sortedExpenses.map(e => ({ date: e.date, description: e.description, amount: e.amount })));
+    }
+    
+    return sortedExpenses;
   }
 
   // Get filtered expenses sorted by amount in descending order
@@ -371,50 +366,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // New enhanced functionality
 
-  // Smart Alerts
-  getAlerts(): Alert[] {
-    const alerts: Alert[] = [];
-    
-    // High spending alert - show actual percentage
-    if (this.previousMonthTotal > 0 && this.currentMonthTotal > this.previousMonthTotal) {
-      const increasePercentage = ((this.currentMonthTotal - this.previousMonthTotal) / this.previousMonthTotal) * 100;
-      if (increasePercentage > 10) {
-        alerts.push({
-          type: 'error',
-          message: `Your spending is ${increasePercentage.toFixed(2)}% higher than last month`,
-          icon: '📈'
-        });
-      }
-    }
-    
-    // Good spending alert - show actual percentage
-    if (this.previousMonthTotal > 0 && this.currentMonthTotal < this.previousMonthTotal) {
-      const decreasePercentage = ((this.previousMonthTotal - this.currentMonthTotal) / this.previousMonthTotal) * 100;
-      if (decreasePercentage > 10) {
-        alerts.push({
-          type: 'success',
-          message: `Great job! You've reduced spending by ${decreasePercentage.toFixed(2)}% compared to last month`,
-          icon: '🎉'
-        });
-      }
-    }
-    
-    return alerts;
-  }
 
-  // Spending Trends
-  getSpendingTrend(): SpendingTrend | null {
-    if (this.previousMonthTotal === 0) return null;
-    
-    const percentage = this.monthlyChangePercentage;
-    if (percentage > 10) {
-      return { direction: 'up', percentage: parseFloat(percentage.toFixed(2)), icon: '📈' };
-    } else if (percentage < -10) {
-      return { direction: 'down', percentage: parseFloat(Math.abs(percentage).toFixed(2)), icon: '📉' };
-    } else {
-      return { direction: 'stable', percentage: parseFloat(Math.abs(percentage).toFixed(2)), icon: '➡️' };
-    }
-  }
+
+
 
   // Budget Progress - Return null since no budget is set
   getBudgetProgress(): BudgetProgress | null {
@@ -453,12 +407,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Insights
   getTopSpendingCategory(): { name: string; amount: number } | null {
-    const sortedCategories = this.categoryBreakdown.sort((a, b) => b.amount - a.amount);
-    if (sortedCategories.length === 0) return null;
+    const filteredExpenses = this.getFilteredExpenses();
+    if (filteredExpenses.length === 0) return null;
+    
+    // Calculate category breakdown for filtered expenses only
+    const breakdown: { [key: string]: number } = {};
+    
+    filteredExpenses.forEach(expense => {
+      const categoryId = expense.categoryId;
+      if (breakdown[categoryId]) {
+        breakdown[categoryId] += expense.amount;
+      } else {
+        breakdown[categoryId] = expense.amount;
+      }
+    });
+    
+    const categoryBreakdown = Object.entries(breakdown).map(([categoryId, amount]) => {
+      const category = this.categories.find(c => c.id === categoryId);
+      return {
+        categoryId,
+        categoryName: category?.name || 'Unknown',
+        amount
+      };
+    }).sort((a, b) => b.amount - a.amount);
+    
+    if (categoryBreakdown.length === 0) return null;
     
     return {
-      name: sortedCategories[0].categoryName,
-      amount: sortedCategories[0].amount
+      name: categoryBreakdown[0].categoryName,
+      amount: categoryBreakdown[0].amount
     };
   }
 
@@ -491,12 +468,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getAchievement(): Insight | null {
-    if (this.currentMonthTotal < this.previousMonthTotal * 0.8 && this.previousMonthTotal > 0) {
-      return {
-        title: 'Spending Reduction Champion!',
-        description: 'You\'ve reduced spending by over 20% this month'
-      };
-    }
     if (this.currentMonthTotal < this.monthlyTotal * 0.5) {
       return {
         title: 'Budget Master!',
@@ -562,12 +533,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         const insightsSection = document.getElementById('insights-section');
         if (insightsSection) {
-          insightsSection.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          // Calculate offset to account for any fixed headers
+          const offset = 80; // Adjust this value based on your header height
+          const elementPosition = insightsSection.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
           });
         }
-      }, 100); // Small delay to ensure the section is rendered
+      }, 150); // Slightly longer delay to ensure the section is fully rendered
     }
   }
 
@@ -631,4 +607,405 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     }
   }
+
+  // Enhanced Data Insights and Smart Features
+  getSmartInsights(): Insight[] {
+    const insights: Insight[] = [];
+    
+    // Spending Pattern Analysis
+    const avgAmount = this.getFilteredTotal() / Math.max(this.getFilteredExpenses().length, 1);
+    if (avgAmount > 1000) {
+      insights.push({
+        title: 'High-Value Spending Pattern',
+        description: `Your average expense is ₹${avgAmount.toFixed(0)}, indicating large purchases. Consider breaking down big expenses.`
+      });
+    }
+    
+    // Category Concentration Warning
+    const topCategory = this.getTopSpendingCategory();
+    if (topCategory && (topCategory.amount / this.getFilteredTotal()) > 0.5) {
+      insights.push({
+        title: 'Category Concentration Alert',
+        description: `${topCategory.name} represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your spending. Consider diversifying.`
+      });
+    }
+    
+    // Weekly Spending Trend
+    const weeklyAvg = this.weeklyTotal;
+    if (weeklyAvg > this.currentMonthTotal / 4) {
+      insights.push({
+        title: 'High Weekly Spending',
+        description: `This week's spending (₹${weeklyAvg.toFixed(0)}) is above average. Monitor your daily expenses.`
+      });
+    }
+    
+    // Savings Opportunity
+    const potentialSavings = this.getPotentialSavings();
+    if (potentialSavings > 0) {
+      insights.push({
+        title: 'Savings Opportunity',
+        description: `You could save ₹${potentialSavings.toFixed(0)} by optimizing your spending patterns.`
+      });
+    }
+    
+    return insights;
+  }
+
+  // Quick Actions Data
+  getQuickActions(): { title: string; action: string; icon: string; route?: string; method?: () => void }[] {
+    return [
+      {
+        title: 'Add Expense',
+        action: 'Quick Entry',
+        icon: '➕',
+        route: '/expenses'
+      },
+      {
+        title: 'View Reports',
+        action: 'Monthly Analysis',
+        icon: '📊',
+        route: '/monthly-reports'
+      },
+      {
+        title: 'Manage Categories',
+        action: 'Organize',
+        icon: '🏷️',
+        route: '/categories'
+      },
+      {
+        title: 'Export Data',
+        action: 'Download',
+        icon: '📥',
+        method: () => this.exportData()
+      }
+    ];
+  }
+
+  // Enhanced Spending Analytics
+  getSpendingAnalytics(): any {
+    const expenses = this.getFilteredExpenses();
+    const total = this.getFilteredTotal();
+    
+    return {
+      totalExpenses: expenses.length,
+      totalAmount: total,
+      averagePerExpense: expenses.length > 0 ? total / expenses.length : 0,
+      highestExpense: Math.max(...expenses.map(e => e.amount)),
+      lowestExpense: Math.min(...expenses.map(e => e.amount)),
+      mostExpensiveCategory: this.getMostExpensiveCategory(),
+      leastExpensiveCategory: this.getLeastExpensiveCategory(),
+      spendingByDay: this.getSpendingByDay(),
+      spendingByWeek: this.getSpendingByWeek(),
+      spendingByMonth: this.getSpendingByMonth(),
+      topExpenses: this.getTopExpenses(5),
+      recentTrend: this.getRecentSpendingTrend()
+    };
+  }
+
+  // Get most expensive category
+  getMostExpensiveCategory(): { name: string; amount: number; percentage: number } | null {
+    const categoryTotals = this.categoryTotals;
+    const total = this.getFilteredTotal();
+    if (total === 0) return null;
+    
+    const maxCategory = Object.entries(categoryTotals)
+      .reduce((max, [id, amount]) => amount > max.amount ? { id, amount } : max, { id: '', amount: 0 });
+    
+    const category = this.categories.find(c => c.id === maxCategory.id);
+    return {
+      name: category?.name || 'Unknown',
+      amount: maxCategory.amount,
+      percentage: (maxCategory.amount / total) * 100
+    };
+  }
+
+  // Get least expensive category
+  getLeastExpensiveCategory(): { name: string; amount: number; percentage: number } | null {
+    const categoryTotals = this.categoryTotals;
+    const total = this.getFilteredTotal();
+    if (total === 0) return null;
+    
+    const minCategory = Object.entries(categoryTotals)
+      .reduce((min, [id, amount]) => amount < min.amount ? { id, amount } : min, { id: '', amount: Infinity });
+    
+    const category = this.categories.find(c => c.id === minCategory.id);
+    return {
+      name: category?.name || 'Unknown',
+      amount: minCategory.amount,
+      percentage: (minCategory.amount / total) * 100
+    };
+  }
+
+  // Get spending by day of week
+  getSpendingByDay(): { day: string; amount: number; count: number }[] {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const spendingByDay: { [key: string]: { amount: number; count: number } } = {};
+    
+    days.forEach(day => {
+      spendingByDay[day] = { amount: 0, count: 0 };
+    });
+    
+    this.getFilteredExpenses().forEach(expense => {
+      const day = new Date(expense.date).toLocaleDateString('en-US', { weekday: 'long' });
+      spendingByDay[day].amount += expense.amount;
+      spendingByDay[day].count += 1;
+    });
+    
+    return days.map(day => ({
+      day,
+      amount: spendingByDay[day].amount,
+      count: spendingByDay[day].count
+    }));
+  }
+
+  // Get spending by week
+  getSpendingByWeek(): { week: string; amount: number; count: number }[] {
+    const weeks: { [key: string]: { amount: number; count: number } } = {};
+    
+    this.getFilteredExpenses().forEach(expense => {
+      const date = new Date(expense.date);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = { amount: 0, count: 0 };
+      }
+      weeks[weekKey].amount += expense.amount;
+      weeks[weekKey].count += 1;
+    });
+    
+    return Object.entries(weeks)
+      .map(([week, data]) => ({
+        week: new Date(week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        amount: data.amount,
+        count: data.count
+      }))
+      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
+  }
+
+  // Get spending by month
+  getSpendingByMonth(): { month: string; amount: number; count: number }[] {
+    const months: { [key: string]: { amount: number; count: number } } = {};
+    
+    this.getFilteredExpenses().forEach(expense => {
+      const date = new Date(expense.date);
+      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+      
+      if (!months[monthKey]) {
+        months[monthKey] = { amount: 0, count: 0 };
+      }
+      months[monthKey].amount += expense.amount;
+      months[monthKey].count += 1;
+    });
+    
+    return Object.entries(months)
+      .map(([month, data]) => ({
+        month: new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        amount: data.amount,
+        count: data.count
+      }))
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+  }
+
+  // Get top expenses
+  getTopExpenses(count: number): Expense[] {
+    return [...this.getFilteredExpenses()]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, count);
+  }
+
+  // Get recent spending trend
+  getRecentSpendingTrend(): { trend: 'increasing' | 'decreasing' | 'stable'; percentage: number } {
+    const recentExpenses = this.getRecentExpensesSorted().slice(0, 10);
+    if (recentExpenses.length < 5) return { trend: 'stable', percentage: 0 };
+    
+    const midPoint = Math.floor(recentExpenses.length / 2);
+    const firstHalf = recentExpenses.slice(0, midPoint);
+    const secondHalf = recentExpenses.slice(midPoint);
+    
+    const firstHalfTotal = firstHalf.reduce((sum, e) => sum + e.amount, 0);
+    const secondHalfTotal = secondHalf.reduce((sum, e) => sum + e.amount, 0);
+    
+    if (firstHalfTotal === 0) return { trend: 'stable', percentage: 0 };
+    
+    const percentage = ((secondHalfTotal - firstHalfTotal) / firstHalfTotal) * 100;
+    
+    if (percentage > 10) return { trend: 'increasing', percentage };
+    if (percentage < -10) return { trend: 'decreasing', percentage };
+    return { trend: 'stable', percentage };
+  }
+
+  // Export data functionality
+  exportData(): void {
+    const data = {
+      expenses: this.expenses,
+      categories: this.categories,
+      analytics: this.getSpendingAnalytics(),
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expense-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  // Smart Recommendations
+  getSmartRecommendations(): { title: string; description: string; priority: 'high' | 'medium' | 'low' }[] {
+    const recommendations: { title: string; description: string; priority: 'high' | 'medium' | 'low' }[] = [];
+    
+
+    
+    // Category concentration
+    const topCategory = this.getTopSpendingCategory();
+    if (topCategory && (topCategory.amount / this.getFilteredTotal()) > 0.6) {
+      recommendations.push({
+        title: 'Category Diversification',
+        description: `Consider reducing spending in ${topCategory.name} category.`,
+        priority: 'medium'
+      });
+    }
+    
+    // Large expenses
+    const largeExpenses = this.expenses.filter(e => e.amount > 1000);
+    if (largeExpenses.length > 3) {
+      recommendations.push({
+        title: 'Large Expenses Review',
+        description: 'You have several large expenses. Consider if all are necessary.',
+        priority: 'medium'
+      });
+    }
+    
+    return recommendations;
+  }
+
+  // Enhanced filter with smart defaults
+  getSmartFilters(): { label: string; value: string; description: string }[] {
+    return [
+      { label: 'All Time', value: 'all', description: 'Complete expense history' },
+      { label: 'This Month', value: 'monthly', description: 'Current month expenses' },
+      { label: 'This Year', value: 'yearly', description: 'Current year expenses' },
+      { label: 'Last 30 Days', value: 'last30', description: 'Recent month activity' },
+      { label: 'Last 7 Days', value: 'last7', description: 'This week\'s expenses' },
+      { label: 'Custom Range', value: 'custom', description: 'Select specific dates' }
+    ];
+  }
+
+  // Quick summary cards data
+  getQuickSummaryCards(): { title: string; value: string; change: string; trend: 'up' | 'down' | 'stable'; icon: string }[] {
+    return [
+      {
+        title: 'Total Spent',
+        value: `₹${this.getFilteredTotal().toLocaleString()}`,
+        change: 'Current period',
+        trend: 'stable',
+        icon: '💰'
+      },
+      {
+        title: 'Expense Count',
+        value: this.getFilteredExpenses().length.toString(),
+        change: `${this.getFilteredExpenses().length} this period`,
+        trend: 'stable',
+        icon: '📊'
+      },
+      {
+        title: 'Average Per Expense',
+        value: `₹${(this.getFilteredTotal() / Math.max(this.getFilteredExpenses().length, 1)).toFixed(0)}`,
+        change: 'Per transaction',
+        trend: 'stable',
+        icon: '📈'
+      },
+      {
+        title: 'Top Category',
+        value: this.getTopSpendingCategory()?.name || 'No Data',
+        change: this.getTopSpendingCategory() && this.getFilteredTotal() > 0 ? 
+          `${((this.getTopSpendingCategory()!.amount / this.getFilteredTotal()) * 100).toFixed(1)}%` : 
+          'No expenses',
+        trend: 'stable',
+        icon: '🏷️'
+      }
+    ];
+  }
+
+  // View category details
+  viewCategoryDetails(categoryId: string): void {
+    // Navigate to expenses page with category filter
+    this.router.navigate(['/expenses'], { 
+      queryParams: { 
+        category: categoryId,
+        filter: 'category'
+      } 
+    });
+  }
+
+  // Get maximum spending amount for chart scaling
+  getMaxSpendingAmount(): number {
+    const spendingByDay = this.getSpendingByDay();
+    if (spendingByDay.length === 0) return 0;
+    return Math.max(...spendingByDay.map(d => d.amount));
+  }
+
+  // Format date to day of week
+  getDayOfWeek(date: string): string {
+    return new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+  }
+
+  // Get maximum expense amount for a category
+  getMaxExpenseForCategory(categoryId: string): number {
+    const expenses = this.getExpensesByCategory(categoryId);
+    if (expenses.length === 0) return 0;
+    return Math.max(...expenses.map(e => e.amount));
+  }
+
+  // Get current month name for display
+  getCurrentMonthName(): string {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', { month: 'long' });
+  }
+
+  // Get current year for display
+  getCurrentYear(): string {
+    const now = new Date();
+    return now.getFullYear().toString();
+  }
+
+  // Get selected month name for display
+  getSelectedMonthName(): string {
+    const monthIndex = parseInt(this.selectedMonth);
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[monthIndex] || 'January';
+  }
+
+  // Get selected year for display
+  getSelectedYear(): string {
+    return this.selectedYear || new Date().getFullYear().toString();
+  }
+
+  // Available months for selection
+  availableMonths: { value: string; label: string }[] = [
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' }
+  ];
+
+  // Available years for selection
+  availableYears: string[] = [];
+
+
 } 
