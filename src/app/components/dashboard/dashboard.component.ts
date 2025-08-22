@@ -301,7 +301,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Trigger change detection
   }
 
-
+  openDatePicker() {
+    // For now, we'll show a simple alert with instructions
+    // In a real implementation, this would open a date picker modal or calendar component
+    alert('Date picker functionality would open here. You can implement a modal with date selection or use a third-party date picker library.');
+    
+    // Example implementation ideas:
+    // 1. Open a modal with date range picker
+    // 2. Use a library like ngx-bootstrap datepicker
+    // 3. Create a custom date picker component
+    // 4. Use HTML5 date inputs in a modal
+    
+    // For now, we'll set some default dates as an example
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    this.customStartDate = thirtyDaysAgo.toISOString().split('T')[0];
+    this.customEndDate = today.toISOString().split('T')[0];
+    
+    // Apply the filter
+    this.onFilterChange();
+  }
 
   getExpensesByCategory(categoryId: string): Expense[] {
     return this.getFilteredExpenses().filter(expense => expense.categoryId === categoryId);
