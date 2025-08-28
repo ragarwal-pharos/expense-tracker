@@ -1,5 +1,61 @@
 /* Modern Expenses Styles */
 
+/* Pagination Controls */
+.pagination-controls {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
+}
+
+.pagination-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.pagination-navigation {
+  flex-shrink: 0;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-info {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.pagination-buttons .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+.pagination-buttons .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-buttons .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Page Header */
 .page-header {
   background: linear-gradient(135deg, #9b6b9b 0%, #b76bb7 100%);
@@ -531,6 +587,41 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  /* Pagination Mobile Layout */
+  .pagination-layout {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .pagination-info {
+    text-align: center;
+    order: 1;
+  }
+  
+  .pagination-navigation {
+    order: 2;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .pagination-buttons .btn {
+    min-width: 100px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .page-info {
+    order: 2;
+    text-align: center;
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
     gap: 1.5rem;
@@ -778,6 +869,31 @@
 
 /* Extra small devices */
 @media (max-width: 480px) {
+  /* Pagination Extra Small Screen */
+  .pagination-controls {
+    padding: 0.75rem;
+  }
+  
+  .pagination-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .pagination-buttons .btn {
+    width: 100%;
+    min-width: auto;
+    justify-content: center;
+  }
+  
+  .page-info {
+    order: 1;
+    margin-bottom: 0.5rem;
+  }
+  
+  .pagination-info {
+    font-size: 0.8rem;
+  }
+
   .page-header {
     padding: 1rem;
   }

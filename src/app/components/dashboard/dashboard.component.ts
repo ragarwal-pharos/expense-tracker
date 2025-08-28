@@ -638,8 +638,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return parseFloat(((categoryTotal / total) * 100).toFixed(2));
   }
 
-  // Category Trend - Return null to hide trend percentages
-  getCategoryTrend(categoryId: string): CategoryTrend | null {
+  // Category Trend - Return null to hide trend percentages (legacy method)
+  getCategoryTrendLegacy(categoryId: string): CategoryTrend | null {
     return null; // Hide trend percentages
   }
 
@@ -1170,12 +1170,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ];
   }
 
-  // View category details
+  // View category analytics (detailed breakdown)
   viewCategoryDetails(categoryId: string): void {
     // Get current filter state
     const filterState = this.filterStateService.getFilterState();
     
     // Navigate to expenses page with category filter and current filter state
+    // This preserves all dashboard filters for detailed analysis
     this.router.navigate(['/expenses'], { 
       queryParams: { 
         category: categoryId,
@@ -1255,6 +1256,125 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Available years for selection
   availableYears: string[] = [];
+
+  // Get last week total
+  getLastWeekTotal(): number {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    return this.expenses
+      .filter(expense => new Date(expense.date) >= oneWeekAgo)
+      .reduce((total, expense) => total + expense.amount, 0);
+  }
+
+  // Get amount indicator
+  getAmountIndicator(amount: number): string {
+    if (amount > 5000) return 'high';
+    if (amount > 1000) return 'medium';
+    return 'low';
+  }
+
+  // Get category insights
+  getCategoryInsights(categoryId: string): any[] {
+    const insights = [];
+    const expenses = this.getExpensesByCategory(categoryId);
+    const total = this.categoryTotals[categoryId] || 0;
+    const avg = expenses.length > 0 ? total / expenses.length : 0;
+    
+    if (total > this.getFilteredTotal() * 0.4) {
+      insights.push({
+        type: 'high',
+        icon: '⚠️',
+        text: 'High spending category'
+      });
+    }
+    
+    if (avg > 2000) {
+      insights.push({
+        type: 'medium',
+        icon: '💰',
+        text: 'High average expense'
+      });
+    }
+    
+    if (expenses.length > 10) {
+      insights.push({
+        type: 'low',
+        icon: '📊',
+        text: 'Frequent expenses'
+      });
+    }
+    
+    return insights;
+  }
+
+  // Get category trend
+  getCategoryTrend(categoryId: string): any {
+    // This is a simplified trend calculation
+    // In a real app, you'd compare with previous periods
+    const currentTotal = this.categoryTotals[categoryId] || 0;
+    const avgTotal = this.getFilteredTotal() / Object.keys(this.categoryTotals).length;
+    
+    if (currentTotal > avgTotal * 1.2) {
+      return {
+        icon: '📈',
+        text: 'Above average'
+      };
+    } else if (currentTotal < avgTotal * 0.8) {
+      return {
+        icon: '📉',
+        text: 'Below average'
+      };
+    } else {
+      return {
+        icon: '➡️',
+        text: 'Stable'
+      };
+    }
+  }
+
+  // Get expense insights
+  getExpenseInsights(expense: Expense): any[] {
+    const insights = [];
+    
+    if (expense.amount > 5000) {
+      insights.push({
+        type: 'high',
+        icon: '💰',
+        text: 'Large expense'
+      });
+    }
+    
+    if (expense.amount > this.getAverageExpense() * 2) {
+      insights.push({
+        type: 'medium',
+        icon: '📊',
+        text: 'Above average'
+      });
+    }
+    
+    const expenseDate = new Date(expense.date);
+    const today = new Date();
+    const daysDiff = Math.floor((today.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff <= 1) {
+      insights.push({
+        type: 'low',
+        icon: '🆕',
+        text: 'Recent'
+      });
+    }
+    
+    return insights;
+  }
+
+  // Get average expense
+  getAverageExpense(): number {
+    if (this.expenses.length === 0) return 0;
+    return this.expenses.reduce((total, expense) => total + expense.amount, 0) / this.expenses.length;
+  }
+
+
+
 
 
 } 

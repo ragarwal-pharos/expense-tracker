@@ -24,7 +24,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     id: '',
     description: '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: this.getCurrentDateString(),
     categoryId: '',
     paymentMethod: '',
     tags: [],
@@ -58,6 +58,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Edit mode properties
   isEditMode: boolean = false;
   editingExpenseId: string = '';
+
+  // Pagination properties
+  currentPage: number = 1;
+  itemsPerPage: number = 10;
 
   private subscription: Subscription = new Subscription();
 
@@ -365,7 +369,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
 
       // Check if the selected date is in the future
-      const selectedDate = new Date(dateStr);
+      const selectedDate = new Date(dateStr + 'T00:00:00');
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
       
@@ -496,7 +500,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     // Check if the selected date is in the future
-    const selectedDate = new Date(this.newExpense.date);
+    const selectedDate = new Date(this.newExpense.date + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
     
@@ -523,7 +527,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       id: '',
       description: '',
       amount: 0,
-      date: new Date().toISOString().split('T')[0],
+      date: this.getCurrentDateString(),
       categoryId: '',
       paymentMethod: '',
       tags: [],
@@ -791,6 +795,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.dashboardMonthOnly = '';
     this.dashboardYearOnly = '';
     
+    // Reset pagination
+    this.resetPagination();
+    
     // Clear URL query parameters
     this.router.navigate([], {
       queryParams: {},
@@ -800,11 +807,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   clearCategoryFilter() {
     this.filterCategory = '';
+    // Reset pagination when filter changes
+    this.resetPagination();
     // Clear the URL query parameters
     this.router.navigate([], {
       queryParams: {},
       queryParamsHandling: 'merge'
     });
+  }
+
+  onCategoryFilterChange(): void {
+    // Reset pagination when filter changes
+    this.resetPagination();
   }
 
   clearCategory() {
@@ -888,6 +902,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     // Update the input value
     input.value = value;
     this.filterAmount = value;
+    
+    // Reset pagination when filter changes
+    this.resetPagination();
   }
 
   onFilterAmountKeypress(event: KeyboardEvent): void {
@@ -1117,9 +1134,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     return this.getExpensesWithUnknownCategories().length;
   }
 
+  // Get current date as string in YYYY-MM-DD format
+  getCurrentDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // Get maximum allowed date (today's date)
   getMaxDate(): string {
-    return new Date().toISOString().split('T')[0];
+    return this.getCurrentDateString();
   }
 
   // Handle From Date change
@@ -1128,6 +1154,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     if (this.filterDateTo && this.filterDateFrom && this.filterDateTo < this.filterDateFrom) {
       this.filterDateTo = '';
     }
+    // Reset pagination when filter changes
+    this.resetPagination();
   }
 
   // Handle To Date change
@@ -1137,5 +1165,41 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       alert('To Date cannot be earlier than From Date. Please select a valid date range.');
       this.filterDateTo = '';
     }
+    // Reset pagination when filter changes
+    this.resetPagination();
+  }
+
+  // Pagination methods
+  getPaginatedExpenses(): Expense[] {
+    const filteredExpenses = this.getFilteredExpenses();
+    const startIndex = this.getStartIndex();
+    const endIndex = this.getEndIndex();
+    return filteredExpenses.slice(startIndex, endIndex);
+  }
+
+  getStartIndex(): number {
+    return (this.currentPage - 1) * this.itemsPerPage;
+  }
+
+  getEndIndex(): number {
+    const filteredExpenses = this.getFilteredExpenses();
+    return Math.min(this.currentPage * this.itemsPerPage, filteredExpenses.length);
+  }
+
+  getTotalPages(): number {
+    const filteredExpenses = this.getFilteredExpenses();
+    return Math.ceil(filteredExpenses.length / this.itemsPerPage);
+  }
+
+  goToPage(page: number): void {
+    const totalPages = this.getTotalPages();
+    if (page >= 1 && page <= totalPages) {
+      this.currentPage = page;
+    }
+  }
+
+  // Reset pagination when filters change
+  resetPagination(): void {
+    this.currentPage = 1;
   }
 } 

@@ -135,7 +135,7 @@
       <div class="filters-row">
         <div class="filter-group">
           <label for="filterCategory" class="form-label-modern">Category</label>
-          <select class="form-select" id="filterCategory" [(ngModel)]="filterCategory">
+          <select class="form-select" id="filterCategory" [(ngModel)]="filterCategory" (change)="onCategoryFilterChange()">
             <option value="">🏷️ All Categories</option>
             <option *ngFor="let cat of categories" [value]="cat.id">{{cat.icon}} {{cat.name}}</option>
           </select>
@@ -178,8 +178,43 @@
       </div>
     </div>
     <div class="card-body-modern">
+      <!-- Pagination Controls -->
+      <div class="pagination-controls mb-3" *ngIf="getFilteredExpenses().length > itemsPerPage">
+        <div class="pagination-layout">
+          <div class="pagination-info">
+            <span class="text-muted">
+              Showing {{getStartIndex() + 1}} to {{getEndIndex()}} of {{getFilteredExpenses().length}} expenses
+            </span>
+          </div>
+          <div class="pagination-navigation">
+            <div class="pagination-buttons">
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary btn-sm" 
+                [disabled]="currentPage === 1"
+                (click)="goToPage(currentPage - 1)"
+                title="Previous page">
+                ← Previous
+              </button>
+              <span class="page-info">
+                Page {{currentPage}} of {{getTotalPages()}}
+              </span>
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary btn-sm" 
+                [disabled]="currentPage === getTotalPages()"
+                (click)="goToPage(currentPage + 1)"
+                title="Next page">
+                Next →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body-modern">
       <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0; else noExpenses">
-        <div class="expense-item" *ngFor="let expense of getFilteredExpenses(); let i = index" 
+        <div class="expense-item" *ngFor="let expense of getPaginatedExpenses(); let i = index" 
              [style.animation-delay]="i * 0.1 + 's'">
           <div class="expense-main">
             <div class="expense-amount">{{expense.amount | currency:'INR'}}</div>
