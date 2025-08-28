@@ -177,6 +177,42 @@
         </div>
       </div>
     </div>
+    
+    <div class="card-body-modern">
+      <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0; else noExpenses">
+        <div class="expense-item" *ngFor="let expense of getPaginatedExpenses(); let i = index" 
+             [style.animation-delay]="i * 0.1 + 's'">
+          <div class="expense-main">
+            <div class="expense-amount">{{expense.amount | currency:'INR'}}</div>
+            <div class="expense-category">
+              <span class="category-badge" [ngStyle]="{'background': getCategoryColor(expense.categoryId)}">
+                {{getCategoryIcon(expense.categoryId)}} {{getCategoryName(expense.categoryId)}}
+              </span>
+            </div>
+          </div>
+          <div class="expense-details">
+            <div class="expense-date">{{expense.date | date}}</div>
+            <div class="expense-description">{{expense.description || 'No description'}}</div>
+          </div>
+          <div class="expense-actions">
+            <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit">
+              <span class="action-icon">✏️</span>
+            </button>
+            <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete">
+              <span class="action-icon">🗑️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noExpenses>
+        <div class="no-expenses">
+          <div class="no-expenses-icon">📋</div>
+          <h6>No expenses found</h6>
+          <p>Add your first expense using the form above!</p>
+        </div>
+      </ng-template>
+    </div>
+
     <div class="card-body-modern">
       <!-- Pagination Controls -->
       <div class="pagination-controls mb-3" *ngIf="getFilteredExpenses().length > itemsPerPage">
@@ -211,40 +247,6 @@
           </div>
         </div>
       </div>
-    </div>
-    <div class="card-body-modern">
-      <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0; else noExpenses">
-        <div class="expense-item" *ngFor="let expense of getPaginatedExpenses(); let i = index" 
-             [style.animation-delay]="i * 0.1 + 's'">
-          <div class="expense-main">
-            <div class="expense-amount">{{expense.amount | currency:'INR'}}</div>
-            <div class="expense-category">
-              <span class="category-badge" [ngStyle]="{'background': getCategoryColor(expense.categoryId)}">
-                {{getCategoryIcon(expense.categoryId)}} {{getCategoryName(expense.categoryId)}}
-              </span>
-            </div>
-          </div>
-          <div class="expense-details">
-            <div class="expense-date">{{expense.date | date}}</div>
-            <div class="expense-description">{{expense.description || 'No description'}}</div>
-          </div>
-          <div class="expense-actions">
-            <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit">
-              <span class="action-icon">✏️</span>
-            </button>
-            <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete">
-              <span class="action-icon">🗑️</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <ng-template #noExpenses>
-        <div class="no-expenses">
-          <div class="no-expenses-icon">📋</div>
-          <h6>No expenses found</h6>
-          <p>Add your first expense using the form above!</p>
-        </div>
-      </ng-template>
     </div>
   </div>
 </div> 

@@ -1,46 +1,70 @@
 <div class="monthly-reports-page">
-  <!-- Page Header -->
-  <div class="page-header">
+  <!-- Smart Header -->
+  <div class="smart-header">
     <div class="header-content">
-      <div class="header-icon">📊</div>
-      <div class="header-text">
-        <h1 class="page-title">Monthly Reports</h1>
-        <p class="page-description">Track your spending patterns and get insights</p>
+      <div class="header-left">
+        <h1 class="page-title">📊 Financial Reports</h1>
+        <p class="page-description">Comprehensive spending analysis and insights</p>
       </div>
+             <div class="header-actions">
+         <button class="action-btn primary" (click)="exportFullReport()" title="Export all filtered data">
+           <span class="action-icon">📊</span>
+           <span class="action-text">Export Full Report</span>
+         </button>
+         <button class="action-btn secondary" (click)="toggleAnalytics()">
+           <span class="action-icon">{{ showAnalytics ? '📊' : '🔍' }}</span>
+           <span class="action-text">{{ showAnalytics ? 'Hide Analytics' : 'Show Analytics' }}</span>
+         </button>
+       </div>
     </div>
   </div>
 
-  <!-- Analytics Overview -->
-  <div class="analytics-section" *ngIf="monthlyReports.length > 0">
+  <!-- Smart Analytics Overview -->
+  <div class="analytics-section" *ngIf="monthlyReports.length > 0 && showAnalytics">
     <div class="analytics-header">
       <h3>📈 Spending Analytics</h3>
-      <button class="btn-toggle-analytics" (click)="showAnalytics = !showAnalytics">
-        {{ showAnalytics ? 'Hide' : 'Show' }} Analytics
-      </button>
+      <div class="analytics-period">
+        <span class="period-badge">{{ getAnalyticsPeriod() }}</span>
+      </div>
     </div>
     
-    <div class="analytics-grid" *ngIf="showAnalytics">
-      <div class="analytics-card">
+    <div class="analytics-grid">
+      <div class="analytics-card primary">
         <div class="analytics-icon">💰</div>
         <div class="analytics-content">
           <div class="analytics-value">{{ totalSpent | currency:'INR' }}</div>
           <div class="analytics-label">Total Spent</div>
+          <div class="analytics-trend" *ngIf="getSpendingTrend()">
+            <span class="trend-icon">{{ getSpendingTrend().icon }}</span>
+            <span class="trend-text">{{ getSpendingTrend().text }}</span>
+          </div>
         </div>
       </div>
       
-      <div class="analytics-card">
+      <div class="analytics-card secondary">
         <div class="analytics-icon">📅</div>
         <div class="analytics-content">
           <div class="analytics-value">{{ averageMonthlySpend | currency:'INR' }}</div>
           <div class="analytics-label">Average Monthly</div>
+          <div class="analytics-subtitle">Per month</div>
         </div>
       </div>
       
-      <div class="analytics-card" *ngFor="let insight of getSpendingInsights()">
-        <div class="analytics-icon">{{ insight.icon }}</div>
+      <div class="analytics-card tertiary">
+        <div class="analytics-icon">📊</div>
         <div class="analytics-content">
-          <div class="analytics-value">{{ insight.value }}</div>
-          <div class="analytics-label">{{ insight.title }}</div>
+          <div class="analytics-value">{{ getTotalExpenses() }}</div>
+          <div class="analytics-label">Total Expenses</div>
+          <div class="analytics-subtitle">All time</div>
+        </div>
+      </div>
+      
+      <div class="analytics-card accent">
+        <div class="analytics-icon">🏆</div>
+        <div class="analytics-content">
+          <div class="analytics-value">{{ getTopCategory()?.name || 'None' }}</div>
+          <div class="analytics-label">Top Category</div>
+          <div class="analytics-subtitle">{{ getTopCategoryPercentage() }}% of total</div>
         </div>
       </div>
     </div>
@@ -50,36 +74,52 @@
   <div class="overview-section" *ngIf="getCurrentMonthReport()">
     <div class="overview-card">
       <div class="overview-header">
-        <h3>Current Month Overview</h3>
-        <span class="month-badge">{{ getCurrentMonthReport()?.monthName }}</span>
+        <div class="overview-title">
+          <h3>Current Month Overview</h3>
+          <span class="month-badge">{{ getCurrentMonthReport()?.monthName }}</span>
+        </div>
       </div>
       <div class="overview-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ getCurrentMonthReport()?.totalAmount | currency:'INR' }}</div>
-          <div class="stat-label">Total Spent</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ getCurrentMonthReport()?.expenseCount }}</div>
-          <div class="stat-label">Expenses</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" *ngIf="getMonthlyComparison().hasPreviousData" [class.positive]="getMonthlyComparison().change < 0" [class.negative]="getMonthlyComparison().change > 0">
-            {{ getMonthlyComparison().change | currency:'INR' }}
+        <div class="stat-item primary">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getCurrentMonthReport()?.totalAmount | currency:'INR' }}</div>
+            <div class="stat-label">Total Spent</div>
           </div>
-          <div class="stat-value new-month" *ngIf="!getMonthlyComparison().hasPreviousData && getCurrentMonthReport()?.totalAmount > 0">
-            First Month
+        </div>
+        <div class="stat-item secondary">
+          <div class="stat-icon">📝</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getCurrentMonthReport()?.expenseCount }}</div>
+            <div class="stat-label">Expenses</div>
           </div>
-          <div class="stat-label">vs Last Month</div>
+        </div>
+        <div class="stat-item tertiary">
+          <div class="stat-icon">📈</div>
+          <div class="stat-content">
+            <div class="stat-value" *ngIf="getMonthlyComparison().hasPreviousData" 
+                 [class.positive]="getMonthlyComparison().change < 0" 
+                 [class.negative]="getMonthlyComparison().change > 0">
+              {{ getMonthlyComparison().change | currency:'INR' }}
+            </div>
+            <div class="stat-value new-month" *ngIf="!getMonthlyComparison().hasPreviousData && getCurrentMonthReport()?.totalAmount > 0">
+              First Month
+            </div>
+            <div class="stat-label">vs Last Month</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Filters and Controls -->
+  <!-- Smart Filters -->
   <div class="filters-section" *ngIf="monthlyReports.length > 0">
     <div class="filters-header">
-      <h3>🔍 Filter & Sort</h3>
-      <button class="btn-clear-filters" (click)="clearFilters()">Clear All</button>
+      <h3>🔍 Smart Filters</h3>
+      <button class="btn-clear-filters" *ngIf="hasActiveFilters()" (click)="clearFilters()">
+        <span class="clear-icon">✕</span>
+        Clear All
+      </button>
     </div>
     
     <div class="filters-grid">
@@ -128,18 +168,29 @@
     </div>
   </div>
 
-  <!-- Monthly Reports Grid -->
+  <!-- Enhanced Monthly Reports Grid -->
   <div class="reports-section">
     <div class="section-header">
-      <h3>Monthly Breakdown</h3>
-      <p>Click on any month to view detailed breakdown</p>
-      <div class="reports-count">{{ getFilteredReports().length }} months</div>
+      <div class="header-left">
+        <h3>Monthly Breakdown</h3>
+        <p>Click on any month to view detailed breakdown</p>
+      </div>
+      <div class="header-right">
+        <div class="reports-count">{{ getFilteredReports().length }} months</div>
+        <div class="view-toggle">
+          <button class="view-btn active" (click)="setViewMode('grid')">Grid</button>
+          <button class="view-btn" (click)="setViewMode('list')">List</button>
+        </div>
+      </div>
     </div>
     
-    <div class="reports-grid" *ngIf="getFilteredReports().length > 0">
+    <div class="reports-grid" *ngIf="getFilteredReports().length > 0 && viewMode === 'grid'">
       <div class="report-card" *ngFor="let report of getFilteredReports()" (click)="selectMonth(report.monthKey)">
         <div class="report-header">
-          <h4 class="month-name">{{ report.monthName }}</h4>
+          <div class="month-info">
+            <h4 class="month-name">{{ report.monthName }}</h4>
+            <div class="month-year">{{ report.year }}</div>
+          </div>
           <div class="report-arrow">→</div>
         </div>
         <div class="report-stats">
@@ -153,6 +204,35 @@
             <span class="category-amount">{{ breakdown.amount | currency:'INR' }}</span>
           </div>
         </div>
+        <div class="report-footer">
+          <div class="trend-indicator" *ngIf="getReportTrend(report)">
+            <span class="trend-icon">{{ getReportTrend(report)?.icon }}</span>
+            <span class="trend-text">{{ getReportTrend(report)?.text }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-list" *ngIf="getFilteredReports().length > 0 && viewMode === 'list'">
+      <div class="report-list-item" *ngFor="let report of getFilteredReports()" (click)="selectMonth(report.monthKey)">
+        <div class="list-item-header">
+          <div class="month-info">
+            <h4 class="month-name">{{ report.monthName }}</h4>
+            <div class="month-year">{{ report.year }}</div>
+          </div>
+          <div class="list-item-amount">{{ report.totalAmount | currency:'INR' }}</div>
+        </div>
+        <div class="list-item-details">
+          <div class="detail-item">
+            <span class="detail-label">Expenses:</span>
+            <span class="detail-value">{{ report.expenseCount }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Top Category:</span>
+            <span class="detail-value">{{ getTopCategoryForReport(report)?.name || 'None' }}</span>
+          </div>
+        </div>
+        <div class="list-item-arrow">→</div>
       </div>
     </div>
 
@@ -160,20 +240,68 @@
       <div class="empty-icon">📊</div>
       <h6>No Reports Found</h6>
       <p>Try adjusting your filters or add some expenses!</p>
+      <button class="btn-add-expense" routerLink="/expenses">Add Expenses</button>
     </div>
   </div>
 
-  <!-- Detailed Month View -->
+  <!-- Enhanced Detailed Month View -->
   <div class="detailed-view" *ngIf="showDetailedView && getSelectedMonthReport()">
     <div class="detailed-header">
-      <button class="back-btn" (click)="showDetailedView = false">← Back to Overview</button>
-      <h3>{{ getSelectedMonthReport()?.monthName }} - Detailed Report</h3>
+      <button class="back-btn" (click)="showDetailedView = false">
+        <span class="back-icon">←</span>
+        Back to Overview
+      </button>
+      <div class="detailed-title">
+        <h3>{{ getSelectedMonthReport()?.monthName }} - Detailed Report</h3>
+        <div class="detailed-subtitle">Comprehensive spending analysis</div>
+      </div>
+             <div class="detailed-actions">
+         <button class="action-btn" (click)="exportMonthReport()" title="Export this month's detailed report">
+           <span class="action-icon">📤</span>
+           Export Month Report
+         </button>
+       </div>
     </div>
 
     <div class="detailed-content">
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">💰</div>
+          <div class="summary-content">
+            <div class="summary-value">{{ getSelectedMonthReport()?.totalAmount | currency:'INR' }}</div>
+            <div class="summary-label">Total Spent</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">📝</div>
+          <div class="summary-content">
+            <div class="summary-value">{{ getSelectedMonthReport()?.expenseCount }}</div>
+            <div class="summary-label">Total Expenses</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">📊</div>
+          <div class="summary-content">
+            <div class="summary-value">{{ getAverageExpenseAmount() | currency:'INR' }}</div>
+            <div class="summary-label">Average Per Expense</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">🏷️</div>
+          <div class="summary-content">
+            <div class="summary-value">{{ getSelectedMonthReport()?.categoryBreakdown.length }}</div>
+            <div class="summary-label">Categories Used</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Category Breakdown -->
       <div class="breakdown-section">
-        <h4>Category Breakdown</h4>
+        <div class="section-header">
+          <h4>Category Breakdown</h4>
+          <div class="breakdown-total">Total: {{ getSelectedMonthReport()?.totalAmount | currency:'INR' }}</div>
+        </div>
         <div class="category-breakdown">
           <div class="category-item-detailed" *ngFor="let breakdown of getSelectedMonthReport()?.categoryBreakdown">
             <div class="category-info">
@@ -183,28 +311,83 @@
                 <div class="category-count">{{ breakdown.count }} expenses</div>
               </div>
             </div>
-            <div class="category-amount">{{ breakdown.amount | currency:'INR' }}</div>
+            <div class="category-amounts">
+              <div class="amount-primary">{{ breakdown.amount | currency:'INR' }}</div>
+              <div class="amount-percentage">{{ getCategoryPercentage(breakdown) }}%</div>
+            </div>
+            <div class="category-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="getCategoryPercentage(breakdown)" [style.background-color]="breakdown.category.color"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Expense List -->
+      <!-- Enhanced Expense List -->
       <div class="expenses-section">
-        <h4>All Expenses</h4>
+        <div class="section-header">
+          <h4>All Expenses</h4>
+          <div class="expenses-controls">
+            <button class="btn-sort" (click)="toggleExpenseSort()">
+              <span class="sort-icon">{{ getSortIcon() }}</span>
+              {{ getSortLabel() }}
+            </button>
+          </div>
+        </div>
         <div class="expenses-list">
-          <div class="expense-item" *ngFor="let expense of getSelectedMonthReport()?.expenses">
-            <div class="expense-info">
-              <div class="expense-amount">{{ expense.amount | currency:'INR' }}</div>
-              <div class="expense-category">
-                <span class="category-badge" [style.background-color]="getCategoryColor(expense.categoryId)">
-                  {{ getCategoryIcon(expense.categoryId) }} {{ getCategoryName(expense.categoryId) }}
-                </span>
+          <div class="expense-item" *ngFor="let expense of getPaginatedExpenses()">
+            <div class="expense-main">
+              <div class="expense-icon" [style.background-color]="getCategoryColor(expense.categoryId)">
+                {{ getCategoryIcon(expense.categoryId) }}
+              </div>
+              <div class="expense-info">
+                <div class="expense-description">{{ expense.description || 'No description' }}</div>
+                <div class="expense-meta">
+                  <span class="expense-date">{{ expense.date | date:'MMM dd, yyyy' }}</span>
+                  <span class="expense-category">
+                    <span class="category-badge" [style.background-color]="getCategoryColor(expense.categoryId)">
+                      {{ getCategoryIcon(expense.categoryId) }} {{ getCategoryName(expense.categoryId) }}
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
-            <div class="expense-details">
-              <div class="expense-date">{{ expense.date | date }}</div>
-              <div class="expense-description">{{ expense.description || 'No description' }}</div>
+            <div class="expense-amount">
+              <div class="amount-value">{{ expense.amount | currency:'INR' }}</div>
+              <div class="amount-indicator" [class]="getAmountIndicator(expense.amount)">
+                {{ getAmountIndicator(expense.amount) }}
+              </div>
             </div>
+          </div>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="pagination-controls" *ngIf="getTotalExpensePages() > 1">
+          <div class="pagination-info">
+            Showing {{ getExpenseStartIndex() + 1 }}-{{ getExpenseEndIndex() }} of {{ getSortedExpenses().length }} expenses
+          </div>
+          <div class="pagination-buttons">
+            <button class="pagination-btn" 
+                    [disabled]="currentExpensePage === 1"
+                    (click)="goToExpensePage(currentExpensePage - 1)">
+              <span class="pagination-icon">←</span>
+              Previous
+            </button>
+            <div class="page-numbers">
+              <button class="page-number" 
+                      *ngFor="let page of getExpensePageNumbers()"
+                      [class.active]="page === currentExpensePage"
+                      (click)="goToExpensePage(page)">
+                {{ page }}
+              </button>
+            </div>
+            <button class="pagination-btn" 
+                    [disabled]="currentExpensePage === getTotalExpensePages()"
+                    (click)="goToExpensePage(currentExpensePage + 1)">
+              Next
+              <span class="pagination-icon">→</span>
+            </button>
           </div>
         </div>
       </div>

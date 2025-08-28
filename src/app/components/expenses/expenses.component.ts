@@ -24,7 +24,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     id: '',
     description: '',
     amount: 0,
-    date: this.getCurrentDateString(),
+    date: new Date().toISOString().split('T')[0],
     categoryId: '',
     paymentMethod: '',
     tags: [],
@@ -369,7 +369,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
 
       // Check if the selected date is in the future
-      const selectedDate = new Date(dateStr + 'T00:00:00');
+      const selectedDate = new Date(dateStr);
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
       
@@ -500,7 +500,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     // Check if the selected date is in the future
-    const selectedDate = new Date(this.newExpense.date + 'T00:00:00');
+    const selectedDate = new Date(this.newExpense.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
     
@@ -527,7 +527,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       id: '',
       description: '',
       amount: 0,
-      date: this.getCurrentDateString(),
+      date: new Date().toISOString().split('T')[0],
       categoryId: '',
       paymentMethod: '',
       tags: [],
@@ -1134,18 +1134,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     return this.getExpensesWithUnknownCategories().length;
   }
 
-  // Get current date as string in YYYY-MM-DD format
-  getCurrentDateString(): string {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
   // Get maximum allowed date (today's date)
   getMaxDate(): string {
-    return this.getCurrentDateString();
+    return new Date().toISOString().split('T')[0];
   }
 
   // Handle From Date change
