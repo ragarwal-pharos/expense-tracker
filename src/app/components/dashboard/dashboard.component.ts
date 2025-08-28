@@ -1129,7 +1129,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       { label: 'This Year', value: 'yearly', description: 'Current year expenses' },
       { label: 'Last 30 Days', value: 'last30', description: 'Recent month activity' },
       { label: 'Last 7 Days', value: 'last7', description: 'This week\'s expenses' },
-      { label: 'Month Only', value: 'monthOnly', description: 'Select specific month' },
+      { label: 'Specific Month/Year', value: 'monthOnly', description: 'Select specific month and year' },
       { label: 'Custom Range', value: 'custom', description: 'Select specific dates' }
     ];
   }
