@@ -53,6 +53,7 @@
               id="expenseDate"
               [(ngModel)]="newExpense.date" 
               name="date" 
+              [max]="getMaxDate()"
               required>
           </div>
           <div class="form-group">
@@ -141,11 +142,11 @@
         </div>
         <div class="filter-group">
           <label for="filterDateFrom" class="form-label-modern">From Date</label>
-          <input type="date" class="form-control-modern" id="filterDateFrom" [(ngModel)]="filterDateFrom">
+          <input type="date" class="form-control-modern" id="filterDateFrom" [(ngModel)]="filterDateFrom" [max]="getMaxDate()" (change)="onFromDateChange()">
         </div>
         <div class="filter-group">
           <label for="filterDateTo" class="form-label-modern">To Date</label>
-          <input type="date" class="form-control-modern" id="filterDateTo" [(ngModel)]="filterDateTo">
+          <input type="date" class="form-control-modern" id="filterDateTo" [(ngModel)]="filterDateTo" [max]="getMaxDate()" [min]="filterDateFrom" (change)="onToDateChange()">
         </div>
         <div class="filter-group">
           <label for="filterAmount" class="form-label-modern">Min Amount</label>

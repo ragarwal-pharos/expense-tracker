@@ -364,6 +364,16 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Check if the selected date is in the future
+      const selectedDate = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      if (selectedDate > today) {
+        alert('Cannot edit expenses to future dates. Please select today\'s date or a past date.');
+        return;
+      }
+
       // Validate category
       const selectedCategory = this.categories.find(cat => cat.id === categorySelection);
       if (!selectedCategory) {
@@ -482,6 +492,16 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
     if (!this.newExpense.date) {
       alert('Please select a date.');
+      return false;
+    }
+
+    // Check if the selected date is in the future
+    const selectedDate = new Date(this.newExpense.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+    
+    if (selectedDate > today) {
+      alert('Cannot add expenses for future dates. Please select today\'s date or a past date.');
       return false;
     }
 
@@ -1095,5 +1115,27 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Get count of expenses with unknown categories
   getUnknownCategoryCount(): number {
     return this.getExpensesWithUnknownCategories().length;
+  }
+
+  // Get maximum allowed date (today's date)
+  getMaxDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // Handle From Date change
+  onFromDateChange(): void {
+    // If To Date is set and is earlier than From Date, clear it
+    if (this.filterDateTo && this.filterDateFrom && this.filterDateTo < this.filterDateFrom) {
+      this.filterDateTo = '';
+    }
+  }
+
+  // Handle To Date change
+  onToDateChange(): void {
+    // Validate that To Date is not earlier than From Date
+    if (this.filterDateFrom && this.filterDateTo && this.filterDateTo < this.filterDateFrom) {
+      alert('To Date cannot be earlier than From Date. Please select a valid date range.');
+      this.filterDateTo = '';
+    }
   }
 } 
