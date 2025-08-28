@@ -228,10 +228,19 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async editExpense(expense: Expense) {
     
     try {
-      // Simplified edit - description, amount, and date
+      // Get current category name for display
+      const currentCategoryName = this.getCategoryName(expense.categoryId);
+      
+      // Edit description, amount, date, and category
       const description = window.prompt('Description:', expense.description) || expense.description;
       const amountStr = window.prompt('Amount (₹):', expense.amount.toString()) || expense.amount.toString();
       const dateStr = window.prompt('Date (YYYY-MM-DD):', expense.date) || expense.date;
+      
+      // Create a more user-friendly category selection
+      const categorySelection = this.createCategorySelectionDialog(expense.categoryId);
+      if (categorySelection === null) {
+        return; // User cancelled
+      }
       
       // Validate amount
       const amount = parseFloat(amountStr);
@@ -247,20 +256,88 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Validate category
+      const selectedCategory = this.categories.find(cat => cat.id === categorySelection);
+      if (!selectedCategory) {
+        alert(`Error: Category with ID "${categorySelection}" does not exist. Please select a valid category from the list.`);
+        return;
+      }
+
       const updatedExpense: Expense = {
         ...expense,
         description,
         amount: amount,
-        date: dateStr
+        date: dateStr,
+        categoryId: categorySelection
       };
 
       await this.expenseService.update(updatedExpense);
       
+      // Show detailed success message
+      const successMessage = `Expense updated successfully!\n\n` +
+        `Description: ${description}\n` +
+        `Amount: ₹${amount}\n` +
+        `Date: ${dateStr}\n` +
+        `Category: ${selectedCategory.icon} ${selectedCategory.name}`;
+      
+      alert(successMessage);
+      
     } catch (error) {
       console.error('Error editing expense:', error);
+      alert('Error updating expense. Please try again.');
     } finally {
       
     }
+  }
+
+  // Helper method to create a user-friendly category selection dialog
+  private createCategorySelectionDialog(currentCategoryId: string): string | null {
+    // Check if there are any categories available
+    if (this.categories.length === 0) {
+      alert('No categories available. Please create some categories first before editing expenses.');
+      return null;
+    }
+    
+    const currentCategory = this.categories.find(cat => cat.id === currentCategoryId);
+    const currentCategoryName = currentCategory ? `${currentCategory.icon} ${currentCategory.name}` : 'Unknown (Category not found)';
+    
+    let message = `Current category: ${currentCategoryName}\n\n`;
+    message += `Available categories:\n`;
+    
+    // Only show "Keep current category" option if the current category exists
+    if (currentCategory) {
+      message += `0. Keep current category\n`;
+    } else {
+      message += `⚠️ Current category not found - please select a new category\n\n`;
+    }
+    
+    this.categories.forEach((cat, index) => {
+      message += `${index + 1}. ${cat.icon} ${cat.name}\n`;
+    });
+    
+    const rangeText = currentCategory ? `0-${this.categories.length}` : `1-${this.categories.length}`;
+    message += `\nEnter the number of your choice (${rangeText}):`;
+    
+    const choice = window.prompt(message, '0');
+    if (choice === null) {
+      return null; // User cancelled
+    }
+    
+    const choiceNum = parseInt(choice);
+    const maxChoice = currentCategory ? this.categories.length : this.categories.length;
+    const minChoice = currentCategory ? 0 : 1;
+    
+    if (isNaN(choiceNum) || choiceNum < minChoice || choiceNum > maxChoice) {
+      const rangeText = currentCategory ? `0-${this.categories.length}` : `1-${this.categories.length}`;
+      alert(`Invalid choice. Please enter a number between ${rangeText}`);
+      return this.createCategorySelectionDialog(currentCategoryId); // Retry
+    }
+    
+    if (choiceNum === 0 && currentCategory) {
+      return currentCategoryId; // Keep current category
+    }
+    
+    return this.categories[choiceNum - 1].id; // Return selected category ID
   }
 
   async deleteExpense(expense: Expense) {
@@ -716,5 +793,28 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       amount,
       percentage: (amount / expenses.reduce((sum, e) => sum + e.amount, 0)) * 100
     }));
+  }
+
+  // Validate if a category exists
+  validateCategoryExists(categoryId: string): boolean {
+    return this.categories.some(cat => cat.id === categoryId);
+  }
+
+  // Get category by ID with validation
+  getCategoryById(categoryId: string): Category | null {
+    const category = this.categories.find(cat => cat.id === categoryId);
+    return category || null;
+  }
+
+  // Get expenses with unknown categories for debugging
+  getExpensesWithUnknownCategories(): Expense[] {
+    return this.expenses.filter(expense => {
+      return !this.categories.find(cat => cat.id === expense.categoryId);
+    });
+  }
+
+  // Get count of expenses with unknown categories
+  getUnknownCategoryCount(): number {
+    return this.getExpensesWithUnknownCategories().length;
   }
 } 
