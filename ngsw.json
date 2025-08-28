@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1755873785178,
+  "timestamp": 1756368898260,
   "index": "/expense-tracker/index.html",
   "assetGroups": [
     {
@@ -13,7 +13,7 @@
       "urls": [
         "/expense-tracker/favicon.ico",
         "/expense-tracker/index.html",
-        "/expense-tracker/main-YTHNS5AW.js",
+        "/expense-tracker/main-BZZLRJCG.js",
         "/expense-tracker/manifest.webmanifest",
         "/expense-tracker/polyfills-B6TNHZQ6.js",
         "/expense-tracker/scripts-WL2QHKC5.js",
@@ -52,8 +52,8 @@
     "/expense-tracker/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/expense-tracker/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/expense-tracker/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/expense-tracker/index.html": "d9a8b646d7bd9227128d19bdede1b62ae3efa629",
-    "/expense-tracker/main-YTHNS5AW.js": "77a28fbbd45c6adebf6a3d2ca7310317dae78923",
+    "/expense-tracker/index.html": "6a95df2d28d71879eddbbc6b3c6648041eb8a60b",
+    "/expense-tracker/main-BZZLRJCG.js": "e3ea0e86fc997c1d77ce5bcdf44905517f4354fd",
     "/expense-tracker/manifest.webmanifest": "f75fbfacd19f26a6c323c7efea01dd3dd25ec6aa",
     "/expense-tracker/polyfills-B6TNHZQ6.js": "bf76ac291d7f51c1139b7edcf86b359a30c08c64",
     "/expense-tracker/scripts-WL2QHKC5.js": "c1b0b7dbf9c9fb61cc4dc027d25f48b5a7b113ad",
