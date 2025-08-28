@@ -5,43 +5,6 @@
       <div class="header-left">
         <h1 class="dashboard-title">📊 Smart Dashboard</h1>
         <p class="dashboard-subtitle">Complete financial overview at a glance</p>
-        <!-- Period Indicator -->
-        <div class="period-indicator" *ngIf="selectedPeriod !== 'all'">
-          <span class="period-badge" [ngClass]="'period-' + selectedPeriod">
-            <span class="period-icon">
-              {{ selectedPeriod === 'monthly' ? '📅' : 
-                 selectedPeriod === 'yearly' ? '📆' : 
-                 selectedPeriod === 'last30' ? '📊' : 
-                 selectedPeriod === 'last7' ? '📈' : '📋' }}
-            </span>
-            <span class="period-text">
-              {{ selectedPeriod === 'monthly' ? getSelectedMonthName() + ' ' + getSelectedYear() :
-                 selectedPeriod === 'yearly' ? getCurrentYear() :
-                 selectedPeriod === 'last30' ? 'Last 30 Days' :
-                 selectedPeriod === 'last7' ? 'Last 7 Days' :
-                 selectedPeriod === 'custom' ? 'Custom Range' : '' }}
-            </span>
-            <!-- Month and Year Selector for Monthly Period -->
-            <div class="month-selector" *ngIf="selectedPeriod === 'monthly'">
-              <div class="selector-group">
-                <label class="selector-label">Month</label>
-                <select class="month-select" [(ngModel)]="selectedMonth">
-                  <option *ngFor="let month of availableMonths" [value]="month.value">
-                    {{ month.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="selector-group">
-                <label class="selector-label">Year</label>
-                <select class="year-select" [(ngModel)]="selectedYear">
-                  <option *ngFor="let year of availableYears" [value]="year">
-                    {{ year }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </span>
-        </div>
       </div>
       <div class="quick-actions">
         <div class="action-buttons">
@@ -75,16 +38,81 @@
       </button>
     </div>
     
-    <!-- Custom Date Range with Calendar Icon and Filter Button -->
+    <!-- Custom Date Range with Start and End Date Inputs -->
     <div class="custom-date-range" *ngIf="selectedPeriod === 'custom'">
-      <div class="calendar-filter">
-        <div class="calendar-icon">
-          <span class="icon">📅</span>
+      <div class="date-range-container">
+        <div class="date-input-group">
+          <label class="date-label">Start Date</label>
+          <input 
+            type="date" 
+            class="date-input" 
+            [(ngModel)]="customStartDate"
+            (change)="onCustomDateChange()"
+            placeholder="Start date">
         </div>
-        <button class="filter-btn" (click)="openDatePicker()">
-          <span class="btn-icon">🔍</span>
-          <span class="btn-text">Filter</span>
-        </button>
+        <div class="date-separator">
+          <span class="separator-text">to</span>
+        </div>
+        <div class="date-input-group">
+          <label class="date-label">End Date</label>
+          <div class="end-date-container">
+            <input 
+              type="date" 
+              class="date-input" 
+              [(ngModel)]="customEndDate"
+              (change)="onCustomDateChange()"
+              placeholder="End date">
+            <button 
+              *ngIf="customStartDate || customEndDate"
+              class="clear-date-btn" 
+              (click)="clearCustomDateRange()"
+              title="Clear date range">
+              <span class="clear-icon">✕</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Date Range Validation Message -->
+      <div class="date-validation" *ngIf="customStartDate && customEndDate">
+        <div class="validation-message" [class]="isCustomDateRangeValid() ? 'valid' : 'invalid'">
+          <span class="validation-icon">{{ isCustomDateRangeValid() ? '✅' : '⚠️' }}</span>
+          <span class="validation-text">
+            {{ isCustomDateRangeValid() ? 
+              'Date range is valid' : 
+              'End date must be after start date' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month Only Filter -->
+  <div class="month-only-filter" *ngIf="selectedPeriod === 'monthOnly'">
+    <div class="month-only-container">
+      <div class="month-input-group">
+        <label class="month-label">Select Month</label>
+        <select class="month-select" [(ngModel)]="selectedMonthOnly" (change)="onMonthOnlyChange()">
+          <option value="">Select Month</option>
+          <option *ngFor="let month of availableMonths" [value]="month.value">
+            {{ month.label }}
+          </option>
+        </select>
+      </div>
+      <div class="year-input-group">
+        <label class="year-label">Select Year</label>
+        <select class="year-select" [(ngModel)]="selectedYearOnly" (change)="onMonthOnlyChange()">
+          <option value="">Select Year</option>
+          <option *ngFor="let year of availableYears" [value]="year">
+            {{ year }}
+          </option>
+        </select>
+      </div>
+    </div>
+    <!-- Month Range Display -->
+    <div class="month-range-display" *ngIf="customStartDate && customEndDate">
+      <div class="range-info">
+        <span class="range-label">Selected Range:</span>
+        <span class="range-dates">{{ customStartDate }} to {{ customEndDate }}</span>
       </div>
     </div>
   </div>

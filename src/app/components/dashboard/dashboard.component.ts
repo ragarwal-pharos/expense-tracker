@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
+import { FilterStateService } from '../../core/services/filter-state.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -64,6 +65,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedYear: string = '';
   customStartDate: string = '';
   customEndDate: string = '';
+  selectedMonthOnly: string = '';
+  selectedYearOnly: string = '';
   
   // Category breakdown
   categoryBreakdown: any[] = [];
@@ -86,17 +89,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
     private firebaseService: FirebaseService,
+    private filterStateService: FilterStateService,
     private router: Router
   ) {}
 
   ngOnInit() {
-    // Initialize month and year selection
-    const now = new Date();
-    this.selectedMonth = now.getMonth().toString();
-    this.selectedYear = now.getFullYear().toString();
+    // Load filter state from service
+    this.loadFilterState();
     
     // Initialize available years
-    const currentYear = now.getFullYear();
+    const currentYear = new Date().getFullYear();
     for (let year = 2020; year <= currentYear + 1; year++) {
       this.availableYears.push(year.toString());
     }
@@ -276,6 +278,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
             });
           }
           break;
+        case 'monthOnly':
+          if (this.selectedMonthOnly && this.selectedYearOnly) {
+            const monthIndex = parseInt(this.selectedMonthOnly);
+            const year = parseInt(this.selectedYearOnly);
+            filtered = filtered.filter(expense => {
+              const expenseDate = new Date(expense.date);
+              return expenseDate.getMonth() === monthIndex && 
+                     expenseDate.getFullYear() === year;
+            });
+          }
+          break;
       }
     }
     
@@ -292,32 +305,237 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'yearly': return 'This Year';
       case 'last30': return 'Last 30 Days';
       case 'last7': return 'Last 7 Days';
-      case 'custom': return 'Custom Period';
+      case 'custom': return this.getCustomDateRangeLabel();
       default: return 'All Time';
     }
   }
 
-  onFilterChange() {
-    // Trigger change detection
+  getCustomDateRangeLabel(): string {
+    if (!this.customStartDate || !this.customEndDate) {
+      return 'Custom Range';
+    }
+    
+    const startDate = new Date(this.customStartDate);
+    const endDate = new Date(this.customEndDate);
+    
+    const startFormatted = startDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    const endFormatted = endDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    return `${startFormatted} - ${endFormatted}`;
   }
 
+  // Load filter state from service
+  loadFilterState() {
+    const filterState = this.filterStateService.getFilterState();
+    console.log('Loading filter state from service:', filterState);
+    
+    this.selectedPeriod = filterState.selectedPeriod;
+    this.selectedMonth = filterState.selectedMonth;
+    this.selectedYear = filterState.selectedYear;
+    this.customStartDate = filterState.customStartDate;
+    this.customEndDate = filterState.customEndDate;
+    this.selectedMonthOnly = filterState.selectedMonthOnly || '';
+    this.selectedYearOnly = filterState.selectedYearOnly || '';
+    
+    // Auto-select current month and year if "Month Only" is selected but no month/year is set
+    if (this.selectedPeriod === 'monthOnly' && (!this.selectedMonthOnly || !this.selectedYearOnly)) {
+      const now = new Date();
+      this.selectedMonthOnly = now.getMonth().toString();
+      this.selectedYearOnly = now.getFullYear().toString();
+      console.log('Auto-selected current month and year on load:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
+      
+      // Trigger the month only change to set the date range
+      this.onMonthOnlyChange();
+    }
+    
+    console.log('Filter state loaded into component:', {
+      selectedPeriod: this.selectedPeriod,
+      selectedMonth: this.selectedMonth,
+      selectedYear: this.selectedYear,
+      customStartDate: this.customStartDate,
+      customEndDate: this.customEndDate,
+      selectedMonthOnly: this.selectedMonthOnly,
+      selectedYearOnly: this.selectedYearOnly
+    });
+  }
+
+  onFilterChange() {
+    console.log('Filter changed, saving state:', {
+      selectedPeriod: this.selectedPeriod,
+      selectedMonth: this.selectedMonth,
+      selectedYear: this.selectedYear,
+      customStartDate: this.customStartDate,
+      customEndDate: this.customEndDate
+    });
+    
+    // Auto-select current month and year when "Month Only" is selected
+    if (this.selectedPeriod === 'monthOnly') {
+      const now = new Date();
+      this.selectedMonthOnly = now.getMonth().toString();
+      this.selectedYearOnly = now.getFullYear().toString();
+      console.log('Auto-selected current month and year:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
+      
+      // Trigger the month only change to set the date range
+      this.onMonthOnlyChange();
+    }
+    
+    // Save filter state to service
+    this.filterStateService.updateFilterState({
+      selectedPeriod: this.selectedPeriod,
+      selectedMonth: this.selectedMonth,
+      selectedYear: this.selectedYear,
+      customStartDate: this.customStartDate,
+      customEndDate: this.customEndDate,
+      selectedMonthOnly: this.selectedMonthOnly,
+      selectedYearOnly: this.selectedYearOnly
+    });
+  }
+
+  // Custom date range methods
+  onCustomDateChange() {
+    // This method is called when either start or end date changes
+    console.log('Custom date changed:', { start: this.customStartDate, end: this.customEndDate });
+    
+    // Automatically apply the filter when both dates are selected and valid
+    if (this.customStartDate && this.customEndDate && this.isCustomDateRangeValid()) {
+      console.log('Auto-applying custom date range filter');
+      this.onFilterChange();
+    }
+  }
+
+  onMonthOnlyChange() {
+    console.log('Month only changed:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
+    if (this.selectedMonthOnly && this.selectedYearOnly) {
+      // Set the custom date range to the selected month
+      const monthIndex = parseInt(this.selectedMonthOnly);
+      const year = parseInt(this.selectedYearOnly);
+      
+      // Create start date (first day of the month) - use UTC to avoid timezone issues
+      const startDate = new Date(Date.UTC(year, monthIndex, 1));
+      
+      // Create end date (last day of the month) - use UTC to avoid timezone issues
+      const endDate = new Date(Date.UTC(year, monthIndex + 1, 0));
+      
+      // Format dates as YYYY-MM-DD using UTC methods to avoid timezone issues
+      const formatDate = (date: Date) => {
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      // Debug the date calculations
+      console.log('Date calculations:', {
+        monthIndex,
+        year,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        startDateMonth: startDate.getUTCMonth(),
+        startDateDate: startDate.getUTCDate(),
+        endDateMonth: endDate.getUTCMonth(),
+        endDateDate: endDate.getUTCDate()
+      });
+      
+      this.customStartDate = formatDate(startDate);
+      this.customEndDate = formatDate(endDate);
+      
+      console.log('Month only filter applied:', { 
+        month: monthIndex, 
+        year: year, 
+        startDate: this.customStartDate, 
+        endDate: this.customEndDate 
+      });
+      
+      // Save filter state directly without calling onFilterChange to avoid recursion
+      this.filterStateService.updateFilterState({
+        selectedPeriod: this.selectedPeriod,
+        selectedMonth: this.selectedMonth,
+        selectedYear: this.selectedYear,
+        customStartDate: this.customStartDate,
+        customEndDate: this.customEndDate,
+        selectedMonthOnly: this.selectedMonthOnly,
+        selectedYearOnly: this.selectedYearOnly
+      });
+      
+      // Force a small delay to ensure state is synchronized
+      setTimeout(() => {
+        console.log('Month only filter state after delay:', {
+          selectedPeriod: this.selectedPeriod,
+          selectedMonthOnly: this.selectedMonthOnly,
+          selectedYearOnly: this.selectedYearOnly,
+          customStartDate: this.customStartDate,
+          customEndDate: this.customEndDate
+        });
+      }, 100);
+    }
+  }
+
+  isCustomDateRangeValid(): boolean {
+    if (!this.customStartDate || !this.customEndDate) {
+      return false;
+    }
+    
+    const startDate = new Date(this.customStartDate);
+    const endDate = new Date(this.customEndDate);
+    
+    return startDate <= endDate;
+  }
+
+
+
+  clearCustomDateRange() {
+    this.customStartDate = '';
+    this.customEndDate = '';
+    console.log('Custom date range cleared');
+    
+    // Trigger change detection
+    this.onFilterChange();
+  }
+
+  // Legacy method for backward compatibility
   openDatePicker() {
-    // For now, we'll show a simple alert with instructions
-    // In a real implementation, this would open a date picker modal or calendar component
-    alert('Date picker functionality would open here. You can implement a modal with date selection or use a third-party date picker library.');
-    
-    // Example implementation ideas:
-    // 1. Open a modal with date range picker
-    // 2. Use a library like ngx-bootstrap datepicker
-    // 3. Create a custom date picker component
-    // 4. Use HTML5 date inputs in a modal
-    
-    // For now, we'll set some default dates as an example
+    // Set default date range (last 30 days)
+    this.setDefaultDateRange('last30');
+  }
+
+  // Set default date ranges
+  setDefaultDateRange(range: 'last7' | 'last30' | 'last90' | 'thisMonth' | 'lastMonth') {
     const today = new Date();
-    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    let startDate: Date;
     
-    this.customStartDate = thirtyDaysAgo.toISOString().split('T')[0];
+    switch (range) {
+      case 'last7':
+        startDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+        break;
+      case 'last30':
+        startDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+        break;
+      case 'last90':
+        startDate = new Date(today.getTime() - (90 * 24 * 60 * 60 * 1000));
+        break;
+      case 'thisMonth':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      case 'lastMonth':
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+        this.customStartDate = startDate.toISOString().split('T')[0];
+        this.customEndDate = endDate.toISOString().split('T')[0];
+        this.onFilterChange();
+        return;
+    }
+    
+    this.customStartDate = startDate.toISOString().split('T')[0];
     this.customEndDate = today.toISOString().split('T')[0];
+    
+    console.log(`Default date range set (${range}):`, { start: this.customStartDate, end: this.customEndDate });
     
     // Apply the filter
     this.onFilterChange();
@@ -911,6 +1129,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       { label: 'This Year', value: 'yearly', description: 'Current year expenses' },
       { label: 'Last 30 Days', value: 'last30', description: 'Recent month activity' },
       { label: 'Last 7 Days', value: 'last7', description: 'This week\'s expenses' },
+      { label: 'Month Only', value: 'monthOnly', description: 'Select specific month' },
       { label: 'Custom Range', value: 'custom', description: 'Select specific dates' }
     ];
   }
@@ -953,11 +1172,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // View category details
   viewCategoryDetails(categoryId: string): void {
-    // Navigate to expenses page with category filter
+    // Get current filter state
+    const filterState = this.filterStateService.getFilterState();
+    
+    // Navigate to expenses page with category filter and current filter state
     this.router.navigate(['/expenses'], { 
       queryParams: { 
         category: categoryId,
-        filter: 'category'
+        filter: 'category',
+        period: filterState.selectedPeriod,
+        month: filterState.selectedMonth,
+        year: filterState.selectedYear,
+        startDate: filterState.customStartDate,
+        endDate: filterState.customEndDate,
+        monthOnly: filterState.selectedMonthOnly,
+        yearOnly: filterState.selectedYearOnly
       } 
     });
   }
