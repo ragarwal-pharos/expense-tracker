@@ -183,7 +183,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getRecentExpenses() {
-    this.recentExpenses = [...this.expenses]
+    const filteredExpenses = this.getFilteredExpenses();
+    this.recentExpenses = [...filteredExpenses]
       .sort((a, b) => {
         // Ensure proper date parsing and handle potential timezone issues
         const dateA = new Date(a.date + 'T00:00:00');
@@ -567,9 +568,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.currentMonthTotal;
   }
 
-  // Get recent expenses sorted by date (most recent first)
+  // Get recent expenses sorted by date (most recent first) - using filtered expenses
   getRecentExpensesSorted(): Expense[] {
-    const sortedExpenses = [...this.expenses]
+    const filteredExpenses = this.getFilteredExpenses();
+    const sortedExpenses = [...filteredExpenses]
       .sort((a, b) => {
         // Ensure proper date parsing and handle potential timezone issues
         const dateA = new Date(a.date + 'T00:00:00');

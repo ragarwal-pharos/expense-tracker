@@ -355,8 +355,8 @@
         <div class="header-right">
           <div class="expense-summary">
             <div class="summary-item">
-              <span class="summary-label">Last 7 days</span>
-              <span class="summary-value">₹{{ getLastWeekTotal() | number }}</span>
+              <span class="summary-label">{{ getFilterLabel() }}</span>
+              <span class="summary-value">₹{{ getFilteredTotal() | number }}</span>
             </div>
           </div>
           <button class="btn btn-sm btn-outline-primary" (click)="viewAllExpenses()">

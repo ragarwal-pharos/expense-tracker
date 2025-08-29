@@ -7,7 +7,7 @@
 <!-- Main App Container -->
 <div class="app-container" *ngIf="(currentUser$ | async) as user">
   <!-- Header -->
-  <header class="app-header">
+  <header class="app-header" [class.header-hidden]="headerHidden">
             <div class="header-content">
               <div class="header-left">
                 <button class="sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
@@ -46,8 +46,6 @@
               </div>
             </div>
           </header>
-
-
 
   <!-- Sidebar Overlay -->
   <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>

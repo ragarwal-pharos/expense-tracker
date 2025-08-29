@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ScrollService } from './core/services/scroll.service';
@@ -60,6 +60,12 @@ import { take, filter } from 'rxjs/operators';
       right: 0;
       z-index: 100;
       padding: 0;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(0);
+    }
+
+    .app-header.header-hidden {
+      transform: translateY(-100%);
     }
 
     .header-content {
@@ -213,8 +219,6 @@ import { take, filter } from 'rxjs/operators';
               width: 100%;
             }
 
-
-
     /* Sidebar */
     .sidebar-overlay {
       position: fixed;
@@ -314,7 +318,7 @@ import { take, filter } from 'rxjs/operators';
     .main-content {
       flex: 1;
       background: #f8f9fa;
-      transition: filter 0.3s ease;
+      transition: filter 0.3s ease, margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       margin-top: 70px; /* Account for fixed header height */
     }
 
@@ -439,8 +443,12 @@ import { take, filter } from 'rxjs/operators';
     }
   `]
 })
-export class App {
+export class App implements OnInit, OnDestroy {
   sidebarOpen = false;
+  headerHidden = false;
+  private lastScrollY = 0;
+  private scrollThreshold = 10; // Minimum scroll amount to trigger hide/show
+  private scrollHandler: (() => void) | null = null;
 
   constructor(
     private scrollService: ScrollService,
@@ -456,8 +464,44 @@ export class App {
     });
   }
 
+  ngOnInit() {
+    this.setupScrollListener();
+  }
+
+  ngOnDestroy() {
+    this.removeScrollListener();
+  }
+
   get currentUser$() {
     return this.authService.currentUser$;
+  }
+
+  private setupScrollListener() {
+    this.scrollHandler = () => {
+      const currentScrollY = window.scrollY || window.pageYOffset;
+      
+      // Only trigger if scroll amount is significant
+      if (Math.abs(currentScrollY - this.lastScrollY) > this.scrollThreshold) {
+        if (currentScrollY > this.lastScrollY && currentScrollY > 100) {
+          // Scrolling down and not at the top - hide header
+          this.headerHidden = true;
+        } else if (currentScrollY < this.lastScrollY) {
+          // Scrolling up - show header
+          this.headerHidden = false;
+        }
+        
+        this.lastScrollY = currentScrollY;
+      }
+    };
+
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+  }
+
+  private removeScrollListener() {
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+      this.scrollHandler = null;
+    }
   }
 
   toggleSidebar() {
