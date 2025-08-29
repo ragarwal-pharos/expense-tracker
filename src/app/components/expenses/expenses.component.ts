@@ -371,7 +371,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       // Check if the selected date is in the future
       const selectedDate = new Date(dateStr);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      // Reset both dates to start of day for accurate comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
       
       if (selectedDate > today) {
         alert('Cannot edit expenses to future dates. Please select today\'s date or a past date.');
@@ -502,7 +505,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     // Check if the selected date is in the future
     const selectedDate = new Date(this.newExpense.date);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+    
+    // Reset both dates to start of day for accurate comparison
+    selectedDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
     
     if (selectedDate > today) {
       alert('Cannot add expenses for future dates. Please select today\'s date or a past date.');
