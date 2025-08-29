@@ -224,6 +224,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return category?.icon || '📌';
   }
 
+  getCategoryAmountColor(categoryId: string): string {
+    const category = this.categories.find(c => c.id === categoryId);
+    return category?.color || '#3b82f6'; // Default blue color
+  }
+
   // Filter methods
   getFilteredExpenses(): Expense[] {
     let filtered = [...this.expenses];
@@ -902,7 +907,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         title: 'View Reports',
         action: 'Monthly Analysis',
         icon: '📊',
-        route: '/monthly-reports'
+        route: '/reports'
       },
       {
         title: 'Manage Categories',

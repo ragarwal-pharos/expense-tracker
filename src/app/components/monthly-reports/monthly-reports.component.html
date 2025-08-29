@@ -178,8 +178,14 @@
       <div class="header-right">
         <div class="reports-count">{{ getFilteredReports().length }} months</div>
         <div class="view-toggle">
-          <button class="view-btn active" (click)="setViewMode('grid')">Grid</button>
-          <button class="view-btn" (click)="setViewMode('list')">List</button>
+          <button class="view-btn" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')">
+            <span class="view-icon">⊞</span>
+            <span class="view-text">Grid</span>
+          </button>
+          <button class="view-btn" [class.active]="viewMode === 'list'" (click)="setViewMode('list')">
+            <span class="view-icon">☰</span>
+            <span class="view-text">List</span>
+          </button>
         </div>
       </div>
     </div>
