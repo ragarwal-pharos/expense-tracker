@@ -42,6 +42,9 @@ import { AuthService } from '../../core/services/auth.service';
               required
               class="form-control"
               placeholder="Enter your password">
+            <div class="forgot-password-link">
+              <a (click)="goToForgotPassword()" class="link">Forgot Password?</a>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -144,6 +147,25 @@ import { AuthService } from '../../core/services/auth.service';
       outline: none;
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .forgot-password-link {
+      text-align: right;
+      margin-top: 0.5rem;
+    }
+
+    .forgot-password-link .link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .forgot-password-link .link:hover {
+      color: #5a6fd8;
+      text-decoration: underline;
     }
 
     .form-actions {
@@ -264,6 +286,10 @@ export class LoginComponent {
 
   goToRegister() {
     this.router.navigate(['/register']);
+  }
+
+  goToForgotPassword() {
+    this.router.navigate(['/forgot-password']);
   }
 
   private getErrorMessage(error: any): string {

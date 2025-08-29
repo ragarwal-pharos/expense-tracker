@@ -6,7 +6,8 @@ import {
   signOut, 
   onAuthStateChanged, 
   User,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from '@angular/fire/auth';
 import { BehaviorSubject, Observable } from 'rxjs';
 
@@ -31,6 +32,11 @@ export class AuthService {
       console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
       this.currentUserSubject.next(user);
     });
+  }
+
+  // Get auth instance for password reset
+  getAuthInstance() {
+    return this.auth;
   }
 
   // Get current user
@@ -80,7 +86,48 @@ export class AuthService {
     }
   }
 
-
+  // Send password reset email
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      console.log('Attempting to send password reset email to:', email);
+      console.log('Auth instance:', this.auth);
+      
+      // Validate email format
+      if (!email || !email.includes('@')) {
+        throw new Error('Invalid email address');
+      }
+      
+      await sendPasswordResetEmail(this.auth, email);
+      console.log('Password reset email sent successfully to:', email);
+      
+      // Additional logging for debugging
+      console.log('Firebase Auth state:', this.auth.currentUser);
+      console.log('Firebase config:', this.auth.app.options);
+      
+    } catch (error: any) {
+      console.error('Password reset error details:', {
+        code: error.code,
+        message: error.message,
+        email: email,
+        authState: this.auth.currentUser ? 'User logged in' : 'No user logged in'
+      });
+      
+      // Enhanced error messages
+      if (error.code === 'auth/user-not-found') {
+        throw new Error('No account found with this email address. Please check your email or create a new account.');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address format. Please enter a valid email.');
+      } else if (error.code === 'auth/too-many-requests') {
+        throw new Error('Too many password reset requests. Please wait a few minutes and try again.');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        throw new Error('Password reset is not enabled for this Firebase project. Please contact support.');
+      } else {
+        throw new Error(`Password reset failed: ${error.message || 'Unknown error occurred'}`);
+      }
+    }
+  }
 
   // Sign out
   async signOut(): Promise<void> {
