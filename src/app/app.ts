@@ -54,8 +54,10 @@ import { take, filter } from 'rxjs/operators';
     .app-header {
       background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
       padding: 0;
     }
@@ -211,6 +213,8 @@ import { take, filter } from 'rxjs/operators';
               width: 100%;
             }
 
+
+
     /* Sidebar */
     .sidebar-overlay {
       position: fixed;
@@ -311,6 +315,7 @@ import { take, filter } from 'rxjs/operators';
       flex: 1;
       background: #f8f9fa;
       transition: filter 0.3s ease;
+      margin-top: 70px; /* Account for fixed header height */
     }
 
     .main-content.content-blurred {
@@ -354,6 +359,10 @@ import { take, filter } from 'rxjs/operators';
         top: 0;
       }
 
+      .main-content {
+        margin-top: 65px; /* Slightly smaller margin for mobile */
+      }
+
       .content-container {
         padding: 1rem;
       }
@@ -395,6 +404,10 @@ import { take, filter } from 'rxjs/operators';
         min-height: 100vh;
         max-height: 100vh;
         top: 0;
+      }
+
+      .main-content {
+        margin-top: 60px; /* Even smaller margin for very small screens */
       }
 
       .content-container {
