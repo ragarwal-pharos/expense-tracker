@@ -224,7 +224,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     try {
       console.log('Loading data from Firebase...');
       
-      // Force reload from Firebase by calling the services directly
+      // Optimize: Use cached data if available, only reload if empty
       const expenses = await this.expenseService.getAll();
       const categories = await this.categoryService.getAll();
 

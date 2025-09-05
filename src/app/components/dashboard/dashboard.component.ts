@@ -895,11 +895,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const confirmDelete = window.confirm(`Are you sure you want to delete this expense?\n\nDescription: ${expense.description}\nAmount: ₹${expense.amount}\nDate: ${expense.date}`);
     
     if (confirmDelete) {
+      // Show immediate feedback - remove from UI optimistically
+      const originalExpenses = [...this.expenses];
+      this.expenses = this.expenses.filter(e => e.id !== expense.id);
+      
       this.expenseService.delete(expense.id).then(() => {
         console.log('Expense deleted successfully');
-        alert('Expense deleted successfully!');
+        // Success feedback is already shown by the optimistic update
       }).catch(error => {
         console.error('Error deleting expense:', error);
+        // Restore the expense if deletion failed
+        this.expenses = originalExpenses;
         alert('Error deleting expense. Please try again.');
       });
     }

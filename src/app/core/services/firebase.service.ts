@@ -101,8 +101,11 @@ export class FirebaseService {
       
       const docRef = await addDoc(expensesRef, expenseWithUserId);
       
-      // Reload expenses to update the list
-      await this.loadExpenses();
+      // Optimize: Update cache instead of reloading all expenses
+      const newExpense: Expense = { id: docRef.id, ...expenseWithUserId };
+      const currentExpenses = this.expensesSubject.value;
+      this.expensesSubject.next([newExpense, ...currentExpenses]);
+      
       return docRef.id;
     } catch (error) {
       console.error('Error adding expense:', error);
@@ -129,8 +132,13 @@ export class FirebaseService {
         console.log(`Expense ${expense.id} updated successfully`);
       }
       
-      // Reload expenses to update the list
-      await this.loadExpenses();
+      // Optimize: Update cache instead of reloading all expenses
+      const currentExpenses = this.expensesSubject.value;
+      const updatedExpenses = currentExpenses.map(e => 
+        e.id === expense.id ? expense : e
+      );
+      this.expensesSubject.next(updatedExpenses);
+      
     } catch (error) {
       console.error('Error updating expense:', error);
       throw error;
@@ -142,24 +150,24 @@ export class FirebaseService {
       console.log(`Attempting to delete expense with ID: ${expenseId}`);
       const expenseRef = doc(this.firestore, 'expenses', expenseId);
       
-      // Check if document exists first
-      const docSnap = await getDoc(expenseRef);
-      if (!docSnap.exists()) {
-        console.warn(`Document with ID ${expenseId} does not exist in Firebase. This might be a local-only expense.`);
-        // Don't throw error, just log warning and continue
-        return;
-      }
-      
+      // Delete the document directly - Firebase handles non-existent documents gracefully
       await deleteDoc(expenseRef);
       console.log(`Expense ${expenseId} deleted successfully`);
       
-      // Reload expenses to update the list
-      await this.loadExpenses();
+      // Optimize: Update local cache instead of reloading all expenses
+      const currentExpenses = this.expensesSubject.value;
+      const updatedExpenses = currentExpenses.filter(expense => expense.id !== expenseId);
+      this.expensesSubject.next(updatedExpenses);
+      
     } catch (error) {
       console.error('Error deleting expense:', error);
       // Don't throw error for non-existent documents
       if (error instanceof Error && error.message && error.message.includes('does not exist')) {
         console.warn('Document not found - likely a local-only expense');
+        // Still update local cache to remove the expense
+        const currentExpenses = this.expensesSubject.value;
+        const updatedExpenses = currentExpenses.filter(expense => expense.id !== expenseId);
+        this.expensesSubject.next(updatedExpenses);
         return;
       }
       throw error;
@@ -234,8 +242,11 @@ export class FirebaseService {
       const categoryWithUserId = { ...category, userId };
       const docRef = await addDoc(categoriesRef, categoryWithUserId);
       
-      // Reload categories to update the list
-      await this.loadCategories();
+      // Optimize: Update cache instead of reloading all categories
+      const newCategory: Category = { id: docRef.id, ...categoryWithUserId };
+      const currentCategories = this.categoriesSubject.value;
+      this.categoriesSubject.next([...currentCategories, newCategory]);
+      
       return docRef.id;
     } catch (error) {
       console.error('Error adding category:', error);
@@ -261,8 +272,13 @@ export class FirebaseService {
         console.log(`Category ${category.id} updated successfully`);
       }
       
-      // Reload categories to update the list
-      await this.loadCategories();
+      // Optimize: Update cache instead of reloading all categories
+      const currentCategories = this.categoriesSubject.value;
+      const updatedCategories = currentCategories.map(c => 
+        c.id === category.id ? category : c
+      );
+      this.categoriesSubject.next(updatedCategories);
+      
     } catch (error) {
       console.error('Error updating category:', error);
       throw error;
@@ -288,13 +304,20 @@ export class FirebaseService {
       await deleteDoc(categoryRef);
       console.log(`Category ${categoryId} deleted successfully`);
       
-      // Reload categories to update the list
-      await this.loadCategories();
+      // Optimize: Update cache instead of reloading all categories
+      const currentCategories = this.categoriesSubject.value;
+      const updatedCategories = currentCategories.filter(c => c.id !== categoryId);
+      this.categoriesSubject.next(updatedCategories);
+      
     } catch (error) {
       console.error('Error deleting category:', error);
       // Don't throw error for non-existent documents
       if (error instanceof Error && error.message.includes('does not exist')) {
         console.warn('Category not found - likely a local-only category');
+        // Still update local cache to remove the category
+        const currentCategories = this.categoriesSubject.value;
+        const updatedCategories = currentCategories.filter(c => c.id !== categoryId);
+        this.categoriesSubject.next(updatedCategories);
         return;
       }
       throw error;

@@ -23,8 +23,10 @@ export class ExpenseService {
   }
 
   async getAll(): Promise<Expense[]> {
-    // Always reload from Firebase to ensure fresh data
-    await this.loadExpenses();
+    // Optimize: Use cached data if available, only reload if empty
+    if (this.expenses.length === 0) {
+      await this.loadExpenses();
+    }
     return [...this.expenses];
   }
 
@@ -33,7 +35,7 @@ export class ExpenseService {
       console.log('Adding expense to Firebase...');
       const id = await this.firebaseService.addExpense(expense);
       console.log(`Expense added with ID: ${id}`);
-      await this.loadExpenses(); // Reload from Firebase
+      // Optimize: No need to reload - Firebase service handles cache update
       return id;
     } catch (error) {
       console.error('Error adding expense:', error);
@@ -65,7 +67,7 @@ export class ExpenseService {
       }
       
       console.log('Expense updated successfully');
-      await this.loadExpenses(); // Reload from Firebase
+      // Optimize: No need to reload - Firebase service handles cache update
     } catch (error) {
       console.error('Error updating expense:', error);
       throw error;
@@ -96,7 +98,7 @@ export class ExpenseService {
       }
       
       console.log('Expense deleted successfully');
-      await this.loadExpenses(); // Reload from Firebase
+      // Optimize: No need to reload from Firebase - Firebase service handles cache update
     } catch (error) {
       console.error('Error deleting expense:', error);
       throw error;
@@ -119,8 +121,11 @@ export class ExpenseService {
   }
 
   async getById(id: string): Promise<Expense | undefined> {
-    const expenses = await this.firebaseService.loadExpenses();
-    return expenses.find(e => e.id === id);
+    // Optimize: Use cached data if available
+    if (this.expenses.length === 0) {
+      await this.loadExpenses();
+    }
+    return this.expenses.find(e => e.id === id);
   }
 
   // Get expenses by category

@@ -58,6 +58,7 @@ export class MonthlyReportsComponent implements OnInit {
 
   async loadData() {
     try {
+      // Optimize: Use cached data if available, only reload if empty
       this.expenses = await this.expenseService.getAll();
       this.categories = await this.categoryService.getAll();
       

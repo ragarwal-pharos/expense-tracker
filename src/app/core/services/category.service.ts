@@ -101,8 +101,10 @@ export class CategoryService {
   }
 
   async getAll(): Promise<Category[]> {
-    // Always reload from Firebase to ensure fresh data
-    await this.loadCategories();
+    // Optimize: Use cached data if available, only reload if empty
+    if (this.categories.length === 0) {
+      await this.loadCategories();
+    }
     
     // Remove duplicates based on name (case-insensitive)
     const uniqueCategories = this.removeDuplicateCategories(this.categories);
@@ -172,7 +174,7 @@ export class CategoryService {
   async add(category: Omit<Category, 'id'>): Promise<string> {
     try {
       const id = await this.firebaseService.addCategory(category);
-      await this.loadCategories(); // Reload from Firebase
+      // Optimize: No need to reload - Firebase service handles cache update
       return id;
     } catch (error) {
       console.error('Error adding category:', error);
@@ -205,7 +207,7 @@ export class CategoryService {
       }
       
       console.log('Category updated successfully');
-      await this.loadCategories(); // Reload from Firebase
+      // Optimize: No need to reload - Firebase service handles cache update
     } catch (error) {
       console.error('Error updating category:', error);
       throw error;
@@ -255,7 +257,7 @@ export class CategoryService {
       }
       
       console.log('Category deleted successfully');
-      await this.loadCategories(); // Reload from Firebase
+      // Optimize: No need to reload - Firebase service handles cache update
     } catch (error) {
       console.error('Error deleting category:', error);
       throw error;
@@ -263,8 +265,11 @@ export class CategoryService {
   }
 
   async getById(id: string): Promise<Category | undefined> {
-    const categories = await this.firebaseService.loadCategories();
-    return categories.find(c => c.id === id);
+    // Optimize: Use cached data if available
+    if (this.categories.length === 0) {
+      await this.loadCategories();
+    }
+    return this.categories.find(c => c.id === id);
   }
 
   async triggerDuplicateCleanup(): Promise<void> {
