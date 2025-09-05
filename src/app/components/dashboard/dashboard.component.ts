@@ -84,6 +84,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // New features
   showInsights: boolean = false;
   
+  // Loading states
+  isLoading: boolean = true;
+  
   private subscription: Subscription = new Subscription();
 
   constructor(
@@ -133,6 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async loadData() {
     try {
+      this.isLoading = true;
       console.log('Loading dashboard data...');
       
       // Load expenses and categories
@@ -149,7 +153,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
-      
+      this.isLoading = false;
     }
   }
 

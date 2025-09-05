@@ -15,11 +15,17 @@
       </div>
     </div>
   </div>
-  
 
+  <!-- Loading Spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading expenses...</p>
+    </div>
+  </div>
   
   <!-- Add Expense Form -->
-  <div class="add-expense-card mb-4">
+  <div class="add-expense-card mb-4" *ngIf="!isLoading">
     <div class="card-header-modern">
       <div class="d-flex align-items-center">
         <span class="header-icon-small me-2">{{ isEditMode ? '✏️' : '➕' }}</span>
@@ -93,9 +99,10 @@
           <div class="form-group button-group">
             <label class="form-label-modern">&nbsp;</label>
             <div class="d-flex gap-2">
-              <button type="submit" class="btn-add-expense" [disabled]="!isFormValid()">
-                <span class="btn-icon">{{ isEditMode ? '💾' : '➕' }}</span>
-                <span class="btn-text">{{ isEditMode ? 'Save Changes' : 'Add Expense' }}</span>
+              <button type="submit" class="btn-add-expense" [disabled]="!isFormValid() || isSaving">
+                <span class="btn-icon" *ngIf="!isSaving">{{ isEditMode ? '💾' : '➕' }}</span>
+                <span class="btn-icon" *ngIf="isSaving">⏳</span>
+                <span class="btn-text">{{ isSaving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Add Expense') }}</span>
               </button>
               <button 
                 *ngIf="isEditMode" 
@@ -164,7 +171,7 @@
   </div>
 
   <!-- Expenses List -->
-  <div class="expenses-list-card">
+  <div class="expenses-list-card" *ngIf="!isLoading">
     <div class="card-header-modern">
       <div class="d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">

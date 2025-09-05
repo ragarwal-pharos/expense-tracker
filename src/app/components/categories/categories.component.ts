@@ -45,6 +45,10 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   mostUsedCategory: Category | null = null;
   leastUsedCategory: Category | null = null;
 
+  // Loading states
+  isLoading: boolean = true;
+  isUpdatingIcons: boolean = false;
+
   private subscription: Subscription = new Subscription();
 
   constructor(
@@ -81,11 +85,14 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   async loadData() {
     try {
+      this.isLoading = true;
       this.categories = await this.categoryService.getAll();
       this.expenses = await this.expenseService.getAll();
       this.calculateAnalytics();
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -154,51 +161,45 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   async updateCategory(category: Category) {
     try {
-      const newName = await this.dialogService.prompt(
-        'Enter new category name:',
-        'Edit Category',
-        category.name,
-        'text',
-        'Enter category name...',
-        'Category Name'
-      );
-      if (!newName || newName.trim() === '') {
-        return;
-      }
+      const result = await this.dialogService.form([
+        {
+          name: 'name',
+          label: 'Category Name',
+          type: 'text',
+          value: category.name,
+          placeholder: 'Enter category name...',
+          required: true
+        },
+        {
+          name: 'color',
+          label: 'Category Color',
+          type: 'color',
+          value: category.color || '#ff6b9d',
+          required: true
+        },
+        {
+          name: 'icon',
+          label: 'Category Icon',
+          type: 'text',
+          value: category.icon || '📌',
+          placeholder: 'Enter emoji icon...',
+          required: true
+        }
+      ], 'Edit Category', 'Update your category details:');
 
-      const newColor = await this.dialogService.prompt(
-        'Enter new color (hex code):',
-        'Edit Category',
-        category.color || '#ff6b9d',
-        'text',
-        '#ff6b9d',
-        'Color (Hex Code)'
-      );
-      if (!newColor) {
-        return;
-      }
-
-      const newIcon = await this.dialogService.prompt(
-        'Enter new icon (emoji):',
-        'Edit Category',
-        category.icon || '📌',
-        'text',
-        '📌',
-        'Icon (Emoji)'
-      );
-      if (!newIcon) {
+      if (!result) {
         return;
       }
 
       const updatedCategory: Category = {
         ...category,
-        name: newName.trim(),
-        color: newColor,
-        icon: newIcon
+        name: result['name'].trim(),
+        color: result['color'],
+        icon: result['icon'].trim()
       };
 
       await this.categoryService.update(updatedCategory);
-      console.log('Category updated successfully');
+      await this.loadData();
       await this.dialogService.success('Category updated successfully!');
     } catch (error) {
       console.error('Error updating category:', error);
@@ -456,6 +457,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     try {
+      this.isUpdatingIcons = true;
       const updatedCount = await this.categoryService.updateCategoryIcons();
       // Service handles reload, just refresh local data
       await this.loadData();
@@ -463,6 +465,8 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error updating category icons:', error);
       await this.dialogService.error('Error updating category icons. Please try again.');
+    } finally {
+      this.isUpdatingIcons = false;
     }
   }
 

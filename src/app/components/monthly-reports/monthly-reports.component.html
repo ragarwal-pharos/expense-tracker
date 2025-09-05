@@ -19,8 +19,16 @@
     </div>
   </div>
 
+  <!-- Loading Spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading reports...</p>
+    </div>
+  </div>
+
   <!-- Smart Analytics Overview -->
-  <div class="analytics-section" *ngIf="monthlyReports.length > 0 && showAnalytics">
+  <div class="analytics-section" *ngIf="monthlyReports.length > 0 && showAnalytics && !isLoading">
     <div class="analytics-header">
       <h3>📈 Spending Analytics</h3>
       <div class="analytics-period">
@@ -35,8 +43,23 @@
           <div class="analytics-value">{{ totalSpent | currency:'INR' }}</div>
           <div class="analytics-label">Total Spent</div>
           <div class="analytics-trend" *ngIf="getSpendingTrend()">
-            <span class="trend-icon">{{ getSpendingTrend().icon }}</span>
-            <span class="trend-text">{{ getSpendingTrend().text }}</span>
+            <div class="trend-header clickable-trend" 
+                 (click)="toggleTrendDisplayMode($event)"
+                 (mousedown)="$event.stopPropagation()"
+                 (mouseup)="$event.stopPropagation()"
+                 (touchstart)="$event.stopPropagation()"
+                 (touchend)="$event.stopPropagation()"
+                 title="Click to toggle between percentage and amount">
+              <span class="trend-icon">{{ getSpendingTrend().icon }}</span>
+              <span class="trend-text" 
+                    [class.trend-positive]="getSpendingTrend()?.isPositive"
+                    [class.trend-negative]="getSpendingTrend()?.isNegative"
+                    [class.trend-neutral]="getSpendingTrend()?.isNeutral">
+                {{ getSpendingTrend().text }}
+              </span>
+            </div>
+            <div class="trend-description">{{ getSpendingTrend().description }}</div>
+            <div class="trend-insight">{{ getSpendingTrend().insight }}</div>
           </div>
         </div>
       </div>
@@ -101,6 +124,9 @@
                  [class.positive]="getMonthlyComparison().change < 0" 
                  [class.negative]="getMonthlyComparison().change > 0">
               {{ getMonthlyComparison().change | currency:'INR' }}
+            </div>
+            <div class="stat-description" *ngIf="getMonthlyComparison().hasPreviousData">
+              {{ getMonthlyComparison().status }}
             </div>
             <div class="stat-value new-month" *ngIf="!getMonthlyComparison().hasPreviousData && getCurrentMonthReport()?.totalAmount > 0">
               First Month
@@ -190,14 +216,14 @@
       </div>
     </div>
     
-    <div class="reports-grid" *ngIf="getFilteredReports().length > 0 && viewMode === 'grid'">
+    <div class="reports-grid" *ngIf="getFilteredReports().length > 0 && viewMode === 'grid' && !isLoading">
       <div class="report-card" *ngFor="let report of getFilteredReports()" (click)="selectMonth(report.monthKey)">
         <div class="report-header">
           <div class="month-info">
             <h4 class="month-name">{{ report.monthName }}</h4>
             <div class="month-year">{{ report.year }}</div>
           </div>
-          <div class="report-arrow">→</div>
+          <div class="report-arrow clickable-arrow" (click)="selectMonth(report.monthKey); $event.stopPropagation()" title="View detailed report">→</div>
         </div>
         <div class="report-stats">
           <div class="report-amount">{{ report.totalAmount | currency:'INR' }}</div>
@@ -212,14 +238,25 @@
         </div>
         <div class="report-footer">
           <div class="trend-indicator" *ngIf="getReportTrend(report)">
-            <span class="trend-icon">{{ getReportTrend(report)?.icon }}</span>
-            <span class="trend-text">{{ getReportTrend(report)?.text }}</span>
+            <div class="trend-header">
+              <span class="trend-icon">{{ getReportTrend(report)?.icon }}</span>
+              <span class="trend-percentage clickable-trend" 
+                    [class.trend-positive]="getReportTrend(report)?.isPositive"
+                    [class.trend-negative]="getReportTrend(report)?.isNegative"
+                    [class.trend-neutral]="getReportTrend(report)?.isNeutral"
+                    (click)="toggleTrendDisplayMode($event, report.monthKey)"
+                    title="Click to toggle between percentage and amount">
+                {{ getReportTrend(report)?.text }}
+              </span>
+            </div>
+            <div class="trend-description">{{ getReportTrend(report)?.description }}</div>
+            <div class="trend-insight">{{ getReportTrend(report)?.insight }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="reports-list" *ngIf="getFilteredReports().length > 0 && viewMode === 'list'">
+    <div class="reports-list" *ngIf="getFilteredReports().length > 0 && viewMode === 'list' && !isLoading">
       <div class="report-list-item" *ngFor="let report of getFilteredReports()" (click)="selectMonth(report.monthKey)">
         <div class="list-item-header">
           <div class="month-info">
@@ -227,6 +264,7 @@
             <div class="month-year">{{ report.year }}</div>
           </div>
           <div class="list-item-amount">{{ report.totalAmount | currency:'INR' }}</div>
+          <div class="report-arrow clickable-arrow" (click)="selectMonth(report.monthKey); $event.stopPropagation()" title="View detailed report">→</div>
         </div>
         <div class="list-item-details">
           <div class="detail-item">
@@ -238,7 +276,23 @@
             <span class="detail-value">{{ getTopCategoryForReport(report)?.name || 'None' }}</span>
           </div>
         </div>
-        <div class="list-item-arrow">→</div>
+        <div class="list-item-footer" *ngIf="getReportTrend(report)">
+          <div class="trend-indicator">
+            <div class="trend-header">
+              <span class="trend-icon">{{ getReportTrend(report)?.icon }}</span>
+              <span class="trend-percentage clickable-trend" 
+                    [class.trend-positive]="getReportTrend(report)?.isPositive"
+                    [class.trend-negative]="getReportTrend(report)?.isNegative"
+                    [class.trend-neutral]="getReportTrend(report)?.isNeutral"
+                    (click)="toggleTrendDisplayMode($event, report.monthKey)"
+                    title="Click to toggle between percentage and amount">
+                {{ getReportTrend(report)?.text }}
+              </span>
+            </div>
+            <div class="trend-description">{{ getReportTrend(report)?.description }}</div>
+            <div class="trend-insight">{{ getReportTrend(report)?.insight }}</div>
+          </div>
+        </div>
       </div>
     </div>
 

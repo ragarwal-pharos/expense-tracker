@@ -10,8 +10,16 @@
     </div>
   </div>
 
+  <!-- Loading Spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading categories...</p>
+    </div>
+  </div>
+
   <!-- Analytics Overview -->
-  <div class="analytics-section" *ngIf="categories.length > 0">
+  <div class="analytics-section" *ngIf="categories.length > 0 && !isLoading">
     <div class="analytics-header">
       <h3>📊 Category Analytics</h3>
     </div>
@@ -191,15 +199,16 @@
     </div>
 
     <!-- Update Category Icons Button -->
-    <div class="update-icons-section" *ngIf="categories.length > 0 && hasOutdatedIcons()" style="margin-bottom: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px; text-align: center; border: 1px solid #4caf50;">
+    <div class="update-icons-section" *ngIf="categories.length > 0 && hasOutdatedIcons() && !isLoading" style="margin-bottom: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px; text-align: center; border: 1px solid #4caf50;">
       <p style="margin-bottom: 15px; color: #2e7d32; font-weight: 500;">✨ Update your category icons with new enhanced designs!</p>
-      <button (click)="updateCategoryIcons()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-        <span style="margin-right: 8px;">🎨</span>
-        Update Category Icons
+      <button (click)="updateCategoryIcons()" [disabled]="isUpdatingIcons" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; opacity: isUpdatingIcons ? 0.7 : 1;">
+        <span *ngIf="!isUpdatingIcons" style="margin-right: 8px;">🎨</span>
+        <span *ngIf="isUpdatingIcons" style="margin-right: 8px;">⏳</span>
+        {{ isUpdatingIcons ? 'Updating Icons...' : 'Update Category Icons' }}
       </button>
     </div>
     
-    <div class="categories-grid" *ngIf="getFilteredCategories().length > 0">
+    <div class="categories-grid" *ngIf="getFilteredCategories().length > 0 && !isLoading">
       <div class="category-card" *ngFor="let category of getFilteredCategories()">
         <div class="category-content">
           <div class="category-info">

@@ -25,6 +25,14 @@
     </div>
   </div>
 
+  <!-- Loading Spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading dashboard...</p>
+    </div>
+  </div>
+
   <!-- Smart Filters Bar -->
   <div class="smart-filters">
     <div class="filter-tabs">
@@ -118,7 +126,7 @@
   </div>
 
   <!-- Quick Summary Cards -->
-  <div class="summary-grid">
+  <div class="summary-grid" *ngIf="!isLoading">
     <div class="summary-card" *ngFor="let card of getQuickSummaryCards()">
       <div class="card-header">
         <span class="card-icon">{{ card.icon }}</span>
@@ -212,7 +220,7 @@
   </div>
 
   <!-- Main Content Grid -->
-  <div class="content-grid">
+  <div class="content-grid" *ngIf="!isLoading">
     <!-- Enhanced Category Breakdown with Visual Analytics -->
     <div class="content-card category-section">
       <div class="card-header">

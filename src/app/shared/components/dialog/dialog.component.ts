@@ -56,6 +56,15 @@ import { Subscription } from 'rxjs';
               #inputRef>
             
             <input 
+              *ngIf="config.inputType === 'color'"
+              type="color"
+              class="dialog-input color-input"
+              [(ngModel)]="inputValue"
+              (keyup.enter)="onConfirm()"
+              (keyup.escape)="onCancel()"
+              #inputRef>
+            
+            <input 
               *ngIf="config.inputType === 'date'"
               type="date"
               class="dialog-input"
@@ -64,7 +73,48 @@ import { Subscription } from 'rxjs';
               (keyup.escape)="onCancel()"
               #inputRef>
           </div>
-
+          
+          <!-- Multi-field Form -->
+          <div class="fields-group" *ngIf="config.fields && config.fields.length > 0">
+            <div class="field-item" *ngFor="let field of config.fields">
+              <label class="field-label">{{ field.label }}<span *ngIf="field.required" class="required">*</span></label>
+              
+              <input 
+                *ngIf="field.type === 'text' || field.type === 'email' || field.type === 'password'"
+                [type]="field.type"
+                class="dialog-input"
+                [(ngModel)]="fieldValues[field.name]"
+                [placeholder]="field.placeholder || ''"
+                (keyup.enter)="onConfirm()"
+                (keyup.escape)="onCancel()">
+              
+              <input 
+                *ngIf="field.type === 'number'"
+                type="number"
+                class="dialog-input"
+                [(ngModel)]="fieldValues[field.name]"
+                [placeholder]="field.placeholder || ''"
+                (keyup.enter)="onConfirm()"
+                (keyup.escape)="onCancel()">
+              
+              <input 
+                *ngIf="field.type === 'color'"
+                type="color"
+                class="dialog-input color-input"
+                [(ngModel)]="fieldValues[field.name]"
+                (keyup.enter)="onConfirm()"
+                (keyup.escape)="onCancel()">
+              
+              <input 
+                *ngIf="field.type === 'date'"
+                type="date"
+                class="dialog-input"
+                [(ngModel)]="fieldValues[field.name]"
+                (keyup.enter)="onConfirm()"
+                (keyup.escape)="onCancel()">
+            </div>
+          </div>
+          
           <!-- Options Selection -->
           <div class="options-group" *ngIf="config.options && config.options.length > 0">
             <div class="options-list">
@@ -222,6 +272,34 @@ import { Subscription } from 'rxjs';
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .color-input {
+      width: 60px !important;
+      height: 40px;
+      padding: 4px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .fields-group {
+      margin-bottom: 20px;
+    }
+
+    .field-item {
+      margin-bottom: 16px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .required {
+      color: #ef4444;
+      margin-left: 4px;
     }
 
     .options-group {
@@ -439,6 +517,7 @@ export class DialogComponent implements OnInit, OnDestroy {
 
   inputValue: string = '';
   selectedOption: string = '';
+  fieldValues: { [key: string]: string } = {};
   private subscription: Subscription = new Subscription();
 
   constructor(private dialogService: DialogService) {}
@@ -450,6 +529,14 @@ export class DialogComponent implements OnInit, OnDestroy {
         if (config) {
           this.inputValue = config.inputValue || '';
           this.selectedOption = config.selectedValue || '';
+          
+          // Initialize field values
+          this.fieldValues = {};
+          if (config.fields) {
+            config.fields.forEach(field => {
+              this.fieldValues[field.name] = field.value || '';
+            });
+          }
           
           // Focus on input after dialog opens
           setTimeout(() => {
@@ -474,7 +561,8 @@ export class DialogComponent implements OnInit, OnDestroy {
     const result: DialogResult = {
       confirmed: true,
       value: this.inputValue,
-      selectedOption: this.selectedOption
+      selectedOption: this.selectedOption,
+      fieldValues: this.fieldValues
     };
 
     this.dialogService.handleResult(result);

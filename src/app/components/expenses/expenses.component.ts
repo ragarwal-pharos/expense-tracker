@@ -64,6 +64,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   currentPage: number = 1;
   itemsPerPage: number = 10;
 
+  // Loading states
+  isLoading: boolean = true;
+  isSaving: boolean = false;
+
   private subscription: Subscription = new Subscription();
 
   constructor(
@@ -222,8 +226,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   async loadData() {
-    
     try {
+      this.isLoading = true;
       console.log('Loading data from Firebase...');
       
       // Optimize: Use cached data if available, only reload if empty
@@ -238,7 +242,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
-      
+      this.isLoading = false;
     }
   }
 
@@ -261,10 +265,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.isEditMode) {
-      await this.saveExpenseChanges();
-    } else {
-      await this.createNewExpense();
+    try {
+      this.isSaving = true;
+      if (this.isEditMode) {
+        await this.saveExpenseChanges();
+      } else {
+        await this.createNewExpense();
+      }
+    } finally {
+      this.isSaving = false;
     }
   }
 

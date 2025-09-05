@@ -29,6 +29,9 @@ export class MonthlyReportsComponent implements OnInit {
   sortBy: 'month' | 'amount' | 'expenseCount' = 'month';
   sortOrder: 'asc' | 'desc' = 'desc';
   showAnalytics: boolean = true;
+  
+  // Toggle state for trend indicators - per report card
+  trendDisplayModes: { [monthKey: string]: 'percentage' | 'amount' } = {};
 
   // View modes
   viewMode: 'grid' | 'list' = 'grid';
@@ -48,6 +51,9 @@ export class MonthlyReportsComponent implements OnInit {
   mostUsedCategory: any = null;
   spendingTrend: 'increasing' | 'decreasing' | 'stable' = 'stable';
 
+  // Loading states
+  isLoading: boolean = true;
+
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
@@ -60,6 +66,7 @@ export class MonthlyReportsComponent implements OnInit {
 
   async loadData() {
     try {
+      this.isLoading = true;
       // Optimize: Use cached data if available, only reload if empty
       this.expenses = await this.expenseService.getAll();
       this.categories = await this.categoryService.getAll();
@@ -70,6 +77,8 @@ export class MonthlyReportsComponent implements OnInit {
       
     } catch (error) {
       console.error('Error loading reports:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -152,12 +161,41 @@ export class MonthlyReportsComponent implements OnInit {
   }
 
   getSpendingTrend(): any {
+    const displayMode = this.trendDisplayModes['analytics'] || 'percentage';
+    
     if (this.spendingTrend === 'increasing') {
-      return { icon: '📈', text: 'Increasing' };
+      return { 
+        icon: '📈', 
+        text: 'Spending is increasing',
+        description: 'Monthly expenses are trending upward',
+        insight: 'Consider setting spending limits',
+        severity: 'medium',
+        isPositive: true,
+        isNegative: false,
+        isNeutral: false
+      };
     } else if (this.spendingTrend === 'decreasing') {
-      return { icon: '📉', text: 'Decreasing' };
+      return { 
+        icon: '📉', 
+        text: 'Spending is decreasing',
+        description: 'Monthly expenses are trending downward',
+        insight: 'Excellent financial discipline!',
+        severity: 'low',
+        isPositive: false,
+        isNegative: true,
+        isNeutral: false
+      };
     } else {
-      return { icon: '➡️', text: 'Stable' };
+      return { 
+        icon: '➡️', 
+        text: 'Spending is stable',
+        description: 'Monthly expenses are consistent',
+        insight: 'Good spending control',
+        severity: 'low',
+        isPositive: false,
+        isNegative: false,
+        isNeutral: true
+      };
     }
   }
 
@@ -197,12 +235,69 @@ export class MonthlyReportsComponent implements OnInit {
     const previous = this.monthlyReports[currentIndex + 1].totalAmount;
     const change = ((current - previous) / previous) * 100;
     
-    if (change > 10) {
-      return { icon: '📈', text: `+${change.toFixed(1)}%` };
+    const amountChange = current - previous;
+    const displayMode = this.trendDisplayModes[report.monthKey] || 'percentage';
+    const displayText = displayMode === 'percentage' 
+      ? `${change > 0 ? '+' : ''}${change.toFixed(1)}%`
+      : `${amountChange > 0 ? '+' : ''}₹${Math.abs(amountChange).toLocaleString()}`;
+    
+
+    if (change > 50) {
+      return { 
+        icon: '🚨', 
+        text: displayText,
+        description: 'Significantly higher spending',
+        insight: 'Consider reviewing your budget',
+        severity: 'high',
+        isPositive: true,
+        isNegative: false,
+        isNeutral: false
+      };
+    } else if (change > 10) {
+      return { 
+        icon: '📈', 
+        text: displayText,
+        description: 'Higher spending than last month',
+        insight: 'Monitor your expenses closely',
+        severity: 'medium',
+        isPositive: true,
+        isNegative: false,
+        isNeutral: false
+      };
+    } else if (change < -50) {
+      return { 
+        icon: '🎉', 
+        text: displayText,
+        description: 'Significantly lower spending',
+        insight: 'Great job managing your budget!',
+        severity: 'high',
+        isPositive: false,
+        isNegative: true,
+        isNeutral: false
+      };
     } else if (change < -10) {
-      return { icon: '📉', text: `${change.toFixed(1)}%` };
+      return { 
+        icon: '📉', 
+        text: displayText,
+        description: 'Lower spending than last month',
+        insight: 'Good progress on savings',
+        severity: 'medium',
+        isPositive: false,
+        isNegative: true,
+        isNeutral: false
+      };
     } else {
-      return { icon: '➡️', text: 'Stable' };
+      const displayMode = this.trendDisplayModes[report.monthKey] || 'percentage';
+      return { 
+        icon: '➡️', 
+        text: displayMode === 'percentage' ? '±0%' : '₹0',
+        description: 'Similar spending to last month',
+        insight: 'Consistent spending pattern',
+        severity: 'low',
+        isPositive: false,
+        isNegative: false,
+        isNeutral: true
+      };
     }
   }
 
@@ -726,9 +821,9 @@ export class MonthlyReportsComponent implements OnInit {
     const change = current.totalAmount - previous.totalAmount;
     const percentage = previous.totalAmount > 0 ? (change / previous.totalAmount) * 100 : 0;
     
-    let status = 'No Change';
-    if (change > 0) status = 'Increased';
-    else if (change < 0) status = 'Decreased';
+    let status = 'No significant change';
+    if (change > 0) status = 'Higher spending this month';
+    else if (change < 0) status = 'Lower spending this month';
     
     return {
       change,
@@ -792,6 +887,24 @@ export class MonthlyReportsComponent implements OnInit {
     });
     
     return insights;
+  }
+
+  toggleTrendDisplayMode(event?: Event, monthKey?: string): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+    
+    if (monthKey) {
+      // Toggle for specific report card
+      const currentMode = this.trendDisplayModes[monthKey] || 'percentage';
+      this.trendDisplayModes[monthKey] = currentMode === 'percentage' ? 'amount' : 'percentage';
+    } else {
+      // Fallback for analytics section (global toggle)
+      const globalMode = this.trendDisplayModes['analytics'] || 'percentage';
+      this.trendDisplayModes['analytics'] = globalMode === 'percentage' ? 'amount' : 'percentage';
+    }
   }
 
   getFilteredExpenses(): Expense[] {

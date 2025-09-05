@@ -7,18 +7,28 @@ export interface DialogConfig {
   type: 'info' | 'warning' | 'error' | 'success' | 'confirm';
   confirmText?: string;
   cancelText?: string;
-  inputType?: 'text' | 'number' | 'date' | 'email' | 'password';
+  inputType?: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
   inputValue?: string;
   inputPlaceholder?: string;
   inputLabel?: string;
   options?: Array<{value: string, label: string, icon?: string}>;
   selectedValue?: string;
+  // For multi-field forms
+  fields?: Array<{
+    name: string;
+    label: string;
+    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
+    value: string;
+    placeholder?: string;
+    required?: boolean;
+  }>;
 }
 
 export interface DialogResult {
   confirmed: boolean;
   value?: string;
   selectedOption?: string;
+  fieldValues?: { [key: string]: string };
 }
 
 @Injectable({
@@ -187,6 +197,35 @@ export class DialogService {
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve(result.confirmed ? result.selectedOption || null : null);
+        }
+      });
+    });
+  }
+
+  // Multi-field form dialog
+  form(fields: Array<{
+    name: string;
+    label: string;
+    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
+    value: string;
+    placeholder?: string;
+    required?: boolean;
+  }>, title: string = 'Edit', message: string = 'Please fill in the details:'): Promise<{ [key: string]: string } | null> {
+    return new Promise((resolve) => {
+      this.dialogSubject.next({
+        title,
+        message,
+        type: 'confirm',
+        fields,
+        confirmText: 'Save',
+        cancelText: 'Cancel'
+      });
+
+      this.result$.subscribe(result => {
+        if (result) {
+          this.dialogSubject.next(null);
+          this.resultSubject.next(null);
+          resolve(result.confirmed ? result.fieldValues || null : null);
         }
       });
     });
