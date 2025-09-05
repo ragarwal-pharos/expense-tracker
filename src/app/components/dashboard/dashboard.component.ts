@@ -6,6 +6,7 @@ import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -90,6 +91,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private categoryService: CategoryService,
     private firebaseService: FirebaseService,
     private filterStateService: FilterStateService,
+    private dialogService: DialogService,
     private router: Router
   ) {}
 
@@ -849,24 +851,55 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/expenses']);
   }
 
-  editExpense(expense: Expense): void {
+  async editExpense(expense: Expense): Promise<void> {
     try {
-      // Simplified edit - description, amount, and date
-      const description = window.prompt('Description:', expense.description) || expense.description;
-      const amountStr = window.prompt('Amount (₹):', expense.amount.toString()) || expense.amount.toString();
-      const dateStr = window.prompt('Date (YYYY-MM-DD):', expense.date) || expense.date;
+      // Get updated description
+      const description = await this.dialogService.prompt(
+        'Enter expense description:',
+        'Edit Expense',
+        expense.description,
+        'text',
+        'Enter description...',
+        'Description'
+      );
+      
+      if (description === null) return; // User cancelled
+      
+      // Get updated amount
+      const amountStr = await this.dialogService.prompt(
+        'Enter expense amount:',
+        'Edit Expense',
+        expense.amount.toString(),
+        'number',
+        'Enter amount...',
+        'Amount (₹)'
+      );
+      
+      if (amountStr === null) return; // User cancelled
+      
+      // Get updated date
+      const dateStr = await this.dialogService.prompt(
+        'Enter expense date:',
+        'Edit Expense',
+        expense.date,
+        'date',
+        '',
+        'Date'
+      );
+      
+      if (dateStr === null) return; // User cancelled
       
       // Validate amount
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) {
-        alert('Invalid Amount! Please enter a valid number greater than 0.');
+        await this.dialogService.error('Invalid Amount! Please enter a valid number greater than 0.');
         return;
       }
 
       // Validate date
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(dateStr)) {
-        alert('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
+        await this.dialogService.error('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
         return;
       }
 
@@ -877,37 +910,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
         date: dateStr
       };
 
-      this.expenseService.update(updatedExpense).then(() => {
-        console.log('Expense updated successfully');
-      }).catch(error => {
-        console.error('Error updating expense:', error);
-        alert('Error updating expense. Please try again.');
-      });
+      await this.expenseService.update(updatedExpense);
+      await this.dialogService.success('Expense updated successfully!');
       
     } catch (error) {
       console.error('Error editing expense:', error);
-      alert('Error editing expense. Please try again.');
+      await this.dialogService.error('Error updating expense. Please try again.');
     }
   }
 
-  deleteExpense(expense: Expense): void {
+  async deleteExpense(expense: Expense): Promise<void> {
     // Show confirmation dialog
-    const confirmDelete = window.confirm(`Are you sure you want to delete this expense?\n\nDescription: ${expense.description}\nAmount: ₹${expense.amount}\nDate: ${expense.date}`);
+    const confirmDelete = await this.dialogService.confirm(
+      `Are you sure you want to delete this expense?\n\nDescription: ${expense.description}\nAmount: ₹${expense.amount}\nDate: ${expense.date}`,
+      'Delete Expense'
+    );
     
     if (confirmDelete) {
       // Show immediate feedback - remove from UI optimistically
       const originalExpenses = [...this.expenses];
       this.expenses = this.expenses.filter(e => e.id !== expense.id);
       
-      this.expenseService.delete(expense.id).then(() => {
-        console.log('Expense deleted successfully');
-        // Success feedback is already shown by the optimistic update
-      }).catch(error => {
+      try {
+        await this.expenseService.delete(expense.id);
+        await this.dialogService.success('Expense deleted successfully!');
+      } catch (error) {
         console.error('Error deleting expense:', error);
         // Restore the expense if deletion failed
         this.expenses = originalExpenses;
-        alert('Error deleting expense. Please try again.');
-      });
+        await this.dialogService.error('Error deleting expense. Please try again.');
+      }
     }
   }
 

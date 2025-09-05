@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -50,6 +51,7 @@ export class MonthlyReportsComponent implements OnInit {
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit() {
@@ -295,10 +297,10 @@ export class MonthlyReportsComponent implements OnInit {
     this.exportMonthReport();
   }
 
-  exportFullReport(): void {
+  async exportFullReport(): Promise<void> {
     const filteredReports = this.getFilteredReports();
     if (filteredReports.length === 0) {
-      alert('No data to export. Please adjust your filters.');
+      await this.dialogService.warning('No data to export. Please adjust your filters.');
       return;
     }
 
@@ -309,13 +311,13 @@ export class MonthlyReportsComponent implements OnInit {
     const filename = `expense_report_${timestamp}.csv`;
     
     let csvContent = this.generateFullReportCSV(filteredReports);
-    this.downloadCSV(csvContent, filename);
+    await this.downloadCSV(csvContent, filename);
   }
 
-  exportMonthReport(): void {
+  async exportMonthReport(): Promise<void> {
     const selectedReport = this.getSelectedMonthReport();
     if (!selectedReport) {
-      alert('No month selected for export.');
+      await this.dialogService.warning('No month selected for export.');
       return;
     }
 
@@ -326,7 +328,7 @@ export class MonthlyReportsComponent implements OnInit {
     const filename = `expense_report_${selectedReport.monthName.replace(' ', '_')}_${timestamp}.csv`;
     
     let csvContent = this.generateMonthReportCSV(selectedReport);
-    this.downloadCSV(csvContent, filename);
+    await this.downloadCSV(csvContent, filename);
   }
 
   private generateFullReportCSV(reports: any[]): string {
@@ -525,7 +527,7 @@ export class MonthlyReportsComponent implements OnInit {
     return breakdown ? breakdown.amount.toFixed(2) : '0.00';
   }
 
-  private downloadCSV(content: string, filename: string): void {
+  private async downloadCSV(content: string, filename: string): Promise<void> {
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     
@@ -539,7 +541,7 @@ export class MonthlyReportsComponent implements OnInit {
       document.body.removeChild(link);
     } else {
       // Fallback for older browsers
-      alert('Download not supported in this browser. Copy the data manually.');
+      await this.dialogService.warning('Download not supported in this browser. Copy the data manually.');
       console.log('CSV Content:', content);
     }
   }

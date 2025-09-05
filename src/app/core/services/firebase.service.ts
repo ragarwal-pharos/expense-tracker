@@ -263,9 +263,10 @@ export class FirebaseService {
       const docSnap = await getDoc(categoryRef);
       if (!docSnap.exists()) {
         console.warn(`Category with ID ${category.id} does not exist in Firebase. This might be a local-only category.`);
-        // Don't create new document, just skip the update for local categories
-        console.log('Skipping update for local-only category');
-        return;
+        // For icon updates, we'll create the document if it doesn't exist
+        const { id, ...categoryData } = category;
+        await setDoc(categoryRef, categoryData);
+        console.log(`Created new category with ID: ${category.id}`);
       } else {
         const { id, ...categoryData } = category; // Remove id from the update data
         await updateDoc(categoryRef, categoryData);

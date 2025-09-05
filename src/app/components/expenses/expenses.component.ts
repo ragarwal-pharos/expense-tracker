@@ -6,6 +6,7 @@ import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -70,6 +71,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     private categoryService: CategoryService,
     private firebaseService: FirebaseService,
     private filterStateService: FilterStateService,
+    private dialogService: DialogService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -255,7 +257,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   async addExpense() {
-    if (!this.validateExpense()) {
+    if (!(await this.validateExpense())) {
       return;
     }
 
@@ -270,7 +272,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     try {
       const amount = parseFloat(this.amountInput);
       if (isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid amount greater than 0.');
+        await this.dialogService.warning('Please enter a valid amount greater than 0.');
         return;
       }
 
@@ -292,11 +294,13 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       console.log(`Expense added with Firebase ID: ${id}`);
       
       this.resetForm();
+      await this.dialogService.success('Expense added successfully!');
       
       // Check for achievements
-      this.checkAchievements();
+      await this.checkAchievements();
     } catch (error) {
       console.error('Error adding expense:', error);
+      await this.dialogService.error('Error adding expense. Please try again.');
     }
   }
 
@@ -304,7 +308,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     try {
       const amount = parseFloat(this.amountInput);
       if (isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid amount greater than 0.');
+        await this.dialogService.warning('Please enter a valid amount greater than 0.');
         return;
       }
 
@@ -321,10 +325,13 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       this.editingExpenseId = '';
       this.resetForm();
       
+      await this.dialogService.success('Expense updated successfully!');
+      
       // Clear query parameters
       this.router.navigate(['/expenses']);
     } catch (error) {
       console.error('Error updating expense:', error);
+      await this.dialogService.error('Error updating expense. Please try again.');
     }
   }
 
@@ -339,33 +346,71 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   async editExpense(expense: Expense) {
-    
     try {
-      // Get current category name for display
-      const currentCategoryName = this.getCategoryName(expense.categoryId);
+      // Get updated description
+      const description = await this.dialogService.prompt(
+        'Enter expense description:',
+        'Edit Expense',
+        expense.description,
+        'text',
+        'Enter description...',
+        'Description'
+      );
       
-      // Edit description, amount, date, and category
-      const description = window.prompt('Description:', expense.description) || expense.description;
-      const amountStr = window.prompt('Amount (₹):', expense.amount.toString()) || expense.amount.toString();
-      const dateStr = window.prompt('Date (YYYY-MM-DD):', expense.date) || expense.date;
+      if (description === null) return; // User cancelled
       
-      // Create a more user-friendly category selection
-      const categorySelection = this.createCategorySelectionDialog(expense.categoryId);
-      if (categorySelection === null) {
-        return; // User cancelled
-      }
+      // Get updated amount
+      const amountStr = await this.dialogService.prompt(
+        'Enter expense amount:',
+        'Edit Expense',
+        expense.amount.toString(),
+        'number',
+        'Enter amount...',
+        'Amount (₹)'
+      );
+      
+      if (amountStr === null) return; // User cancelled
+      
+      // Get updated date
+      const dateStr = await this.dialogService.prompt(
+        'Enter expense date:',
+        'Edit Expense',
+        expense.date,
+        'date',
+        '',
+        'Date'
+      );
+      
+      if (dateStr === null) return; // User cancelled
+      
+      // Create category selection options
+      const categoryOptions = this.categories.map(cat => ({
+        value: cat.id,
+        label: cat.name,
+        icon: cat.icon
+      }));
+      
+      // Get updated category
+      const categorySelection = await this.dialogService.select(
+        'Select a category:',
+        'Edit Expense',
+        categoryOptions,
+        expense.categoryId
+      );
+      
+      if (categorySelection === null) return; // User cancelled
       
       // Validate amount
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) {
-        alert('Invalid Amount! Please enter a valid number greater than 0.');
+        await this.dialogService.error('Invalid Amount! Please enter a valid number greater than 0.');
         return;
       }
 
       // Validate date
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(dateStr)) {
-        alert('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
+        await this.dialogService.error('Invalid Date! Please enter date in YYYY-MM-DD format (e.g., 2024-01-15).');
         return;
       }
 
@@ -378,14 +423,14 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       today.setHours(0, 0, 0, 0);
       
       if (selectedDate > today) {
-        alert('Cannot edit expenses to future dates. Please select today\'s date or a past date.');
+        await this.dialogService.error('Cannot edit expenses to future dates. Please select today\'s date or a past date.');
         return;
       }
 
       // Validate category
       const selectedCategory = this.categories.find(cat => cat.id === categorySelection);
       if (!selectedCategory) {
-        alert(`Error: Category with ID "${categorySelection}" does not exist. Please select a valid category from the list.`);
+        await this.dialogService.error(`Error: Category with ID "${categorySelection}" does not exist. Please select a valid category from the list.`);
         return;
       }
 
@@ -406,100 +451,50 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         `Date: ${dateStr}\n` +
         `Category: ${selectedCategory.icon} ${selectedCategory.name}`;
       
-      alert(successMessage);
+      await this.dialogService.success(successMessage);
       
     } catch (error) {
       console.error('Error editing expense:', error);
-      alert('Error updating expense. Please try again.');
-    } finally {
-      
+      await this.dialogService.error('Error updating expense. Please try again.');
     }
   }
 
-  // Helper method to create a user-friendly category selection dialog
-  private createCategorySelectionDialog(currentCategoryId: string): string | null {
-    // Check if there are any categories available
-    if (this.categories.length === 0) {
-      alert('No categories available. Please create some categories first before editing expenses.');
-      return null;
-    }
-    
-    const currentCategory = this.categories.find(cat => cat.id === currentCategoryId);
-    const currentCategoryName = currentCategory ? `${currentCategory.icon} ${currentCategory.name}` : 'Unknown (Category not found)';
-    
-    let message = `Current category: ${currentCategoryName}\n\n`;
-    message += `Available categories:\n`;
-    
-    // Only show "Keep current category" option if the current category exists
-    if (currentCategory) {
-      message += `0. Keep current category\n`;
-    } else {
-      message += `⚠️ Current category not found - please select a new category\n\n`;
-    }
-    
-    this.categories.forEach((cat, index) => {
-      message += `${index + 1}. ${cat.icon} ${cat.name}\n`;
-    });
-    
-    const rangeText = currentCategory ? `0-${this.categories.length}` : `1-${this.categories.length}`;
-    message += `\nEnter the number of your choice (${rangeText}):`;
-    
-    const choice = window.prompt(message, '0');
-    if (choice === null) {
-      return null; // User cancelled
-    }
-    
-    const choiceNum = parseInt(choice);
-    const maxChoice = currentCategory ? this.categories.length : this.categories.length;
-    const minChoice = currentCategory ? 0 : 1;
-    
-    if (isNaN(choiceNum) || choiceNum < minChoice || choiceNum > maxChoice) {
-      const rangeText = currentCategory ? `0-${this.categories.length}` : `1-${this.categories.length}`;
-      alert(`Invalid choice. Please enter a number between ${rangeText}`);
-      return this.createCategorySelectionDialog(currentCategoryId); // Retry
-    }
-    
-    if (choiceNum === 0 && currentCategory) {
-      return currentCategoryId; // Keep current category
-    }
-    
-    return this.categories[choiceNum - 1].id; // Return selected category ID
-  }
 
   async deleteExpense(expense: Expense) {
-    const confirmed = window.confirm(`Are you sure you want to delete "${expense.description}" (₹${expense.amount})?`);
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to delete "${expense.description}" (₹${expense.amount})?`,
+      'Delete Expense'
+    );
     if (!confirmed) return;
 
-    
     try {
       await this.expenseService.delete(expense.id);
-      
+      await this.dialogService.success('Expense deleted successfully!');
     } catch (error) {
       console.error('Error deleting expense:', error);
-    } finally {
-      
+      await this.dialogService.error('Error deleting expense. Please try again.');
     }
   }
 
-  validateExpense(): boolean {
+  async validateExpense(): Promise<boolean> {
     if (!this.newExpense.description?.trim()) {
-      alert('Please enter a description.');
+      await this.dialogService.warning('Please enter a description.');
       return false;
     }
 
     const amount = parseFloat(this.amountInput);
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount greater than 0.');
+      await this.dialogService.warning('Please enter a valid amount greater than 0.');
       return false;
     }
 
     if (!this.newExpense.categoryId) {
-      alert('Please select a category.');
+      await this.dialogService.warning('Please select a category.');
       return false;
     }
 
     if (!this.newExpense.date) {
-      alert('Please select a date.');
+      await this.dialogService.warning('Please select a date.');
       return false;
     }
 
@@ -512,7 +507,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     today.setHours(0, 0, 0, 0);
     
     if (selectedDate > today) {
-      alert('Cannot add expenses for future dates. Please select today\'s date or a past date.');
+      await this.dialogService.warning('Cannot add expenses for future dates. Please select today\'s date or a past date.');
       return false;
     }
 
@@ -958,16 +953,16 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     return this.getFilteredExpenses().length;
   }
 
-  checkAchievements() {
+  async checkAchievements() {
     const totalExpenses = this.expenses.length;
     
     // Check for milestone achievements
     if (totalExpenses === 10) {
-      alert('Congratulations! You\'ve logged your 10th expense. Keep up the great tracking!');
+      await this.dialogService.success('Congratulations! You\'ve logged your 10th expense. Keep up the great tracking!');
     } else if (totalExpenses === 50) {
-      alert('Amazing! You\'ve logged 50 expenses. You\'re becoming a tracking expert!');
+      await this.dialogService.success('Amazing! You\'ve logged 50 expenses. You\'re becoming a tracking expert!');
     } else if (totalExpenses === 100) {
-      alert('Incredible! You\'ve logged 100 expenses. You\'re a financial tracking master!');
+      await this.dialogService.success('Incredible! You\'ve logged 100 expenses. You\'re a financial tracking master!');
     }
 
     // Check for category mastery
@@ -976,18 +971,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       categoryCounts[expense.categoryId] = (categoryCounts[expense.categoryId] || 0) + 1;
     });
 
-    Object.entries(categoryCounts).forEach(([categoryId, count]) => {
+    for (const [categoryId, count] of Object.entries(categoryCounts)) {
       if (count === 10) {
         const categoryName = this.getCategoryName(categoryId);
-        alert(`${categoryName} mastery achieved! You\'ve logged 10 expenses in this category.`);
+        await this.dialogService.success(`${categoryName} mastery achieved! You\'ve logged 10 expenses in this category.`);
       }
-    });
+    }
 
     // Check for daily streak
-    this.checkDailyStreak();
+    await this.checkDailyStreak();
   }
 
-  checkDailyStreak() {
+  async checkDailyStreak() {
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
@@ -1012,7 +1007,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
       
       if (streak >= 7) {
-        alert(`Daily streak of ${streak} days achieved! Keep it up!`);
+        await this.dialogService.success(`Daily streak of ${streak} days achieved! Keep it up!`);
       }
     }
   }
@@ -1160,7 +1155,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   onToDateChange(): void {
     // Validate that To Date is not earlier than From Date
     if (this.filterDateFrom && this.filterDateTo && this.filterDateTo < this.filterDateFrom) {
-      alert('To Date cannot be earlier than From Date. Please select a valid date range.');
+      this.dialogService.warning('To Date cannot be earlier than From Date. Please select a valid date range.');
       this.filterDateTo = '';
     }
     // Reset pagination when filter changes

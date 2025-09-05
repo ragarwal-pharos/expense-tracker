@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
 import { ExpenseService } from '../../core/services/expense.service';
 import { FirebaseService } from '../../core/services/firebase.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Category } from '../../core/models/category.model';
 import { Expense } from '../../core/models/expense.model';
 import { Subscription } from 'rxjs';
@@ -49,7 +50,8 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   constructor(
     private categoryService: CategoryService,
     private expenseService: ExpenseService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit() {
@@ -120,15 +122,15 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     try {
       await this.categoryService.forceInitializeDefaultCategories();
       await this.loadData();
-      alert('Default categories initialized successfully!');
+      await this.dialogService.success('Default categories initialized successfully!');
     } catch (error) {
       console.error('Error initializing default categories:', error);
-      alert('Error initializing default categories. Please try again.');
+      await this.dialogService.error('Error initializing default categories. Please try again.');
     }
   }
 
   async addCategory() {
-    if (!this.validateCategory()) {
+    if (!(await this.validateCategory())) {
       return;
     }
 
@@ -143,26 +145,47 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       console.log(`Category added with Firebase ID: ${id}`);
       
       this.resetForm();
-      alert('Category added successfully!');
+      await this.dialogService.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
-      alert('Error adding category. Please try again.');
+      await this.dialogService.error('Error adding category. Please try again.');
     }
   }
 
   async updateCategory(category: Category) {
     try {
-      const newName = window.prompt('Enter new category name:', category.name);
+      const newName = await this.dialogService.prompt(
+        'Enter new category name:',
+        'Edit Category',
+        category.name,
+        'text',
+        'Enter category name...',
+        'Category Name'
+      );
       if (!newName || newName.trim() === '') {
         return;
       }
 
-      const newColor = window.prompt('Enter new color (hex code):', category.color || '#ff6b9d');
+      const newColor = await this.dialogService.prompt(
+        'Enter new color (hex code):',
+        'Edit Category',
+        category.color || '#ff6b9d',
+        'text',
+        '#ff6b9d',
+        'Color (Hex Code)'
+      );
       if (!newColor) {
         return;
       }
 
-      const newIcon = window.prompt('Enter new icon (emoji):', category.icon || '📌');
+      const newIcon = await this.dialogService.prompt(
+        'Enter new icon (emoji):',
+        'Edit Category',
+        category.icon || '📌',
+        'text',
+        '📌',
+        'Icon (Emoji)'
+      );
       if (!newIcon) {
         return;
       }
@@ -176,24 +199,27 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
       await this.categoryService.update(updatedCategory);
       console.log('Category updated successfully');
-      alert('Category updated successfully!');
+      await this.dialogService.success('Category updated successfully!');
     } catch (error) {
       console.error('Error updating category:', error);
-      alert('Error updating category. Please try again.');
+      await this.dialogService.error('Error updating category. Please try again.');
     }
   }
 
   async deleteCategory(category: Category) {
-    const confirmed = window.confirm(`Are you sure you want to delete "${category.name}"?\n\nThis will also remove all expenses in this category.`);
+    const confirmed = await this.dialogService.confirm(
+      `Are you sure you want to delete "${category.name}"?\n\nThis will also remove all expenses in this category.`,
+      'Delete Category'
+    );
     if (!confirmed) return;
 
     try {
       await this.categoryService.delete(category.id);
       console.log('Category deleted successfully');
-      alert('Category deleted successfully!');
+      await this.dialogService.success('Category deleted successfully!');
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Error deleting category. Please try again.');
+      await this.dialogService.error('Error deleting category. Please try again.');
     }
   }
 
@@ -201,9 +227,9 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     this.deleteCategory(category);
   }
 
-  validateCategory(): boolean {
+  async validateCategory(): Promise<boolean> {
     if (!this.newCategory.name?.trim()) {
-      alert('Please enter a category name.');
+      await this.dialogService.warning('Please enter a category name.');
       return false;
     }
 
@@ -215,7 +241,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
     if (isDuplicate) {
       this.isDuplicateCategory = true;
-      alert('Category name already exists!');
+      await this.dialogService.warning('Category name already exists!');
       return false;
     }
 
@@ -356,7 +382,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   async cleanupDuplicates() {
-    const confirmed = window.confirm('This will remove duplicate categories. Continue?');
+    const confirmed = await this.dialogService.confirm('This will remove duplicate categories. Continue?', 'Cleanup Duplicates');
     if (!confirmed) return;
 
     try {
@@ -377,10 +403,66 @@ export class CategoriesComponent implements OnInit, OnDestroy {
         });
       }
 
-      alert('Duplicate categories cleaned up successfully!');
+      await this.dialogService.success('Duplicate categories cleaned up successfully!');
     } catch (error) {
       console.error('Error cleaning up duplicates:', error);
-      alert('Error cleaning up duplicates. Please try again.');
+      await this.dialogService.error('Error cleaning up duplicates. Please try again.');
+    }
+  }
+
+  hasOutdatedIcons(): boolean {
+    // Define the new icon mappings (same as in service)
+    const iconMappings: { [key: string]: string } = {
+      'Food & Dining': '🍕',
+      'Transportation': '🚙',
+      'Shopping': '🛒',
+      'Entertainment': '🎭',
+      'Bills & Utilities': '⚡',
+      'Healthcare': '🏥',
+      'Education': '🎓',
+      'Rent/Mortgage': '🏘️',
+      'Insurance': '🛡️',
+      'Savings': '💎',
+      'Travel': '✈️',
+      'Fitness & Sports': '🏃',
+      'Personal Care': '💄',
+      'Gifts & Donations': '🎁',
+      'Technology': '💻',
+      'Pet Care': '🐕',
+      'Movie': '🎬',
+      'Loan': '💳',
+      'SIP': '📈',
+      'Street food': '🌮',
+      'Snooker': '🎱',
+      'Tax': '📊',
+      'Trips': '🧳',
+      'EMI': '🏦',
+      'Fuel': '⛽',
+      'Office canteen': '🍽️'
+    };
+
+    // Check if any category has an outdated icon
+    return this.categories.some(category => {
+      const newIcon = iconMappings[category.name];
+      return newIcon && category.icon !== newIcon;
+    });
+  }
+
+  async updateCategoryIcons() {
+    const confirmed = await this.dialogService.confirm(
+      'This will update your existing category icons with new enhanced designs. Continue?',
+      'Update Category Icons'
+    );
+    if (!confirmed) return;
+
+    try {
+      const updatedCount = await this.categoryService.updateCategoryIcons();
+      // Service handles reload, just refresh local data
+      await this.loadData();
+      await this.dialogService.success(`Updated ${updatedCount} category icons with new enhanced icons!`);
+    } catch (error) {
+      console.error('Error updating category icons:', error);
+      await this.dialogService.error('Error updating category icons. Please try again.');
     }
   }
 

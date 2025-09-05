@@ -3,12 +3,13 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { ScrollService } from './core/services/scroll.service';
 import { AuthService } from './core/services/auth.service';
+import { DialogComponent } from './shared/components/dialog/dialog.component';
 import { take, filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, DialogComponent],
   templateUrl: './app.html',
   styles: [`
     /* App Container */

@@ -50,27 +50,27 @@ export class CategoryService {
       {
         name: 'Food & Dining',
         color: '#A62C2C',
-        icon: '🍽️'
+        icon: '🍕'
       },
       {
         name: 'Transportation',
         color: '#E83F25',
-        icon: '🚗'
+        icon: '🚙'
       },
       {
         name: 'Shopping',
         color: '#EA7300',
-        icon: '🛍️'
+        icon: '🛒'
       },
       {
         name: 'Entertainment',
         color: '#D3CA79',
-        icon: '🎬'
+        icon: '🎭'
       },
       {
         name: 'Bills & Utilities',
         color: '#FF6B6B',
-        icon: '💡'
+        icon: '⚡'
       },
       {
         name: 'Healthcare',
@@ -80,12 +80,12 @@ export class CategoryService {
       {
         name: 'Education',
         color: '#45B7D1',
-        icon: '📚'
+        icon: '🎓'
       },
       {
         name: 'Rent/Mortgage',
         color: '#96CEB4',
-        icon: '🏠'
+        icon: '🏘️'
       },
       {
         name: 'Insurance',
@@ -95,7 +95,42 @@ export class CategoryService {
       {
         name: 'Savings',
         color: '#2ECC71',
-        icon: '💰'
+        icon: '💎'
+      },
+      {
+        name: 'Travel',
+        color: '#9B59B6',
+        icon: '✈️'
+      },
+      {
+        name: 'Fitness & Sports',
+        color: '#E74C3C',
+        icon: '🏃'
+      },
+      {
+        name: 'Personal Care',
+        color: '#F39C12',
+        icon: '💄'
+      },
+      {
+        name: 'Gifts & Donations',
+        color: '#E91E63',
+        icon: '🎁'
+      },
+      {
+        name: 'Technology',
+        color: '#34495E',
+        icon: '💻'
+      },
+      {
+        name: 'Pet Care',
+        color: '#8E44AD',
+        icon: '🐕'
+      },
+      {
+        name: 'Other',
+        color: '#95A5A6',
+        icon: '📌'
       }
     ];
   }
@@ -276,5 +311,71 @@ export class CategoryService {
     console.log('Manual duplicate cleanup triggered...');
     const categories = await this.getAll();
     console.log(`Categories after cleanup: ${categories.length}`);
+  }
+
+  async updateCategoryIcons(): Promise<number> {
+    console.log('Updating category icons...');
+    const categories = await this.getAll();
+    
+    // Define the new icon mappings
+    const iconMappings: { [key: string]: string } = {
+      'Food & Dining': '🍕',
+      'Transportation': '🚙',
+      'Shopping': '🛒',
+      'Entertainment': '🎭',
+      'Bills & Utilities': '⚡',
+      'Healthcare': '🏥',
+      'Education': '🎓',
+      'Rent/Mortgage': '🏘️',
+      'Insurance': '🛡️',
+      'Savings': '💎',
+      'Travel': '✈️',
+      'Fitness & Sports': '🏃',
+      'Personal Care': '💄',
+      'Gifts & Donations': '🎁',
+      'Technology': '💻',
+      'Pet Care': '🐕',
+      'Movie': '🎬',
+      'Loan': '💳',
+      'SIP': '📈',
+      'Street food': '🌮',
+      'Snooker': '🎱',
+      'Tax': '📊',
+      'Trips': '🧳',
+      'EMI': '🏦',
+      'Fuel': '⛽',
+      'Office canteen': '🍽️',
+    };
+
+    let updatedCount = 0;
+    
+    for (const category of categories) {
+      console.log(`Checking category: "${category.name}" with current icon: "${category.icon}"`);
+      const newIcon = iconMappings[category.name];
+      if (newIcon && category.icon !== newIcon) {
+        try {
+          const updatedCategory: Category = {
+            ...category,
+            icon: newIcon
+          };
+          await this.update(updatedCategory);
+          updatedCount++;
+          console.log(`✅ Updated icon for "${category.name}" from "${category.icon}" to "${newIcon}"`);
+        } catch (error) {
+          console.error(`❌ Error updating icon for "${category.name}":`, error);
+        }
+      } else if (newIcon) {
+        console.log(`⏭️ Category "${category.name}" already has the correct icon: "${category.icon}"`);
+      } else {
+        console.log(`❓ No icon mapping found for category: "${category.name}"`);
+      }
+    }
+    
+    // Force reload categories from Firebase to ensure updates are reflected
+    console.log('Forcing reload of categories from Firebase...');
+    await this.loadCategories();
+    
+    console.log(`Updated ${updatedCount} category icons`);
+    return updatedCount;
   }
 } 
