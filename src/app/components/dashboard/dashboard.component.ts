@@ -189,7 +189,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // Ensure proper date parsing and handle potential timezone issues
         const dateA = new Date(a.date + 'T00:00:00');
         const dateB = new Date(b.date + 'T00:00:00');
-        return dateB.getTime() - dateA.getTime(); // Sort by date descending (latest first)
+        
+        // First sort by date descending (latest first)
+        const dateComparison = dateB.getTime() - dateA.getTime();
+        
+        // If dates are the same, sort by creation timestamp (newer expenses come first)
+        if (dateComparison === 0) {
+          // If both have createdAt, sort by timestamp
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          }
+          // If only one has createdAt, prioritize the one with timestamp (newer)
+          else if (a.createdAt && !b.createdAt) {
+            return -1; // a comes first (has timestamp)
+          }
+          else if (!a.createdAt && b.createdAt) {
+            return 1; // b comes first (has timestamp)
+          }
+          // If neither has createdAt, fall back to ID comparison
+          else {
+            return b.id.localeCompare(a.id);
+          }
+        }
+        
+        return dateComparison;
       })
       .slice(0, 5);
   }
@@ -576,14 +599,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // Ensure proper date parsing and handle potential timezone issues
         const dateA = new Date(a.date + 'T00:00:00');
         const dateB = new Date(b.date + 'T00:00:00');
-        return dateB.getTime() - dateA.getTime(); // Sort by date descending (latest first)
+        
+        // First sort by date descending (latest first)
+        const dateComparison = dateB.getTime() - dateA.getTime();
+        
+        // If dates are the same, sort by creation timestamp (newer expenses come first)
+        if (dateComparison === 0) {
+          // If both have createdAt, sort by timestamp
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          }
+          // If only one has createdAt, prioritize the one with timestamp (newer)
+          else if (a.createdAt && !b.createdAt) {
+            return -1; // a comes first (has timestamp)
+          }
+          else if (!a.createdAt && b.createdAt) {
+            return 1; // b comes first (has timestamp)
+          }
+          // If neither has createdAt, fall back to ID comparison
+          else {
+            return b.id.localeCompare(a.id);
+          }
+        }
+        
+        return dateComparison;
       })
       .slice(0, 5);
     
     // Debug logging to verify sorting
     if (sortedExpenses.length > 0) {
-      console.log('Recent expenses sorted by date (latest first):', 
-        sortedExpenses.map(e => ({ date: e.date, description: e.description, amount: e.amount })));
+      console.log('Recent expenses sorted by date and creation time (latest first):', 
+        sortedExpenses.map(e => ({ 
+          date: e.date, 
+          description: e.description, 
+          amount: e.amount, 
+          createdAt: e.createdAt ? new Date(e.createdAt).toLocaleTimeString() : 'N/A',
+          id: e.id.substring(0, 8) + '...' 
+        })));
     }
     
     return sortedExpenses;

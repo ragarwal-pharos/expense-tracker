@@ -10,4 +10,5 @@ export interface Expense {
   notes?: string;
   location?: string;
   receiptNumber?: string;
+  createdAt?: string; // ISO timestamp for creation time
 } 

@@ -284,7 +284,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         priority: this.newExpense.priority || 'medium',
         notes: this.newExpense.notes || '',
         location: this.newExpense.location || '',
-        receiptNumber: this.newExpense.receiptNumber || ''
+        receiptNumber: this.newExpense.receiptNumber || '',
+        createdAt: new Date().toISOString()
       };
 
       const id = await this.expenseService.add(expenseData);
