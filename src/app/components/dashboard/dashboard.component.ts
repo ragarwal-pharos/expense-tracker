@@ -379,6 +379,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedMonthOnly = filterState.selectedMonthOnly || '';
     this.selectedYearOnly = filterState.selectedYearOnly || '';
     
+    // Auto-select current month and year if "This Month" is selected but no month/year is set
+    if (this.selectedPeriod === 'monthly' && (!this.selectedMonth || !this.selectedYear)) {
+      const now = new Date();
+      this.selectedMonth = now.getMonth().toString();
+      this.selectedYear = now.getFullYear().toString();
+      console.log('Auto-selected current month and year for monthly filter on load:', { month: this.selectedMonth, year: this.selectedYear });
+    }
+    
     // Auto-select current month and year if "Month Only" is selected but no month/year is set
     if (this.selectedPeriod === 'monthOnly' && (!this.selectedMonthOnly || !this.selectedYearOnly)) {
       const now = new Date();
@@ -409,6 +417,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       customStartDate: this.customStartDate,
       customEndDate: this.customEndDate
     });
+    
+    // Auto-select current month and year when "This Month" is selected
+    if (this.selectedPeriod === 'monthly') {
+      const now = new Date();
+      this.selectedMonth = now.getMonth().toString();
+      this.selectedYear = now.getFullYear().toString();
+      console.log('Auto-selected current month and year for monthly filter:', { month: this.selectedMonth, year: this.selectedYear });
+    }
     
     // Auto-select current month and year when "Month Only" is selected
     if (this.selectedPeriod === 'monthOnly') {
