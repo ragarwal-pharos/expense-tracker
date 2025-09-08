@@ -7,6 +7,7 @@ import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { LoadingComponent } from '../../shared/components/loading/loading.component';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -46,7 +47,7 @@ interface Insight {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LoadingComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -86,6 +87,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   
   // Loading states
   isLoading: boolean = true;
+  isEditingExpense: boolean = false;
+  isDeletingExpense: boolean = false;
   
   private subscription: Subscription = new Subscription();
 
@@ -127,35 +130,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.loadData();
+    // Subscribe to loading state
+    this.subscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+      })
+    );
+
+    // Firebase observables will automatically load data when user is authenticated
+    // No need for manual loadData() call as it creates redundant API requests
   }
 
   ngOnDestroy() {
     this.subscription.unsubscribe();
   }
 
-  async loadData() {
-    try {
-      this.isLoading = true;
-      console.log('Loading dashboard data...');
-      
-      // Load expenses and categories
-      this.expenses = await this.expenseService.getAll();
-      this.categories = await this.categoryService.getAll();
-      
-      // Calculate summary data
-      this.calculateTotals();
-      this.calculateCategoryBreakdown();
-      this.getRecentExpenses();
-      this.calculateWeeklyData();
-      
-      console.log('Dashboard data loaded successfully');
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      this.isLoading = false;
-    }
-  }
+  // loadData() method removed - Firebase observables handle data loading automatically
 
   calculateTotals() {
     this.totalSpent = this.expenses.reduce((sum, expense) => sum + expense.amount, 0);

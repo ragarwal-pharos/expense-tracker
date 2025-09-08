@@ -26,12 +26,11 @@
   </div>
 
   <!-- Loading Spinner -->
-  <div class="loading-container" *ngIf="isLoading">
-    <div class="loading-spinner">
-      <div class="spinner"></div>
-      <p class="loading-text">Loading dashboard...</p>
-    </div>
-  </div>
+  <app-loading 
+    *ngIf="isLoading" 
+    message="Loading dashboard..." 
+    type="card">
+  </app-loading>
 
   <!-- Smart Filters Bar -->
   <div class="smart-filters">

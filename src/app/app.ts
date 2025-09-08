@@ -3,13 +3,15 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { ScrollService } from './core/services/scroll.service';
 import { AuthService } from './core/services/auth.service';
+import { RouteLoadingService } from './core/services/route-loading.service';
 import { DialogComponent } from './shared/components/dialog/dialog.component';
+import { LoadingComponent } from './shared/components/loading/loading.component';
 import { take, filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, DialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, DialogComponent, LoadingComponent],
   templateUrl: './app.html',
   styles: [`
     /* App Container */
@@ -454,7 +456,8 @@ export class App implements OnInit, OnDestroy {
   constructor(
     private scrollService: ScrollService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private routeLoadingService: RouteLoadingService
   ) {
     // Restore the last visited route on app initialization
     this.restoreLastRoute();
@@ -475,6 +478,10 @@ export class App implements OnInit, OnDestroy {
 
   get currentUser$() {
     return this.authService.currentUser$;
+  }
+
+  get routeLoading$() {
+    return this.routeLoadingService.loading$;
   }
 
   private setupScrollListener() {

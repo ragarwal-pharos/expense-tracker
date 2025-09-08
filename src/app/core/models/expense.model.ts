@@ -11,4 +11,5 @@ export interface Expense {
   location?: string;
   receiptNumber?: string;
   createdAt?: string; // ISO timestamp for creation time
+  userId?: string; // Added for Firebase user isolation
 } 

@@ -4,6 +4,13 @@
   <p>Loading...</p>
 </div>
 
+<!-- Route Loading Overlay -->
+<app-loading 
+  *ngIf="routeLoading$ | async" 
+  message="Loading page..." 
+  [fullscreen]="true">
+</app-loading>
+
 <!-- Main App Container -->
 <div class="app-container" *ngIf="(currentUser$ | async) as user">
   <!-- Header -->

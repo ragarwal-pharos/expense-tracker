@@ -4,23 +4,9 @@ import { FirebaseService } from './firebase.service';
 
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
-  private categories: Category[] = [];
 
   constructor(private firebaseService: FirebaseService) {
-    this.loadCategories();
     this.initializeDefaultCategories();
-  }
-
-  private async loadCategories() {
-    try {
-      console.log('Loading categories from Firebase...');
-      this.categories = await this.firebaseService.loadCategories();
-      console.log(`Loaded ${this.categories.length} categories from Firebase`);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-      this.categories = [];
-      // Return empty array instead of throwing to prevent app crashes
-    }
   }
 
   private async initializeDefaultCategories() {
@@ -31,7 +17,6 @@ export class CategoryService {
       for (const category of defaultCategories) {
         await this.firebaseService.addCategory(category);
       }
-      await this.loadCategories(); // Reload after adding defaults
     }
   }
 
@@ -41,7 +26,6 @@ export class CategoryService {
     for (const category of defaultCategories) {
       await this.firebaseService.addCategory(category);
     }
-    await this.loadCategories(); // Reload after adding defaults
     console.log('Default categories initialized successfully');
   }
 
@@ -136,21 +120,19 @@ export class CategoryService {
   }
 
   async getAll(): Promise<Category[]> {
-    // Optimize: Use cached data if available, only reload if empty
-    if (this.categories.length === 0) {
-      await this.loadCategories();
-    }
+    // Simply call Firebase service directly - no caching
+    const categories = await this.firebaseService.loadCategories();
     
     // Remove duplicates based on name (case-insensitive)
-    const uniqueCategories = this.removeDuplicateCategories(this.categories);
+    const uniqueCategories = this.removeDuplicateCategories(categories);
     
     // If we found duplicates, update the Firebase collection
-    if (uniqueCategories.length !== this.categories.length) {
-      console.log(`Found ${this.categories.length - uniqueCategories.length} duplicate categories. Cleaning up...`);
+    if (uniqueCategories.length !== categories.length) {
+      console.log(`Found ${categories.length - uniqueCategories.length} duplicate categories. Cleaning up...`);
       await this.cleanupDuplicateCategories(uniqueCategories);
     }
     
-    return [...uniqueCategories];
+    return uniqueCategories;
   }
 
   private removeDuplicateCategories(categories: Category[]): Category[] {
@@ -199,8 +181,7 @@ export class CategoryService {
         }
       }
       
-      // Reload categories after cleanup
-      await this.loadCategories();
+      // Categories will be reloaded on next getAll() call
     } catch (error) {
       console.error('Error cleaning up duplicate categories:', error);
     }
@@ -209,7 +190,6 @@ export class CategoryService {
   async add(category: Omit<Category, 'id'>): Promise<string> {
     try {
       const id = await this.firebaseService.addCategory(category);
-      // Optimize: No need to reload - Firebase service handles cache update
       return id;
     } catch (error) {
       console.error('Error adding category:', error);
@@ -219,30 +199,9 @@ export class CategoryService {
 
   async update(category: Category): Promise<void> {
     try {
-      console.log(`Updating category with ID: ${category.id} (length: ${category.id.length})`);
-      
-      // Check if this is a local ID (short) vs Firebase ID (long)
-      if (category.id.length < 20) {
-        console.warn(`Attempting to update local category with ID: ${category.id}. This category may not exist in Firebase.`);
-        // For local IDs, we'll try to update but won't fail if it doesn't exist
-        try {
-          await this.firebaseService.updateCategory(category);
-        } catch (error) {
-          if (error instanceof Error && error.message.includes('does not exist')) {
-            console.warn('Local category not found in Firebase - this is expected for old local data');
-            // Remove from local cache
-            this.categories = this.categories.filter(c => c.id !== category.id);
-            return;
-          }
-          throw error;
-        }
-      } else {
-        console.log('Updating Firebase category...');
-        await this.firebaseService.updateCategory(category);
-      }
-      
+      console.log(`Updating category with ID: ${category.id}`);
+      await this.firebaseService.updateCategory(category);
       console.log('Category updated successfully');
-      // Optimize: No need to reload - Firebase service handles cache update
     } catch (error) {
       console.error('Error updating category:', error);
       throw error;
@@ -251,48 +210,19 @@ export class CategoryService {
 
   async delete(id: string): Promise<void> {
     try {
-      console.log(`Deleting category with ID: ${id} (length: ${id.length})`);
+      console.log(`Deleting category with ID: ${id}`);
       
-      // Check if this is a local ID (short) vs Firebase ID (long)
-      if (id.length < 20) {
-        console.warn(`Attempting to delete local category with ID: ${id}. This category may not exist in Firebase.`);
-        // For local IDs, we'll try to delete but won't fail if it doesn't exist
-        try {
-          // Delete all expenses associated with this category first
-          const expenses = await this.firebaseService.loadExpenses();
-          const expensesToDelete = expenses.filter(e => e.categoryId === id);
-          console.log(`Found ${expensesToDelete.length} expenses to delete for category ${id}`);
-          
-          for (const expense of expensesToDelete) {
-            await this.firebaseService.deleteExpense(expense.id);
-          }
-          
-          await this.firebaseService.deleteCategory(id);
-        } catch (error) {
-          if (error instanceof Error && error.message.includes('does not exist')) {
-            console.warn('Local category not found in Firebase - this is expected for old local data');
-            // Remove from local cache
-            this.categories = this.categories.filter(c => c.id !== id);
-            return;
-          }
-          throw error;
-        }
-      } else {
-        console.log('Deleting Firebase category...');
-        // Delete all expenses associated with this category first
-        const expenses = await this.firebaseService.loadExpenses();
-        const expensesToDelete = expenses.filter(e => e.categoryId === id);
-        console.log(`Found ${expensesToDelete.length} expenses to delete for category ${id}`);
-        
-        for (const expense of expensesToDelete) {
-          await this.firebaseService.deleteExpense(expense.id);
-        }
-        
-        await this.firebaseService.deleteCategory(id);
+      // Delete all expenses associated with this category first
+      const expenses = await this.firebaseService.loadExpenses();
+      const expensesToDelete = expenses.filter(e => e.categoryId === id);
+      console.log(`Found ${expensesToDelete.length} expenses to delete for category ${id}`);
+      
+      for (const expense of expensesToDelete) {
+        await this.firebaseService.deleteExpense(expense.id);
       }
       
+      await this.firebaseService.deleteCategory(id);
       console.log('Category deleted successfully');
-      // Optimize: No need to reload - Firebase service handles cache update
     } catch (error) {
       console.error('Error deleting category:', error);
       throw error;
@@ -300,11 +230,8 @@ export class CategoryService {
   }
 
   async getById(id: string): Promise<Category | undefined> {
-    // Optimize: Use cached data if available
-    if (this.categories.length === 0) {
-      await this.loadCategories();
-    }
-    return this.categories.find(c => c.id === id);
+    const categories = await this.firebaseService.loadCategories();
+    return categories.find(c => c.id === id);
   }
 
   async triggerDuplicateCleanup(): Promise<void> {
@@ -370,10 +297,6 @@ export class CategoryService {
         console.log(`❓ No icon mapping found for category: "${category.name}"`);
       }
     }
-    
-    // Force reload categories from Firebase to ensure updates are reflected
-    console.log('Forcing reload of categories from Firebase...');
-    await this.loadCategories();
     
     console.log(`Updated ${updatedCount} category icons`);
     return updatedCount;

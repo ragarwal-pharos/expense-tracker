@@ -1,24 +1,53 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './components/dashboard/dashboard.component';
-import { ExpensesComponent } from './components/expenses/expenses.component';
-import { CategoriesComponent } from './components/categories/categories.component';
-import { MonthlyReportsComponent } from './components/monthly-reports/monthly-reports.component';
-import { LoginComponent } from './components/auth/login.component';
-import { RegisterComponent } from './components/auth/register.component';
-import { ForgotPasswordComponent } from './components/auth/forgot-password.component';
-import { ResetPasswordComponent } from './components/auth/reset-password.component';
-import { EmailTestComponent } from './components/auth/email-test.component';
 import { AuthGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent },
-  { path: 'email-test', component: EmailTestComponent }, // Temporary debug route
-  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
-  { path: 'expenses', component: ExpensesComponent, canActivate: [AuthGuard] },
-  { path: 'categories', component: CategoriesComponent, canActivate: [AuthGuard] },
-  { path: 'reports', component: MonthlyReportsComponent, canActivate: [AuthGuard] }
+  
+  // Auth routes (eagerly loaded for faster access)
+  { 
+    path: 'login', 
+    loadComponent: () => import('./components/auth/login.component').then(m => m.LoginComponent)
+  },
+  { 
+    path: 'register', 
+    loadComponent: () => import('./components/auth/register.component').then(m => m.RegisterComponent)
+  },
+  { 
+    path: 'forgot-password', 
+    loadComponent: () => import('./components/auth/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
+  { 
+    path: 'reset-password', 
+    loadComponent: () => import('./components/auth/reset-password.component').then(m => m.ResetPasswordComponent)
+  },
+  { 
+    path: 'email-test', 
+    loadComponent: () => import('./components/auth/email-test.component').then(m => m.EmailTestComponent)
+  },
+  
+  // Main app routes (lazy loaded for better performance)
+  { 
+    path: 'dashboard', 
+    loadComponent: () => import('./components/dashboard/dashboard.component').then(m => m.DashboardComponent), 
+    canActivate: [AuthGuard] 
+  },
+  { 
+    path: 'expenses', 
+    loadComponent: () => import('./components/expenses/expenses.component').then(m => m.ExpensesComponent), 
+    canActivate: [AuthGuard] 
+  },
+  { 
+    path: 'categories', 
+    loadComponent: () => import('./components/categories/categories.component').then(m => m.CategoriesComponent), 
+    canActivate: [AuthGuard] 
+  },
+  { 
+    path: 'reports', 
+    loadComponent: () => import('./components/monthly-reports/monthly-reports.component').then(m => m.MonthlyReportsComponent), 
+    canActivate: [AuthGuard] 
+  },
+  
+  // Wildcard route for 404
+  { path: '**', redirectTo: '/dashboard' }
 ];

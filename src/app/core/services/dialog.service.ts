@@ -51,8 +51,9 @@ export class DialogService {
         confirmText: 'OK'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve();
@@ -71,8 +72,9 @@ export class DialogService {
         confirmText: 'OK'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve();
@@ -91,8 +93,9 @@ export class DialogService {
         confirmText: 'OK'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve();
@@ -111,8 +114,9 @@ export class DialogService {
         confirmText: 'OK'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve();
@@ -132,8 +136,9 @@ export class DialogService {
         cancelText: 'No'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve(result.confirmed);
@@ -164,8 +169,9 @@ export class DialogService {
         inputLabel: label
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve(result.confirmed ? result.value || null : null);
@@ -192,8 +198,9 @@ export class DialogService {
         selectedValue
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve(result.confirmed ? result.selectedOption || null : null);
@@ -221,8 +228,9 @@ export class DialogService {
         cancelText: 'Cancel'
       });
 
-      this.result$.subscribe(result => {
+      const subscription = this.result$.subscribe(result => {
         if (result) {
+          subscription.unsubscribe();
           this.dialogSubject.next(null);
           this.resultSubject.next(null);
           resolve(result.confirmed ? result.fieldValues || null : null);

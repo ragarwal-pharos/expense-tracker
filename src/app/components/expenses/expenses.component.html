@@ -17,12 +17,11 @@
   </div>
 
   <!-- Loading Spinner -->
-  <div class="loading-container" *ngIf="isLoading">
-    <div class="loading-spinner">
-      <div class="spinner"></div>
-      <p class="loading-text">Loading expenses...</p>
-    </div>
-  </div>
+  <app-loading 
+    *ngIf="isLoading" 
+    message="Loading expenses..." 
+    type="card">
+  </app-loading>
   
   <!-- Add Expense Form -->
   <div class="add-expense-card mb-4" *ngIf="!isLoading">
@@ -101,8 +100,13 @@
             <div class="d-flex gap-2">
               <button type="submit" class="btn-add-expense" [disabled]="!isFormValid() || isSaving">
                 <span class="btn-icon" *ngIf="!isSaving">{{ isEditMode ? '💾' : '➕' }}</span>
-                <span class="btn-icon" *ngIf="isSaving">⏳</span>
-                <span class="btn-text">{{ isSaving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Add Expense') }}</span>
+                <app-loading 
+                  *ngIf="isSaving" 
+                  message="{{ isEditMode ? 'Saving...' : 'Adding...' }}" 
+                  type="button" 
+                  size="small">
+                </app-loading>
+                <span class="btn-text" *ngIf="!isSaving">{{ isEditMode ? 'Save Changes' : 'Add Expense' }}</span>
               </button>
               <button 
                 *ngIf="isEditMode" 
@@ -186,7 +190,20 @@
     </div>
     
     <div class="card-body-modern">
-      <div class="expenses-list" *ngIf="getFilteredExpenses().length > 0; else noExpenses">
+      <!-- Skeleton Loading for Expenses List -->
+      <div class="expenses-list" *ngIf="isLoading">
+        <app-skeleton 
+          *ngFor="let item of [1,2,3,4,5]" 
+          type="expense-item"
+          [lines]="[
+            {width: 30, height: 20, marginBottom: 8},
+            {width: 60, height: 16, marginBottom: 4},
+            {width: 40, height: 14, marginBottom: 0}
+          ]">
+        </app-skeleton>
+      </div>
+
+      <div class="expenses-list" *ngIf="!isLoading && getFilteredExpenses().length > 0; else noExpenses">
         <div class="expense-item" *ngFor="let expense of getPaginatedExpenses(); let i = index" 
              [style.animation-delay]="i * 0.1 + 's'">
           <div class="expense-main">
@@ -205,8 +222,14 @@
             <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit">
               <span class="action-icon">✏️</span>
             </button>
-            <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete">
-              <span class="action-icon">🗑️</span>
+            <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete" [disabled]="isDeleting">
+              <app-loading 
+                *ngIf="isDeleting" 
+                message="Deleting..." 
+                type="button" 
+                size="small">
+              </app-loading>
+              <span class="action-icon" *ngIf="!isDeleting">🗑️</span>
             </button>
           </div>
         </div>

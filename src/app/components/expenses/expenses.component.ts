@@ -7,6 +7,8 @@ import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { LoadingComponent } from '../../shared/components/loading/loading.component';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
@@ -14,7 +16,7 @@ import { Category } from '../../core/models/category.model';
 @Component({
   selector: 'app-expenses',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingComponent, SkeletonComponent],
   templateUrl: './expenses.component.html',
   styleUrls: ['./expenses.component.scss']
 })
@@ -67,6 +69,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Loading states
   isLoading: boolean = true;
   isSaving: boolean = false;
+  isDeleting: boolean = false;
+  isEditing: boolean = false;
+  isFiltering: boolean = false;
 
   private subscription: Subscription = new Subscription();
 
@@ -132,7 +137,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.loadData();
+    // Subscribe to loading state
+    this.subscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+      })
+    );
+
+    // Firebase observables will automatically load data when user is authenticated
+    // No need for manual loadData() call as it creates redundant API requests
   }
 
   ngOnDestroy() {
@@ -225,26 +238,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async loadData() {
-    try {
-      this.isLoading = true;
-      console.log('Loading data from Firebase...');
-      
-      // Optimize: Use cached data if available, only reload if empty
-      const expenses = await this.expenseService.getAll();
-      const categories = await this.categoryService.getAll();
-
-      this.expenses = expenses;
-      this.categories = categories;
-      
-      console.log(`Loaded ${this.expenses.length} expenses and ${this.categories.length} categories`);
-      
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      this.isLoading = false;
-    }
-  }
+  // loadData() method removed - Firebase observables handle data loading automatically
 
   loadExpenseForEditing() {
     const expense = this.expenses.find(e => e.id === this.editingExpenseId);
@@ -476,12 +470,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     );
     if (!confirmed) return;
 
+    this.isDeleting = true;
     try {
       await this.expenseService.delete(expense.id);
       await this.dialogService.success('Expense deleted successfully!');
     } catch (error) {
       console.error('Error deleting expense:', error);
       await this.dialogService.error('Error deleting expense. Please try again.');
+    } finally {
+      this.isDeleting = false;
     }
   }
 

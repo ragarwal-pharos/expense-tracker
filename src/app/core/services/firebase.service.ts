@@ -29,18 +29,32 @@ export class FirebaseService {
   private expensesSubject = new BehaviorSubject<Expense[]>([]);
   private categoriesSubject = new BehaviorSubject<Category[]>([]);
   private userSettingsSubject = new BehaviorSubject<any>({});
+  private loadingSubject = new BehaviorSubject<boolean>(false);
+  
+  // Store unsubscribe functions for real-time listeners
+  private expensesUnsubscribe?: () => void;
+  private categoriesUnsubscribe?: () => void;
 
   public expenses$ = this.expensesSubject.asObservable();
   public categories$ = this.categoriesSubject.asObservable();
   public userSettings$ = this.userSettingsSubject.asObservable();
+  public loading$ = this.loadingSubject.asObservable();
 
   constructor(private authService: AuthService) {
     // Subscribe to auth state changes to reload data when user changes
     this.authService.currentUser$.subscribe(user => {
       if (user) {
-        this.loadData();
+        // Only load data if we don't have any data yet (first time login)
+        const hasData = this.expensesSubject.value.length > 0 || this.categoriesSubject.value.length > 0;
+        if (!hasData) {
+          this.loadData();
+        } else {
+          // If we have data, just set up real-time listeners
+          this.setupRealTimeListeners();
+        }
       } else {
         // Clear data when user logs out
+        this.cleanupListeners();
         this.expensesSubject.next([]);
         this.categoriesSubject.next([]);
         this.userSettingsSubject.next({});
@@ -50,11 +64,70 @@ export class FirebaseService {
 
   // Load all data from Firebase
   private async loadData() {
-    await Promise.all([
-      this.loadExpenses(),
-      this.loadCategories(),
-      this.loadUserSettings()
-    ]);
+    this.loadingSubject.next(true);
+    try {
+      await Promise.all([
+        this.loadExpenses(),
+        this.loadCategories(),
+        this.loadUserSettings()
+      ]);
+      
+      // Set up real-time listeners for automatic updates
+      this.setupRealTimeListeners();
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
+  // Set up real-time listeners
+  private setupRealTimeListeners() {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) return;
+
+    // Clean up existing listeners first
+    this.cleanupListeners();
+
+    // Set up real-time listener for expenses
+    const expensesRef = collection(this.firestore, 'expenses');
+    const expensesQuery = query(
+      expensesRef, 
+      where('userId', '==', userId),
+      orderBy('date', 'desc')
+    );
+    
+    this.expensesUnsubscribe = onSnapshot(expensesQuery, (querySnapshot) => {
+      const expenses: Expense[] = [];
+      querySnapshot.forEach((doc) => {
+        expenses.push({ id: doc.id, ...doc.data() } as Expense);
+      });
+      this.expensesSubject.next(expenses);
+      console.log(`Real-time update: ${expenses.length} expenses`);
+    });
+
+    // Set up real-time listener for categories
+    const categoriesRef = collection(this.firestore, 'categories');
+    const categoriesQuery = query(categoriesRef, where('userId', '==', userId));
+    
+    this.categoriesUnsubscribe = onSnapshot(categoriesQuery, (querySnapshot) => {
+      const categories: Category[] = [];
+      querySnapshot.forEach((doc) => {
+        categories.push({ id: doc.id, ...doc.data() } as Category);
+      });
+      this.categoriesSubject.next(categories);
+      console.log(`Real-time update: ${categories.length} categories`);
+    });
+  }
+
+  // Clean up real-time listeners
+  private cleanupListeners() {
+    if (this.expensesUnsubscribe) {
+      this.expensesUnsubscribe();
+      this.expensesUnsubscribe = undefined;
+    }
+    if (this.categoriesUnsubscribe) {
+      this.categoriesUnsubscribe();
+      this.categoriesUnsubscribe = undefined;
+    }
   }
 
   // Expenses Operations
@@ -101,10 +174,8 @@ export class FirebaseService {
       
       const docRef = await addDoc(expensesRef, expenseWithUserId);
       
-      // Optimize: Update cache instead of reloading all expenses
-      const newExpense: Expense = { id: docRef.id, ...expenseWithUserId };
-      const currentExpenses = this.expensesSubject.value;
-      this.expensesSubject.next([newExpense, ...currentExpenses]);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
       return docRef.id;
     } catch (error) {
@@ -115,6 +186,11 @@ export class FirebaseService {
 
   async updateExpense(expense: Expense): Promise<void> {
     try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       console.log(`Attempting to update expense with ID: ${expense.id}`);
       const expenseRef = doc(this.firestore, 'expenses', expense.id);
       
@@ -124,20 +200,18 @@ export class FirebaseService {
         console.warn(`Document with ID ${expense.id} does not exist in Firebase. This might be a local-only expense.`);
         // For updates, we'll create the document if it doesn't exist
         const { id, ...expenseData } = expense;
-        await setDoc(expenseRef, expenseData);
+        const expenseWithUserId = { ...expenseData, userId };
+        await setDoc(expenseRef, expenseWithUserId);
         console.log(`Created new expense with ID: ${expense.id}`);
       } else {
         const { id, ...expenseData } = expense; // Remove id from the update data
-        await updateDoc(expenseRef, expenseData);
+        const expenseWithUserId = { ...expenseData, userId };
+        await updateDoc(expenseRef, expenseWithUserId);
         console.log(`Expense ${expense.id} updated successfully`);
       }
       
-      // Optimize: Update cache instead of reloading all expenses
-      const currentExpenses = this.expensesSubject.value;
-      const updatedExpenses = currentExpenses.map(e => 
-        e.id === expense.id ? expense : e
-      );
-      this.expensesSubject.next(updatedExpenses);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
     } catch (error) {
       console.error('Error updating expense:', error);
@@ -154,20 +228,14 @@ export class FirebaseService {
       await deleteDoc(expenseRef);
       console.log(`Expense ${expenseId} deleted successfully`);
       
-      // Optimize: Update local cache instead of reloading all expenses
-      const currentExpenses = this.expensesSubject.value;
-      const updatedExpenses = currentExpenses.filter(expense => expense.id !== expenseId);
-      this.expensesSubject.next(updatedExpenses);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
     } catch (error) {
       console.error('Error deleting expense:', error);
       // Don't throw error for non-existent documents
       if (error instanceof Error && error.message && error.message.includes('does not exist')) {
         console.warn('Document not found - likely a local-only expense');
-        // Still update local cache to remove the expense
-        const currentExpenses = this.expensesSubject.value;
-        const updatedExpenses = currentExpenses.filter(expense => expense.id !== expenseId);
-        this.expensesSubject.next(updatedExpenses);
         return;
       }
       throw error;
@@ -242,10 +310,8 @@ export class FirebaseService {
       const categoryWithUserId = { ...category, userId };
       const docRef = await addDoc(categoriesRef, categoryWithUserId);
       
-      // Optimize: Update cache instead of reloading all categories
-      const newCategory: Category = { id: docRef.id, ...categoryWithUserId };
-      const currentCategories = this.categoriesSubject.value;
-      this.categoriesSubject.next([...currentCategories, newCategory]);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
       return docRef.id;
     } catch (error) {
@@ -256,6 +322,11 @@ export class FirebaseService {
 
   async updateCategory(category: Category): Promise<void> {
     try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       console.log(`Attempting to update category with ID: ${category.id}`);
       const categoryRef = doc(this.firestore, 'categories', category.id);
       
@@ -265,20 +336,18 @@ export class FirebaseService {
         console.warn(`Category with ID ${category.id} does not exist in Firebase. This might be a local-only category.`);
         // For icon updates, we'll create the document if it doesn't exist
         const { id, ...categoryData } = category;
-        await setDoc(categoryRef, categoryData);
+        const categoryWithUserId = { ...categoryData, userId };
+        await setDoc(categoryRef, categoryWithUserId);
         console.log(`Created new category with ID: ${category.id}`);
       } else {
         const { id, ...categoryData } = category; // Remove id from the update data
-        await updateDoc(categoryRef, categoryData);
+        const categoryWithUserId = { ...categoryData, userId };
+        await updateDoc(categoryRef, categoryWithUserId);
         console.log(`Category ${category.id} updated successfully`);
       }
       
-      // Optimize: Update cache instead of reloading all categories
-      const currentCategories = this.categoriesSubject.value;
-      const updatedCategories = currentCategories.map(c => 
-        c.id === category.id ? category : c
-      );
-      this.categoriesSubject.next(updatedCategories);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
     } catch (error) {
       console.error('Error updating category:', error);
@@ -305,20 +374,15 @@ export class FirebaseService {
       await deleteDoc(categoryRef);
       console.log(`Category ${categoryId} deleted successfully`);
       
-      // Optimize: Update cache instead of reloading all categories
-      const currentCategories = this.categoriesSubject.value;
-      const updatedCategories = currentCategories.filter(c => c.id !== categoryId);
-      this.categoriesSubject.next(updatedCategories);
+      // Real-time listener will automatically update the cache
+      // No need to manually update cache here to avoid duplicates
       
     } catch (error) {
       console.error('Error deleting category:', error);
       // Don't throw error for non-existent documents
       if (error instanceof Error && error.message.includes('does not exist')) {
         console.warn('Category not found - likely a local-only category');
-        // Still update local cache to remove the category
-        const currentCategories = this.categoriesSubject.value;
-        const updatedCategories = currentCategories.filter(c => c.id !== categoryId);
-        this.categoriesSubject.next(updatedCategories);
+        // Real-time listener will handle the update
         return;
       }
       throw error;
@@ -372,45 +436,19 @@ export class FirebaseService {
     }
   }
 
-  // Real-time listeners
-  subscribeToExpenses(): Observable<Expense[]> {
-    const expensesRef = collection(this.firestore, 'expenses');
-    const q = query(expensesRef, orderBy('date', 'desc'));
-    
-    return new Observable(observer => {
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const expenses: Expense[] = [];
-        querySnapshot.forEach((doc) => {
-          expenses.push({ id: doc.id, ...doc.data() } as Expense);
-        });
-        observer.next(expenses);
-      });
-      
-      return unsubscribe;
-    });
-  }
-
-  subscribeToCategories(): Observable<Category[]> {
-    const categoriesRef = collection(this.firestore, 'categories');
-    
-    return new Observable(observer => {
-      const unsubscribe = onSnapshot(categoriesRef, (querySnapshot) => {
-        const categories: Category[] = [];
-        querySnapshot.forEach((doc) => {
-          categories.push({ id: doc.id, ...doc.data() } as Category);
-        });
-        observer.next(categories);
-      });
-      
-      return unsubscribe;
-    });
-  }
 
   // Utility methods
   async getExpensesByCategory(categoryId: string): Promise<Expense[]> {
     try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) return [];
+
       const expensesRef = collection(this.firestore, 'expenses');
-      const q = query(expensesRef, where('categoryId', '==', categoryId));
+      const q = query(
+        expensesRef, 
+        where('userId', '==', userId),
+        where('categoryId', '==', categoryId)
+      );
       const querySnapshot = await getDocs(q);
       
       const expenses: Expense[] = [];
@@ -427,9 +465,13 @@ export class FirebaseService {
 
   async getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]> {
     try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) return [];
+
       const expensesRef = collection(this.firestore, 'expenses');
       const q = query(
         expensesRef, 
+        where('userId', '==', userId),
         where('date', '>=', startDate),
         where('date', '<=', endDate),
         orderBy('date', 'desc')
