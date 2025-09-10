@@ -41,6 +41,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   amountInput: string = '';
 
   // Filter properties
+  globalSearch: string = '';
   filterAmount: string = '';
   filterCategory: string = '';
   filterDate: string = '';
@@ -72,6 +73,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   isDeleting: boolean = false;
   isEditing: boolean = false;
   isFiltering: boolean = false;
+
+  // Expand/Collapse states
+  isAddExpenseExpanded: boolean = true;
+  isFiltersExpanded: boolean = true;
+  isExpensesListExpanded: boolean = true;
 
   private subscription: Subscription = new Subscription();
 
@@ -550,6 +556,40 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   getFilteredExpenses(): Expense[] {
     let filtered = [...this.expenses];
 
+    // Global search filter
+    if (this.globalSearch) {
+      const searchTerm = this.globalSearch.toLowerCase().trim();
+      filtered = filtered.filter(expense => {
+        // Search in description
+        const descriptionMatch = expense.description?.toLowerCase().includes(searchTerm) || false;
+        
+        // Search in notes
+        const notesMatch = expense.notes?.toLowerCase().includes(searchTerm) || false;
+        
+        // Search in location
+        const locationMatch = expense.location?.toLowerCase().includes(searchTerm) || false;
+        
+        // Search in payment method
+        const paymentMatch = expense.paymentMethod?.toLowerCase().includes(searchTerm) || false;
+        
+        // Search in receipt number
+        const receiptMatch = expense.receiptNumber?.toLowerCase().includes(searchTerm) || false;
+        
+        // Search in category name
+        const categoryName = this.getCategoryName(expense.categoryId)?.toLowerCase() || '';
+        const categoryMatch = categoryName.includes(searchTerm);
+        
+        // Search in amount (as string)
+        const amountMatch = expense.amount.toString().includes(searchTerm);
+        
+        // Search in tags
+        const tagsMatch = expense.tags?.some(tag => tag.toLowerCase().includes(searchTerm)) || false;
+        
+        return descriptionMatch || notesMatch || locationMatch || paymentMatch || 
+               receiptMatch || categoryMatch || amountMatch || tagsMatch;
+      });
+    }
+
     // Filter by amount
     if (this.filterAmount) {
       const amount = parseFloat(this.filterAmount);
@@ -584,8 +624,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(e => e.date === this.filterDate);
     }
 
-    // Apply dashboard filter state if available
-    filtered = this.applyDashboardFilters(filtered);
+    // Apply dashboard filter state only if no manual date filters are set
+    if (!this.filterDateFrom && !this.filterDateTo && !this.filterDate) {
+      filtered = this.applyDashboardFilters(filtered);
+    } else {
+      console.log('Manual date filters active, skipping dashboard filters');
+    }
 
     // Sort
     filtered.sort((a, b) => {
@@ -786,6 +830,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   clearFilters() {
+    this.globalSearch = '';
     this.filterAmount = '';
     this.filterCategory = '';
     this.filterDate = '';
@@ -1155,6 +1200,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     if (this.filterDateTo && this.filterDateFrom && this.filterDateTo < this.filterDateFrom) {
       this.filterDateTo = '';
     }
+    
+    // Clear dashboard filter state when manual date filter is applied
+    if (this.filterDateFrom) {
+      this.clearDashboardFilterState();
+    }
+    
     // Reset pagination when filter changes
     this.resetPagination();
   }
@@ -1166,6 +1217,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       this.dialogService.warning('To Date cannot be earlier than From Date. Please select a valid date range.');
       this.filterDateTo = '';
     }
+    
+    // Clear dashboard filter state when manual date filter is applied
+    if (this.filterDateTo) {
+      this.clearDashboardFilterState();
+    }
+    
     // Reset pagination when filter changes
     this.resetPagination();
   }
@@ -1207,5 +1264,65 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Handle sort change
   onSortChange(): void {
     this.resetPagination();
+  }
+
+  // Handle global search change
+  onSearchChange(): void {
+    this.resetPagination();
+  }
+
+  // Clear dashboard filter state when manual filters are applied
+  clearDashboardFilterState(): void {
+    console.log('Clearing dashboard filter state due to manual date filter');
+    this.dashboardPeriod = 'all';
+    this.dashboardMonth = '';
+    this.dashboardYear = '';
+    this.dashboardStartDate = '';
+    this.dashboardEndDate = '';
+    this.dashboardMonthOnly = '';
+    this.dashboardYearOnly = '';
+  }
+
+  // Get dashboard filter label for display
+  getDashboardFilterLabel(): string {
+    switch (this.dashboardPeriod) {
+      case 'monthly':
+        if (this.dashboardMonth && this.dashboardYear) {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[parseInt(this.dashboardMonth)]} ${this.dashboardYear}`;
+        }
+        return 'This Month';
+      case 'yearly':
+        return this.dashboardYear || 'This Year';
+      case 'last30':
+        return 'Last 30 Days';
+      case 'last7':
+        return 'Last 7 Days';
+      case 'custom':
+        return 'Custom Range';
+      case 'monthOnly':
+        if (this.dashboardMonthOnly && this.dashboardYearOnly) {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[parseInt(this.dashboardMonthOnly)]} ${this.dashboardYearOnly}`;
+        }
+        return 'Selected Month';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // Toggle methods for expand/collapse functionality
+  toggleAddExpenseSection(): void {
+    this.isAddExpenseExpanded = !this.isAddExpenseExpanded;
+  }
+
+  toggleFiltersSection(): void {
+    this.isFiltersExpanded = !this.isFiltersExpanded;
+  }
+
+  toggleExpensesListSection(): void {
+    this.isExpensesListExpanded = !this.isExpensesListExpanded;
   }
 } 
