@@ -78,6 +78,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   isAddExpenseExpanded: boolean = true;
   isFiltersExpanded: boolean = true;
   isExpensesListExpanded: boolean = true;
+  
+  // Search focus state
+  isSearchFocused: boolean = false;
 
   private subscription: Subscription = new Subscription();
 
@@ -1324,5 +1327,13 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   toggleExpensesListSection(): void {
     this.isExpensesListExpanded = !this.isExpensesListExpanded;
+  }
+
+  onSearchFocus(): void {
+    this.isSearchFocused = true;
+  }
+
+  onSearchBlur(): void {
+    this.isSearchFocused = false;
   }
 } 

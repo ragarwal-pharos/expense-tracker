@@ -29,13 +29,20 @@
       <div class="search-container">
         <div class="search-input-group">
           <span class="search-icon">🔍</span>
-          <input 
-            type="text" 
-            class="search-input" 
-            placeholder="Search expenses by description, notes, location, category, amount, tags..."
-            [(ngModel)]="globalSearch"
-            (input)="onSearchChange()"
-            name="globalSearch">
+          <div class="search-input-wrapper">
+            <input 
+              type="text" 
+              class="search-input" 
+              placeholder=""
+              [(ngModel)]="globalSearch"
+              (input)="onSearchChange()"
+              (focus)="onSearchFocus()"
+              (blur)="onSearchBlur()"
+              name="globalSearch">
+            <div class="search-placeholder-marquee" *ngIf="!globalSearch && !isSearchFocused">
+              <span class="marquee-text">Search expenses by description, notes, location, category, amount, tags...</span>
+            </div>
+          </div>
           <button 
             *ngIf="globalSearch" 
             class="clear-search-btn" 
