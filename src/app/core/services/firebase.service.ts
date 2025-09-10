@@ -170,7 +170,11 @@ export class FirebaseService {
       }
 
       const expensesRef = collection(this.firestore, 'expenses');
-      const expenseWithUserId = { ...expense, userId };
+      const expenseWithUserId = { 
+        ...expense, 
+        userId,
+        createdAt: new Date().toISOString() // Add creation timestamp
+      };
       
       const docRef = await addDoc(expensesRef, expenseWithUserId);
       

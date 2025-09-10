@@ -46,7 +46,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   filterDate: string = '';
   filterDateFrom: string = '';
   filterDateTo: string = '';
-  sortBy: 'date' | 'amount' | 'description' = 'date';
+  sortBy: 'date' | 'amount' = 'date';
   sortOrder: 'asc' | 'desc' = 'desc';
   
   // Dashboard filter state properties
@@ -289,8 +289,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         priority: this.newExpense.priority || 'medium',
         notes: this.newExpense.notes || '',
         location: this.newExpense.location || '',
-        receiptNumber: this.newExpense.receiptNumber || '',
-        createdAt: new Date().toISOString()
+        receiptNumber: this.newExpense.receiptNumber || ''
+        // createdAt will be set by Firebase service
       };
 
       const id = await this.expenseService.add(expenseData);
@@ -593,20 +593,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       
       switch (this.sortBy) {
         case 'date':
-          aValue = new Date(a.date).getTime();
-          bValue = new Date(b.date).getTime();
+          // Sort by creation time (when expense was added) - same as recently added
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
           break;
         case 'amount':
           aValue = a.amount;
           bValue = b.amount;
           break;
-        case 'description':
-          aValue = (a.description || '').toLowerCase();
-          bValue = (b.description || '').toLowerCase();
-          break;
         default:
-          aValue = new Date(a.date).getTime();
-          bValue = new Date(b.date).getTime();
+          // Default to creation time for most recent first
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
       }
 
       if (this.sortOrder === 'asc') {
@@ -793,6 +791,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.filterDate = '';
     this.filterDateFrom = '';
     this.filterDateTo = '';
+    
+    // Reset sort to default (date/recently added first)
+    this.sortBy = 'date';
+    this.sortOrder = 'desc';
     
     // Clear dashboard filter state
     this.dashboardPeriod = 'all';
@@ -1200,5 +1202,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Reset pagination when filters change
   resetPagination(): void {
     this.currentPage = 1;
+  }
+
+  // Handle sort change
+  onSortChange(): void {
+    this.resetPagination();
   }
 } 

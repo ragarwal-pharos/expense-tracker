@@ -163,6 +163,20 @@
           <label for="filterAmount" class="form-label-modern">Min Amount</label>
           <input type="text" class="form-control-modern" id="filterAmount" [(ngModel)]="filterAmount" placeholder="0" (input)="onFilterAmountInput($event)" (keypress)="onFilterAmountKeypress($event)">
         </div>
+        <div class="filter-group">
+          <label for="sortBy" class="form-label-modern">Sort By</label>
+          <select class="form-select" id="sortBy" [(ngModel)]="sortBy" (change)="onSortChange()">
+            <option value="date">📅 Date</option>
+            <option value="amount">💰 Amount</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="sortOrder" class="form-label-modern">Order</label>
+          <select class="form-select" id="sortOrder" [(ngModel)]="sortOrder" (change)="onSortChange()">
+            <option value="desc">⬇️ Descending</option>
+            <option value="asc">⬆️ Ascending</option>
+          </select>
+        </div>
         <div class="filter-group button-group">
           <label class="form-label-modern">&nbsp;</label>
           <button type="button" class="btn-clear-filters" (click)="clearFilters()">
