@@ -307,15 +307,62 @@ export class MonthlyReportsComponent implements OnInit {
   }
 
   getAverageExpenseAmount(): number {
-    const selectedReport = this.getSelectedMonthReport();
-    if (!selectedReport || selectedReport.expenseCount === 0) return 0;
-    return selectedReport.totalAmount / selectedReport.expenseCount;
+    const filteredCount = this.getFilteredExpenseCount();
+    const filteredTotal = this.getFilteredTotalAmount();
+    if (filteredCount === 0) return 0;
+    return filteredTotal / filteredCount;
   }
 
   getCategoryPercentage(breakdown: any): number {
+    const filteredTotal = this.getFilteredTotalAmount();
+    if (filteredTotal === 0) return 0;
+    return Math.round((breakdown.amount / filteredTotal) * 100);
+  }
+
+  // Get filtered category breakdown for detailed view
+  getFilteredCategoryBreakdown(): any[] {
     const selectedReport = this.getSelectedMonthReport();
-    if (!selectedReport || selectedReport.totalAmount === 0) return 0;
-    return Math.round((breakdown.amount / selectedReport.totalAmount) * 100);
+    if (!selectedReport) return [];
+
+    let categoryBreakdown = selectedReport.categoryBreakdown;
+
+    // If category filter is applied, show only that category
+    if (this.filterCategory) {
+      categoryBreakdown = categoryBreakdown.filter((breakdown: any) => 
+        breakdown.category.id === this.filterCategory
+      );
+    }
+
+    return categoryBreakdown;
+  }
+
+  // Get filtered total amount for detailed view
+  getFilteredTotalAmount(): number {
+    const selectedReport = this.getSelectedMonthReport();
+    if (!selectedReport) return 0;
+
+    if (!this.filterCategory) {
+      return selectedReport.totalAmount;
+    }
+
+    // Calculate total for filtered category only
+    const filteredBreakdown = this.getFilteredCategoryBreakdown();
+    return filteredBreakdown.reduce((total, breakdown) => total + breakdown.amount, 0);
+  }
+
+  // Get filtered expense count for detailed view
+  getFilteredExpenseCount(): number {
+    const selectedReport = this.getSelectedMonthReport();
+    if (!selectedReport) return 0;
+
+    if (!this.filterCategory) {
+      return selectedReport.expenseCount;
+    }
+
+    // Count expenses for filtered category only
+    return selectedReport.expenses.filter((expense: Expense) => 
+      expense.categoryId === this.filterCategory
+    ).length;
   }
 
   toggleExpenseSort(): void {
@@ -352,7 +399,12 @@ export class MonthlyReportsComponent implements OnInit {
     const selectedReport = this.getSelectedMonthReport();
     if (!selectedReport) return [];
     
-    const expenses = [...selectedReport.expenses];
+    let expenses = [...selectedReport.expenses];
+    
+    // Apply category filter if active
+    if (this.filterCategory) {
+      expenses = expenses.filter(expense => expense.categoryId === this.filterCategory);
+    }
     
     expenses.sort((a, b) => {
       let comparison = 0;
@@ -772,6 +824,19 @@ export class MonthlyReportsComponent implements OnInit {
 
   // Method to recalculate analytics when filters change
   onFilterChange() {
+    // Reset detailed view if category filter is applied and no data exists for selected month
+    if (this.showDetailedView && this.filterCategory) {
+      const selectedReport = this.getSelectedMonthReport();
+      if (selectedReport) {
+        const hasExpensesForCategory = selectedReport.expenses.some((expense: Expense) => 
+          expense.categoryId === this.filterCategory
+        );
+        if (!hasExpensesForCategory) {
+          // Hide detailed view if no expenses exist for the selected category
+          this.showDetailedView = false;
+        }
+      }
+    }
     this.calculateAnalytics();
   }
 
@@ -840,6 +905,30 @@ export class MonthlyReportsComponent implements OnInit {
 
   getSelectedMonthReport() {
     return this.monthlyReports.find(report => report.monthKey === this.selectedMonth);
+  }
+
+  // Check if detailed view should be shown based on current filters
+  shouldShowDetailedView(): boolean {
+    if (!this.showDetailedView || !this.selectedMonth) {
+      return false;
+    }
+
+    const selectedReport = this.getSelectedMonthReport();
+    if (!selectedReport) {
+      return false;
+    }
+
+    // If no category filter is applied, show the detailed view
+    if (!this.filterCategory) {
+      return true;
+    }
+
+    // If category filter is applied, check if there are expenses for that category in the selected month
+    const hasExpensesForCategory = selectedReport.expenses.some((expense: Expense) => 
+      expense.categoryId === this.filterCategory
+    );
+
+    return hasExpensesForCategory;
   }
 
   getCategoryName(categoryId: string): string {

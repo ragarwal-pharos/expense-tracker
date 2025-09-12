@@ -305,7 +305,7 @@
   </div>
 
   <!-- Enhanced Detailed Month View -->
-  <div class="detailed-view" *ngIf="showDetailedView && getSelectedMonthReport()">
+  <div class="detailed-view" *ngIf="shouldShowDetailedView()">
     <div class="detailed-header">
       <button class="back-btn" (click)="showDetailedView = false">
         <span class="back-icon">←</span>
@@ -329,14 +329,14 @@
         <div class="summary-card">
           <div class="summary-icon">💰</div>
           <div class="summary-content">
-            <div class="summary-value">{{ getSelectedMonthReport()?.totalAmount | currency:'INR' }}</div>
+            <div class="summary-value">{{ getFilteredTotalAmount() | currency:'INR' }}</div>
             <div class="summary-label">Total Spent</div>
           </div>
         </div>
         <div class="summary-card">
           <div class="summary-icon">📝</div>
           <div class="summary-content">
-            <div class="summary-value">{{ getSelectedMonthReport()?.expenseCount }}</div>
+            <div class="summary-value">{{ getFilteredExpenseCount() }}</div>
             <div class="summary-label">Total Expenses</div>
           </div>
         </div>
@@ -350,7 +350,7 @@
         <div class="summary-card">
           <div class="summary-icon">🏷️</div>
           <div class="summary-content">
-            <div class="summary-value">{{ getSelectedMonthReport()?.categoryBreakdown.length }}</div>
+            <div class="summary-value">{{ getFilteredCategoryBreakdown().length }}</div>
             <div class="summary-label">Categories Used</div>
           </div>
         </div>
@@ -360,10 +360,10 @@
       <div class="breakdown-section">
         <div class="section-header">
           <h4>Category Breakdown</h4>
-          <div class="breakdown-total">Total: {{ getSelectedMonthReport()?.totalAmount | currency:'INR' }}</div>
+          <div class="breakdown-total">Total: {{ getFilteredTotalAmount() | currency:'INR' }}</div>
         </div>
         <div class="category-breakdown">
-          <div class="category-item-detailed" *ngFor="let breakdown of getSelectedMonthReport()?.categoryBreakdown">
+          <div class="category-item-detailed" *ngFor="let breakdown of getFilteredCategoryBreakdown()">
             <div class="category-info">
               <span class="category-icon" [style.background-color]="breakdown.category.color">{{ breakdown.category.icon }}</span>
               <div class="category-details">

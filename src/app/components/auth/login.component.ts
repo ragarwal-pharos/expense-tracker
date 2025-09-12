@@ -34,14 +34,23 @@ import { AuthService } from '../../core/services/auth.service';
 
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
-            <input 
-              type="password" 
-              id="password"
-              name="password"
-              [(ngModel)]="password" 
-              required
-              class="form-control"
-              placeholder="Enter your password">
+            <div class="password-input-container">
+              <input 
+                [type]="showPassword ? 'text' : 'password'" 
+                id="password"
+                name="password"
+                [(ngModel)]="password" 
+                required
+                class="form-control password-input"
+                placeholder="Enter your password">
+              <button 
+                type="button" 
+                class="password-toggle-btn"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+                <span class="eye-icon">{{ showPassword ? '🙈' : '👁️' }}</span>
+              </button>
+            </div>
             <div class="forgot-password-link">
               <a (click)="goToForgotPassword()" class="link">Forgot Password?</a>
             </div>
@@ -147,6 +156,44 @@ import { AuthService } from '../../core/services/auth.service';
       outline: none;
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .password-input-container {
+      position: relative;
+    }
+
+    .password-input {
+      padding-right: 3rem;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .password-toggle-btn:hover {
+      background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .password-toggle-btn:focus {
+      outline: none;
+      background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .eye-icon {
+      font-size: 1.2rem;
+      user-select: none;
     }
 
     .forgot-password-link {
@@ -257,6 +304,7 @@ export class LoginComponent {
   password: string = '';
   loading: boolean = false;
   error: string = '';
+  showPassword: boolean = false;
 
   constructor(
     private authService: AuthService,
@@ -290,6 +338,10 @@ export class LoginComponent {
 
   goToForgotPassword() {
     this.router.navigate(['/forgot-password']);
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
   }
 
   private getErrorMessage(error: any): string {
