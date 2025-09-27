@@ -1066,6 +1066,7 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = '0';
     document.body.style.right = '0';
+    document.body.style.touchAction = 'none';
     
     // Store scroll position for restoration
     this.storedScrollY = scrollY;
@@ -1090,6 +1091,7 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     document.body.style.top = '';
     document.body.style.left = '';
     document.body.style.right = '';
+    document.body.style.touchAction = '';
     
     // Restore scroll position without animation
     if (this.storedScrollY !== null) {

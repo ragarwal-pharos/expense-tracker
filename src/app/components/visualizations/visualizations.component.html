@@ -1,0 +1,158 @@
+<div class="visualizations-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <span class="title-icon">📈</span>
+          Visualizations
+        </h1>
+        <p class="page-subtitle">Interactive charts and insights for your expense data</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="isLoading">
+    <app-loading message="Loading visualizations..." type="card"></app-loading>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content" *ngIf="!isLoading">
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filter-group">
+        <label class="filter-label">Time Period</label>
+        <select 
+          class="filter-select" 
+          [(ngModel)]="selectedPeriod" 
+          (change)="loadData()">
+          <option value="month">This Month</option>
+          <option value="year">This Year</option>
+          <option value="all">All Time</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Category</label>
+        <select 
+          class="filter-select" 
+          [(ngModel)]="selectedCategory" 
+          (change)="loadData()">
+          <option value="all">All Categories</option>
+          <option *ngFor="let category of categories" [value]="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <div class="card-title">Total Amount</div>
+          <div class="card-value">{{ getTotalAmount() | currency:'INR' }}</div>
+        </div>
+      </div>
+      
+      <div class="summary-card">
+        <div class="card-icon">📊</div>
+        <div class="card-content">
+          <div class="card-title">Transactions</div>
+          <div class="card-value">{{ getFilteredExpenses().length }}</div>
+        </div>
+      </div>
+      
+      <div class="summary-card">
+        <div class="card-icon">🏷️</div>
+        <div class="card-content">
+          <div class="card-title">Categories</div>
+          <div class="card-value">{{ getExpensesByCategory().length }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+      <!-- Category Breakdown -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Category Breakdown</h3>
+          <p class="chart-subtitle">Expense distribution by category</p>
+        </div>
+        <div class="chart-content">
+          <div class="category-list">
+            <div 
+              class="category-item" 
+              *ngFor="let item of getExpensesByCategory(); let i = index">
+              <div class="category-info">
+                <div class="category-name">{{ item.category }}</div>
+                <div class="category-amount">{{ item.amount | currency:'INR' }}</div>
+              </div>
+              <div class="category-bar">
+                <div 
+                  class="bar-fill" 
+                  [style.width.%]="item.percentage"
+                  [style.background-color]="getCategoryColor(i)">
+                </div>
+              </div>
+              <div class="category-percentage">{{ item.percentage | number:'1.1-1' }}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Trend -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Monthly Trend</h3>
+          <p class="chart-subtitle">Expense trends over the last 12 months</p>
+        </div>
+        <div class="chart-content">
+          <div class="trend-chart">
+            <div class="trend-bars">
+              <div 
+                class="trend-bar" 
+                *ngFor="let month of getMonthlyTrend()"
+                [style.height.%]="getBarHeight(month.amount)">
+                <div class="bar-value">{{ month.amount | currency:'INR':'symbol':'1.0-0' }}</div>
+              </div>
+            </div>
+            <div class="trend-labels">
+              <div 
+                class="trend-label" 
+                *ngFor="let month of getMonthlyTrend()">
+                {{ month.month }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Expenses -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Top Expenses</h3>
+          <p class="chart-subtitle">Highest amount transactions</p>
+        </div>
+        <div class="chart-content">
+          <div class="expenses-list">
+            <div 
+              class="expense-item" 
+              *ngFor="let expense of getTopExpenses(); let i = index">
+              <div class="expense-rank">#{{ i + 1 }}</div>
+              <div class="expense-details">
+                <div class="expense-description">{{ expense.description || 'No description' }}</div>
+                <div class="expense-category">{{ getCategoryName(expense.categoryId) }}</div>
+                <div class="expense-date">{{ expense.date | date:'MMM dd, yyyy' }}</div>
+              </div>
+              <div class="expense-amount">{{ expense.amount | currency:'INR' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

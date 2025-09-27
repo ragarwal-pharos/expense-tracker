@@ -2220,7 +2220,7 @@
   z-index: 1000;
   backdrop-filter: blur(4px);
   overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   scroll-behavior: auto;
   padding: 20px;
   box-sizing: border-box;
@@ -2319,10 +2319,13 @@ body.modal-open * {
 .modal-body {
   padding: 24px 28px 28px;
   overflow-y: auto;
+  overflow-x: hidden;
   max-height: calc(85vh - 120px);
   min-height: 0;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   height: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 
@@ -2332,8 +2335,10 @@ body.modal-open * {
   gap: 16px;
   max-height: none;
   overflow-y: visible;
+  overflow-x: hidden;
   padding: 4px;
   height: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .expenses-list::-webkit-scrollbar {
@@ -2579,6 +2584,8 @@ body.modal-open * {
 @media (max-width: 768px) {
   .category-expenses-modal {
     padding: 10px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   
   .modal-content {
@@ -2593,7 +2600,10 @@ body.modal-open * {
     padding: 20px 24px 24px;
     height: auto;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 
   .expenses-list {
@@ -2680,6 +2690,8 @@ body.modal-open * {
 @media (max-width: 480px) {
   .category-expenses-modal {
     padding: 5px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   
   .modal-content {
@@ -2694,7 +2706,10 @@ body.modal-open * {
     padding: 16px 20px 20px;
     height: auto;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 
   .expenses-list {
