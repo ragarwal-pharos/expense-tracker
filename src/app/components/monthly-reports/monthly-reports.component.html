@@ -363,7 +363,7 @@
           <div class="breakdown-total">Total: {{ getFilteredTotalAmount() | currency:'INR' }}</div>
         </div>
         <div class="category-breakdown">
-          <div class="category-item-detailed" *ngFor="let breakdown of getFilteredCategoryBreakdown()">
+          <div class="category-item-detailed" *ngFor="let breakdown of getFilteredCategoryBreakdown()" (click)="showCategoryExpenses(breakdown.category)">
             <div class="category-info">
               <span class="category-icon" [style.background-color]="breakdown.category.color">{{ breakdown.category.icon }}</span>
               <div class="category-details">
@@ -379,6 +379,8 @@
               <div class="progress-bar">
                 <div class="progress-fill" [style.width.%]="getCategoryPercentage(breakdown)" [style.background-color]="breakdown.category.color"></div>
               </div>
+            </div>
+            <div class="category-click-hint">
             </div>
           </div>
         </div>
@@ -449,6 +451,39 @@
               <span class="pagination-icon">→</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Expenses Modal -->
+  <div class="category-expenses-modal" *ngIf="showCategoryExpensesModal" (click)="closeCategoryExpensesModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="category-icon" [style.background-color]="selectedCategoryForModal?.color">{{ selectedCategoryForModal?.icon }}</span>
+          <h3>{{ selectedCategoryForModal?.name }} Expenses</h3>
+        </div>
+        <button class="close-btn" (click)="closeCategoryExpensesModal()">
+          <span>✕</span>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="expenses-list">
+          <div class="expense-item" *ngFor="let expense of getCategoryExpenses()">
+            <div class="expense-description">{{ expense.description || 'No description' }}</div>
+            <div class="expense-date">{{ expense.date | date:'MMM dd, yyyy' }}</div>
+            <div class="expense-right">
+              <div class="expense-amount">{{ expense.amount | currency:'INR' }}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="empty-state" *ngIf="getCategoryExpenses().length === 0">
+          <div class="empty-icon">📝</div>
+          <h6>No Expenses Found</h6>
+          <p>No expenses found for this category in the selected month.</p>
         </div>
       </div>
     </div>

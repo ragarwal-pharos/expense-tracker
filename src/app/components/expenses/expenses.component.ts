@@ -797,6 +797,16 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     return category?.icon || '📌';
   }
 
+  getAmountStatus(amount: number): string {
+    if (amount <= 50) {
+      return 'low';
+    } else if (amount <= 200) {
+      return 'medium';
+    } else {
+      return 'high';
+    }
+  }
+
   // Helper method to get month name
   getMonthName(monthIndex: string): string {
     const months = [

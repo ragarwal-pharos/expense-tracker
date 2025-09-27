@@ -15,7 +15,7 @@ import { Category } from '../../core/models/category.model';
   templateUrl: './monthly-reports.component.html',
   styleUrls: ['./monthly-reports.component.scss']
 })
-export class MonthlyReportsComponent implements OnInit {
+export class MonthlyReportsComponent implements OnInit, OnDestroy {
   expenses: Expense[] = [];
   categories: Category[] = [];
   monthlyReports: any[] = [];
@@ -54,6 +54,11 @@ export class MonthlyReportsComponent implements OnInit {
   // Loading states
   isLoading: boolean = true;
 
+  // Category expenses modal
+  showCategoryExpensesModal: boolean = false;
+  selectedCategoryForModal: Category | null = null;
+  private storedScrollY: number | null = null;
+
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
@@ -62,6 +67,13 @@ export class MonthlyReportsComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+  }
+
+  ngOnDestroy() {
+    // Restore scrolling if modal is open when component is destroyed
+    if (this.showCategoryExpensesModal) {
+      this.restoreBackgroundScrolling();
+    }
   }
 
   async loadData() {
@@ -1022,4 +1034,91 @@ export class MonthlyReportsComponent implements OnInit {
     
     return filtered;
   }
+
+  // Category expenses modal methods
+  showCategoryExpenses(category: Category): void {
+    this.selectedCategoryForModal = category;
+    this.showCategoryExpensesModal = true;
+    
+    // Use setTimeout to ensure DOM updates before preventing scroll
+    setTimeout(() => {
+      this.preventBackgroundScrolling();
+    }, 0);
+  }
+
+  closeCategoryExpensesModal(): void {
+    this.showCategoryExpensesModal = false;
+    this.selectedCategoryForModal = null;
+    this.restoreBackgroundScrolling();
+  }
+
+  private preventBackgroundScrolling(): void {
+    // Store current scroll position
+    const scrollY = window.scrollY;
+    
+    // Add modal-open class to body
+    document.body.classList.add('modal-open');
+    
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    
+    // Store scroll position for restoration
+    this.storedScrollY = scrollY;
+    
+    // Prevent any scroll events
+    document.addEventListener('scroll', this.preventScroll, { passive: false });
+    document.addEventListener('touchmove', this.preventScroll, { passive: false });
+  }
+
+  private restoreBackgroundScrolling(): void {
+    // Remove scroll prevention event listeners
+    document.removeEventListener('scroll', this.preventScroll);
+    document.removeEventListener('touchmove', this.preventScroll);
+    
+    // Remove modal-open class from body
+    document.body.classList.remove('modal-open');
+    
+    // Restore body scrolling when modal is closed
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    
+    // Restore scroll position without animation
+    if (this.storedScrollY !== null) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: this.storedScrollY!,
+          left: 0,
+          behavior: 'instant'
+        });
+        this.storedScrollY = null;
+      });
+    }
+  }
+
+  private preventScroll = (event: Event): void => {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  getCategoryExpenses(): Expense[] {
+    if (!this.selectedCategoryForModal) return [];
+    
+    const selectedReport = this.getSelectedMonthReport();
+    if (!selectedReport) return [];
+    
+    return selectedReport.expenses.filter((expense: Expense) => 
+      expense.categoryId === this.selectedCategoryForModal!.id
+    );
+  }
+
 } 
