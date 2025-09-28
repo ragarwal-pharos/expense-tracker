@@ -1066,7 +1066,8 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = '0';
     document.body.style.right = '0';
-    document.body.style.touchAction = 'none';
+    // Allow touch actions for modal content
+    document.body.style.touchAction = 'auto';
     
     // Store scroll position for restoration
     this.storedScrollY = scrollY;

@@ -2220,19 +2220,51 @@
   z-index: 1000;
   backdrop-filter: blur(4px);
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: auto;
   scroll-behavior: auto;
-  padding: 20px;
-  box-sizing: border-box;
+  padding: 15vh 0;
+  overflow-x: hidden;
+  
+  /* Fallback for browsers that don't support dvh */
+  --modal-max-height: 70vh;
+  --modal-body-max-height: calc(70vh - 120px);
+}
+
+/* Use dvh when supported for better mobile experience */
+@supports (height: 100dvh) {
+  .category-expenses-modal {
+    --modal-max-height: 70dvh;
+    --modal-body-max-height: calc(70dvh - 120px);
+  }
 }
 
 /* Prevent smooth scrolling when modal is open */
 body.modal-open {
   scroll-behavior: auto !important;
+  touch-action: auto !important;
 }
 
 body.modal-open * {
   scroll-behavior: auto !important;
+}
+
+/* Ensure modal content can be scrolled on mobile */
+body.modal-open .category-expenses-modal {
+  touch-action: auto !important;
+}
+
+body.modal-open .modal-content {
+  touch-action: auto !important;
+}
+
+body.modal-open .modal-body {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+body.modal-open .expenses-list {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 .modal-content {
@@ -2241,13 +2273,14 @@ body.modal-open * {
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 10px 20px rgba(0, 0, 0, 0.1);
   max-width: 800px;
   width: 90%;
-  max-height: 85vh;
+  max-height: var(--modal-max-height, 90dvh);
+  height: var(--modal-max-height, 90dvh);
   overflow: hidden;
+  overflow-x: hidden;
   animation: modalSlideIn 0.3s ease-out;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  height: auto;
 }
 
 @keyframes modalSlideIn {
@@ -2320,12 +2353,13 @@ body.modal-open * {
   padding: 24px 28px 28px;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: calc(85vh - 120px);
-  min-height: 0;
+  max-height: var(--modal-body-max-height, calc(90dvh - 120px));
+  min-height: 200px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   height: auto;
+  flex: 1;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 
@@ -2334,11 +2368,14 @@ body.modal-open * {
   flex-direction: column;
   gap: 16px;
   max-height: none;
-  overflow-y: visible;
+  overflow-y: auto;
   overflow-x: hidden;
   padding: 4px;
   height: auto;
+  flex: 1;
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .expenses-list::-webkit-scrollbar {
@@ -2371,11 +2408,12 @@ body.modal-open * {
   animation: slideInFromLeft 0.6s ease-out;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   min-height: 60px;
   gap: 20px;
   flex-shrink: 0;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   margin-bottom: 12px;
 }
@@ -2425,9 +2463,11 @@ body.modal-open * {
   text-align: left;
   line-height: 1.4;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  word-wrap: break-word;
 }
 
 .expense-date {
@@ -2437,15 +2477,11 @@ body.modal-open * {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  min-width: 140px;
-  flex: 0 0 auto;
-}
-
-.expense-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
+  min-width: 120px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .expense-amount {
@@ -2454,6 +2490,10 @@ body.modal-open * {
   color: #1f2937;
   text-align: right;
   min-width: 100px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .expense-date {
@@ -2583,26 +2623,34 @@ body.modal-open * {
 /* Modal responsive */
 @media (max-width: 768px) {
   .category-expenses-modal {
-    padding: 10px;
-    touch-action: pan-y;
-    overscroll-behavior: contain;
+    --modal-max-height: 80vh;
+    --modal-body-max-height: calc(80vh - 100px);
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10vh 0;
+  }
+  
+  @supports (height: 100dvh) {
+    .category-expenses-modal {
+      --modal-max-height: 80dvh;
+      --modal-body-max-height: calc(80dvh - 100px);
+    }
   }
   
   .modal-content {
     max-width: 95%;
-    max-height: 80vh;
-    height: auto;
-    border-radius: 16px;
+    max-height: var(--modal-max-height);
+    height: var(--modal-max-height);
   }
 
   .modal-body {
-    max-height: calc(80vh - 100px);
+    max-height: var(--modal-body-max-height);
     padding: 20px 24px 24px;
     height: auto;
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
     touch-action: pan-y;
   }
 
@@ -2610,67 +2658,18 @@ body.modal-open * {
     max-height: none;
     gap: 12px;
     height: auto;
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .expense-item {
-    padding: 20px;
+    padding: 16px;
     flex-direction: column;
-    gap: 16px;
-    text-align: left;
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    position: relative;
-  }
-  
-  .expense-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: #3b82f6;
-    border-radius: 0 2px 2px 0;
-  }
-  
-  .expense-description {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #111827;
-    text-align: left;
-    margin-bottom: 8px;
-    line-height: 1.3;
-  }
-  
-  .expense-date {
-    font-size: 0.85rem;
-    color: #6b7280;
-    text-align: left;
-    min-width: auto;
-    margin: 0 0 12px 0;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .expense-right {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-top: 0;
-    padding-top: 12px;
-    border-top: 1px solid #f3f4f6;
-  }
-  
-  .expense-amount {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    text-align: left;
-    min-width: auto;
+    gap: 12px;
+    text-align: center;
   }
 
   .expense-amount {
@@ -2689,26 +2688,34 @@ body.modal-open * {
 
 @media (max-width: 480px) {
   .category-expenses-modal {
-    padding: 5px;
-    touch-action: pan-y;
-    overscroll-behavior: contain;
+    --modal-max-height: 85vh;
+    --modal-body-max-height: calc(85vh - 80px);
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 7.5vh 0;
+  }
+  
+  @supports (height: 100dvh) {
+    .category-expenses-modal {
+      --modal-max-height: 85dvh;
+      --modal-body-max-height: calc(85dvh - 80px);
+    }
   }
   
   .modal-content {
     max-width: 98%;
-    max-height: 75vh;
-    height: auto;
-    border-radius: 12px;
+    max-height: var(--modal-max-height);
+    height: var(--modal-max-height);
   }
 
   .modal-body {
-    max-height: calc(75vh - 80px);
+    max-height: var(--modal-body-max-height);
     padding: 16px 20px 20px;
     height: auto;
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
     touch-action: pan-y;
   }
 
@@ -2716,36 +2723,15 @@ body.modal-open * {
     max-height: none;
     gap: 10px;
     height: auto;
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .expense-item {
-    padding: 16px;
-    gap: 12px;
-    border-radius: 12px;
-  }
-  
-  .expense-description {
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 6px;
-  }
-  
-  .expense-date {
-    font-size: 0.8rem;
-    margin: 0 0 10px 0;
-    font-weight: 600;
-  }
-  
-  .expense-amount {
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-  
-  .expense-right {
-    gap: 12px;
-    margin-top: 0;
-    padding-top: 10px;
+    padding: 14px;
   }
 
   .expense-description {
