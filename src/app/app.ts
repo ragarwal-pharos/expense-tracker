@@ -236,12 +236,21 @@ import { take, filter } from 'rxjs/operators';
       backdrop-filter: blur(4px);
       padding-top: env(safe-area-inset-top);
       box-sizing: border-box;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-overlay.sidebar-overlay-visible {
+      opacity: 1;
+      visibility: visible;
     }
 
     .sidebar {
       position: fixed;
       top: 0;
-      left: -300px;
+      left: 0;
       width: 300px;
       height: 100vh;
       min-height: 100vh;
@@ -249,16 +258,20 @@ import { take, filter } from 'rxjs/operators';
       background: linear-gradient(135deg, #ff8c42 0%, #ffa726 50%, #ffcc02 100%);
       box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
       z-index: 300;
-      transition: left 0.3s ease;
+      transform: translate3d(-100%, 0, 0);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       padding-top: env(safe-area-inset-top);
       box-sizing: border-box;
+      will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     .sidebar.sidebar-open {
-      left: 0;
+      transform: translate3d(0, 0, 0);
     }
 
     .sidebar-header {
@@ -321,12 +334,14 @@ import { take, filter } from 'rxjs/operators';
     .main-content {
       flex: 1;
       background: #f8f9fa;
-      transition: filter 0.3s ease, margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: filter 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       margin-top: 70px; /* Account for fixed header height */
+      will-change: filter;
     }
 
     .main-content.content-blurred {
-      filter: blur(4px);
+      filter: blur(2px);
       pointer-events: none;
     }
 
@@ -352,11 +367,12 @@ import { take, filter } from 'rxjs/operators';
 
       .sidebar {
         width: 280px;
-        left: -280px;
         height: 100vh;
         min-height: 100vh;
         max-height: 100vh;
         top: 0;
+        left: 0;
+        transform: translate3d(-100%, 0, 0);
       }
 
       .sidebar-overlay {
@@ -399,11 +415,12 @@ import { take, filter } from 'rxjs/operators';
 
       .sidebar {
         width: 260px;
-        left: -260px;
         height: 100vh;
         min-height: 100vh;
         max-height: 100vh;
         top: 0;
+        left: 0;
+        transform: translate3d(-100%, 0, 0);
       }
 
       .sidebar-overlay {

@@ -55,7 +55,7 @@
           </header>
 
   <!-- Sidebar Overlay -->
-  <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
+  <div class="sidebar-overlay" [class.sidebar-overlay-visible]="sidebarOpen" (click)="closeSidebar()"></div>
 
   <!-- Sidebar -->
   <aside class="sidebar" [class.sidebar-open]="sidebarOpen">
