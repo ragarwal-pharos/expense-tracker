@@ -54,10 +54,6 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
   // Loading states
   isLoading: boolean = true;
 
-  // Category expenses modal
-  showCategoryExpensesModal: boolean = false;
-  selectedCategoryForModal: Category | null = null;
-  private storedScrollY: number | null = null;
 
   constructor(
     private expenseService: ExpenseService,
@@ -70,10 +66,7 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // Restore scrolling if modal is open when component is destroyed
-    if (this.showCategoryExpensesModal) {
-      this.restoreBackgroundScrolling();
-    }
+    // Component cleanup if needed
   }
 
   async loadData() {
@@ -1035,93 +1028,36 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     return filtered;
   }
 
-  // Category expenses modal methods
-  showCategoryExpenses(category: Category): void {
-    this.selectedCategoryForModal = category;
-    this.showCategoryExpensesModal = true;
-    
-    // Use setTimeout to ensure DOM updates before preventing scroll
-    setTimeout(() => {
-      this.preventBackgroundScrolling();
-    }, 0);
-  }
-
-  closeCategoryExpensesModal(): void {
-    this.showCategoryExpensesModal = false;
-    this.selectedCategoryForModal = null;
-    this.restoreBackgroundScrolling();
-  }
-
-  private preventBackgroundScrolling(): void {
-    // Store current scroll position
-    const scrollY = window.scrollY;
-    
-    // Add modal-open class to body
-    document.body.classList.add('modal-open');
-    
-    // Prevent body scrolling when modal is open
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    // Allow touch actions for modal content
-    document.body.style.touchAction = 'auto';
-    
-    // Store scroll position for restoration
-    this.storedScrollY = scrollY;
-    
-    // Prevent any scroll events
-    document.addEventListener('scroll', this.preventScroll, { passive: false });
-    document.addEventListener('touchmove', this.preventScroll, { passive: false });
-  }
-
-  private restoreBackgroundScrolling(): void {
-    // Remove scroll prevention event listeners
-    document.removeEventListener('scroll', this.preventScroll);
-    document.removeEventListener('touchmove', this.preventScroll);
-    
-    // Remove modal-open class from body
-    document.body.classList.remove('modal-open');
-    
-    // Restore body scrolling when modal is closed
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    document.body.style.touchAction = '';
-    
-    // Restore scroll position without animation
-    if (this.storedScrollY !== null) {
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        window.scrollTo({
-          top: this.storedScrollY!,
-          left: 0,
-          behavior: 'instant'
-        });
-        this.storedScrollY = null;
-      });
-    }
-  }
-
-  private preventScroll = (event: Event): void => {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  getCategoryExpenses(): Expense[] {
-    if (!this.selectedCategoryForModal) return [];
-    
+  // Method to show category expenses using the dialog
+  async showCategoryExpenses(category: Category): Promise<void> {
     const selectedReport = this.getSelectedMonthReport();
-    if (!selectedReport) return [];
-    
-    return selectedReport.expenses.filter((expense: Expense) => 
-      expense.categoryId === this.selectedCategoryForModal!.id
+    if (!selectedReport) {
+      await this.dialogService.warning('No month selected. Please select a month first.');
+      return;
+    }
+
+    // Get expenses for this category in the selected month
+    const categoryExpenses = selectedReport.expenses.filter((expense: Expense) => 
+      expense.categoryId === category.id
+    );
+
+    // Prepare expenses data for the dialog
+    const expensesData = categoryExpenses.map((expense: Expense) => ({
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      date: expense.date,
+      categoryId: expense.categoryId
+    }));
+
+    // Show the expense list in the dialog
+    await this.dialogService.showExpenseList(
+      expensesData,
+      category.name,
+      category.icon,
+      category.color
     );
   }
+
 
 } 

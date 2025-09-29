@@ -133,6 +133,30 @@ import { Subscription } from 'rxjs';
               </label>
             </div>
           </div>
+          
+          <!-- Expense List -->
+          <div class="expense-list-group" *ngIf="config.type === 'list' && config.expenses && config.expenses.length > 0">
+            <div class="category-header" *ngIf="config.categoryName">
+              <div class="category-info">
+                <span class="category-icon" [style.background-color]="config.categoryColor">{{ config.categoryIcon }}</span>
+                <span class="category-name">{{ config.categoryName }}</span>
+              </div>
+            </div>
+            <div class="expenses-list">
+              <div class="expense-item" *ngFor="let expense of config.expenses">
+                <div class="expense-description">{{ expense.description || 'No description' }}</div>
+                <div class="expense-date">{{ expense.date | date:'MMM dd, yyyy' }}</div>
+                <div class="expense-amount">{{ expense.amount | currency:'INR' }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Empty state for expense list -->
+          <div class="empty-expenses" *ngIf="config.type === 'list' && (!config.expenses || config.expenses.length === 0)">
+            <div class="empty-icon">📝</div>
+            <h6>No Expenses Found</h6>
+            <p>No expenses found for this category in the selected month.</p>
+          </div>
         </div>
 
         <!-- Dialog Footer -->
@@ -464,6 +488,147 @@ import { Subscription } from 'rxjs';
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), -2px 0 0 rgba(139, 92, 246, 0.1);
     }
 
+    .dialog-container.list {
+      border-left: 5px solid #3b82f6;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), -2px 0 0 rgba(59, 130, 246, 0.1);
+    }
+
+    /* Expense List Styles */
+    .expense-list-group {
+      margin-bottom: 20px;
+      max-height: 400px;
+      overflow: hidden;
+    }
+
+    .category-header {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .category-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .category-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .expenses-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .expenses-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .expenses-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    .expenses-list::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+
+    .expenses-list::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    .expense-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s;
+      gap: 16px;
+    }
+
+    .expense-item:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .expense-description {
+      flex: 1;
+      font-size: 14px;
+      color: #111827;
+      font-weight: 500;
+      line-height: 1.4;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .expense-date {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .expense-amount {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    .empty-expenses {
+      text-align: center;
+      padding: 40px 20px;
+      color: #6b7280;
+    }
+
+    .empty-expenses .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-expenses h6 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .empty-expenses p {
+      margin: 0;
+      font-size: 14px;
+    }
+
     /* Mobile responsive improvements */
     @media (max-width: 768px) {
       .dialog-container {
@@ -488,6 +653,37 @@ import { Subscription } from 'rxjs';
         padding: 10px 12px;
         font-size: 14px;
       }
+
+      .expense-list-group {
+        max-height: 300px;
+      }
+
+      .expenses-list {
+        max-height: 250px;
+        gap: 8px;
+      }
+
+      .expense-item {
+        padding: 10px 12px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+
+      .expense-description {
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .expense-date {
+        font-size: 11px;
+        min-width: auto;
+      }
+
+      .expense-amount {
+        font-size: 13px;
+        min-width: auto;
+      }
     }
 
     @media (max-width: 480px) {
@@ -507,6 +703,32 @@ import { Subscription } from 'rxjs';
 
       .options-list {
         max-height: 200px;
+      }
+
+      .expense-list-group {
+        max-height: 250px;
+      }
+
+      .expenses-list {
+        max-height: 200px;
+        gap: 6px;
+      }
+
+      .expense-item {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+
+      .expense-description {
+        font-size: 12px;
+      }
+
+      .expense-date {
+        font-size: 10px;
+      }
+
+      .expense-amount {
+        font-size: 12px;
       }
     }
   `]

@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 export interface DialogConfig {
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success' | 'confirm';
+  type: 'info' | 'warning' | 'error' | 'success' | 'confirm' | 'list';
   confirmText?: string;
   cancelText?: string;
   inputType?: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
@@ -22,6 +22,17 @@ export interface DialogConfig {
     placeholder?: string;
     required?: boolean;
   }>;
+  // For expense lists
+  expenses?: Array<{
+    id: string;
+    description: string;
+    amount: number;
+    date: string;
+    categoryId: string;
+  }>;
+  categoryName?: string;
+  categoryIcon?: string;
+  categoryColor?: string;
 }
 
 export interface DialogResult {
@@ -242,6 +253,42 @@ export class DialogService {
   // Method to handle dialog result
   handleResult(result: DialogResult): void {
     this.resultSubject.next(result);
+  }
+
+  // Method to show expense list
+  showExpenseList(
+    expenses: Array<{
+      id: string;
+      description: string;
+      amount: number;
+      date: string;
+      categoryId: string;
+    }>,
+    categoryName: string,
+    categoryIcon?: string,
+    categoryColor?: string
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      this.dialogSubject.next({
+        title: `${categoryName} Expenses`,
+        message: `Showing ${expenses.length} expense${expenses.length !== 1 ? 's' : ''} for this category:`,
+        type: 'list',
+        confirmText: 'Close',
+        expenses,
+        categoryName,
+        categoryIcon,
+        categoryColor
+      });
+
+      const subscription = this.result$.subscribe(result => {
+        if (result) {
+          subscription.unsubscribe();
+          this.dialogSubject.next(null);
+          this.resultSubject.next(null);
+          resolve();
+        }
+      });
+    });
   }
 
   // Method to close dialog
