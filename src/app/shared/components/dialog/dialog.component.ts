@@ -201,6 +201,13 @@ import { Subscription } from 'rxjs';
       flex-direction: column;
     }
 
+    /* Larger height for expense list modals */
+    .dialog-container.list {
+      max-width: 700px;
+      max-height: 85vh;
+      width: 95%;
+    }
+
     @keyframes dialogSlideIn {
       from {
         opacity: 0;
@@ -499,8 +506,13 @@ import { Subscription } from 'rxjs';
     /* Expense List Styles */
     .expense-list-group {
       margin-bottom: 20px;
-      max-height: 400px;
+      max-height: 500px;
       overflow: hidden;
+    }
+
+    /* Larger expense list for list type modals */
+    .dialog-container.list .expense-list-group {
+      max-height: 600px;
     }
 
     .header-icon .category-icon {
@@ -641,9 +653,17 @@ import { Subscription } from 'rxjs';
         max-height: 300px;
       }
 
+      .dialog-container.list .expense-list-group {
+        max-height: 400px;
+      }
+
       .expenses-list {
         max-height: 250px;
         gap: 8px;
+      }
+
+      .dialog-container.list .expenses-list {
+        max-height: 350px;
       }
 
       .expense-item {
@@ -692,9 +712,17 @@ import { Subscription } from 'rxjs';
         max-height: 250px;
       }
 
+      .dialog-container.list .expense-list-group {
+        max-height: 350px;
+      }
+
       .expenses-list {
         max-height: 200px;
         gap: 6px;
+      }
+
+      .dialog-container.list .expenses-list {
+        max-height: 300px;
       }
 
       .expense-item {
