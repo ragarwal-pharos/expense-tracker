@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1759136741332,
+  "timestamp": 1759137496923,
   "index": "/expense-tracker/index.html",
   "assetGroups": [
     {
@@ -24,13 +24,13 @@
         "/expense-tracker/chunk-IXOTX77G.js",
         "/expense-tracker/chunk-KIFJSNSH.js",
         "/expense-tracker/chunk-L5RR7FPY.js",
-        "/expense-tracker/chunk-M4VHOU7S.js",
         "/expense-tracker/chunk-RX2VGYNJ.js",
+        "/expense-tracker/chunk-WHBLMQWT.js",
         "/expense-tracker/chunk-YT7K23VI.js",
         "/expense-tracker/chunk-Z56O2ULX.js",
         "/expense-tracker/favicon.ico",
         "/expense-tracker/index.html",
-        "/expense-tracker/main-EOTJ4UCP.js",
+        "/expense-tracker/main-3Z66DRWE.js",
         "/expense-tracker/manifest.webmanifest",
         "/expense-tracker/polyfills-B6TNHZQ6.js",
         "/expense-tracker/scripts-WL2QHKC5.js",
@@ -58,7 +58,22 @@
       "patterns": []
     }
   ],
-  "dataGroups": [],
+  "dataGroups": [
+    {
+      "name": "api-freshness",
+      "patterns": [
+        "https:\\/\\/firestore\\.googleapis\\.com\\/.*",
+        "https:\\/\\/identitytoolkit\\.googleapis\\.com\\/.*"
+      ],
+      "strategy": "freshness",
+      "maxSize": 100,
+      "maxAge": 3600000,
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "version": 1
+    }
+  ],
   "hashTable": {
     "/expense-tracker/chunk-2JQUY7HH.js": "17a8e551d35ebb0910a1bb5be691d9e3f5ad1e40",
     "/expense-tracker/chunk-3WGKAHTM.js": "332a5c7515cc90655b545b000c3921ec4584a734",
@@ -73,8 +88,8 @@
     "/expense-tracker/chunk-IXOTX77G.js": "b82786380d10ef55a5ae3a90c941ffc5170e1fdb",
     "/expense-tracker/chunk-KIFJSNSH.js": "c41cbc434ad63de30f5458c96249faa22bbdd81c",
     "/expense-tracker/chunk-L5RR7FPY.js": "51617092cc59b6b2724ab6a580b8581d31cb60e7",
-    "/expense-tracker/chunk-M4VHOU7S.js": "58cb1f9d11df3c2e1edba9c11794686d3a65f41c",
     "/expense-tracker/chunk-RX2VGYNJ.js": "11a236f80194552a96ad05a249eb73879d164044",
+    "/expense-tracker/chunk-WHBLMQWT.js": "290eeef1e5d9393f1a0731a9526bbe0ab2c78f97",
     "/expense-tracker/chunk-YT7K23VI.js": "c4e5d85a714c763b3632ff17c617805631b10ad7",
     "/expense-tracker/chunk-Z56O2ULX.js": "c521375624604135dce5334342220e1b43d8191f",
     "/expense-tracker/favicon.ico": "9c39f434fe1261f68c5e3eefdf734630d99c5670",
@@ -86,8 +101,8 @@
     "/expense-tracker/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/expense-tracker/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/expense-tracker/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/expense-tracker/index.html": "e8c1c8d5f9dedb624be9170bfb1c7bbf9e111214",
-    "/expense-tracker/main-EOTJ4UCP.js": "b42098a765fdb8de9c37194d4eda3a0f4c649c18",
+    "/expense-tracker/index.html": "0f1e17243dd670fe1e23472411ad2664e2a16e19",
+    "/expense-tracker/main-3Z66DRWE.js": "253f6865cdb9f7a74297e60b8fb1f3fa2b111353",
     "/expense-tracker/manifest.webmanifest": "f75fbfacd19f26a6c323c7efea01dd3dd25ec6aa",
     "/expense-tracker/polyfills-B6TNHZQ6.js": "bf76ac291d7f51c1139b7edcf86b359a30c08c64",
     "/expense-tracker/scripts-WL2QHKC5.js": "c1b0b7dbf9c9fb61cc4dc027d25f48b5a7b113ad",
