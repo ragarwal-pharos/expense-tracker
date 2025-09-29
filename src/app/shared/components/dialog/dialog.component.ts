@@ -629,11 +629,23 @@ import { Subscription } from 'rxjs';
       .dialog-container {
         max-width: 95%;
         max-height: 90vh;
+        margin: 20px auto;
+      }
+
+      .dialog-container.list {
+        max-width: 98%;
+        max-height: 92vh;
+        margin: 10px auto;
       }
 
       .dialog-body {
         max-height: calc(90vh - 140px);
         padding: 16px 20px;
+      }
+
+      .dialog-container.list .dialog-body {
+        max-height: calc(92vh - 120px);
+        padding: 12px 16px;
       }
 
       .options-group {
@@ -659,33 +671,69 @@ import { Subscription } from 'rxjs';
 
       .expenses-list {
         max-height: 250px;
-        gap: 8px;
+        gap: 2px;
       }
 
       .dialog-container.list .expenses-list {
         max-height: 350px;
+        gap: 1px;
       }
 
       .expense-item {
-        padding: 10px 12px;
-        flex-direction: column;
+        padding: 8px 12px;
+        flex-direction: row;
         gap: 8px;
-        text-align: center;
+        text-align: left;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 4px;
+        align-items: center;
+        min-height: 50px;
+      }
+
+      .expense-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        border-color: #cbd5e1;
       }
 
       .expense-description {
-        font-size: 13px;
-        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.3;
+        text-align: left;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .expense-date {
         font-size: 11px;
-        min-width: auto;
+        color: #64748b;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        min-width: 65px;
+        text-align: center;
+        flex-shrink: 0;
       }
 
       .expense-amount {
-        font-size: 13px;
-        min-width: auto;
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+        min-width: 85px;
+        text-align: right;
+        flex-shrink: 0;
+        background: #f8fafc;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
       }
     }
 
@@ -693,11 +741,23 @@ import { Subscription } from 'rxjs';
       .dialog-container {
         max-width: 98%;
         max-height: 95vh;
+        margin: 5px auto;
+      }
+
+      .dialog-container.list {
+        max-width: 99%;
+        max-height: 96vh;
+        margin: 2px auto;
       }
 
       .dialog-body {
         max-height: calc(95vh - 120px);
         padding: 12px 16px;
+      }
+
+      .dialog-container.list .dialog-body {
+        max-height: calc(96vh - 100px);
+        padding: 8px 12px;
       }
 
       .options-group {
@@ -718,28 +778,48 @@ import { Subscription } from 'rxjs';
 
       .expenses-list {
         max-height: 200px;
-        gap: 6px;
+        gap: 1px;
       }
 
       .dialog-container.list .expenses-list {
         max-height: 300px;
+        gap: 0px;
       }
 
       .expense-item {
-        padding: 8px 10px;
+        padding: 6px 10px;
         gap: 6px;
+        border-radius: 6px;
+        margin: 10px;
+        min-height: 40px;
+
       }
 
       .expense-description {
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.2;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .expense-date {
         font-size: 10px;
+        min-width: 55px;
+        text-align: center;
+        flex-shrink: 0;
       }
 
       .expense-amount {
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 3px 6px;
+        border-radius: 3px;
+        min-width: 75px;
+        text-align: right;
+        flex-shrink: 0;
       }
     }
   `]
