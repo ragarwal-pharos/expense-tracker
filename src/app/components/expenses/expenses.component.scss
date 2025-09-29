@@ -252,12 +252,12 @@ body {
 }
 
 .collapsible-content {
-  overflow: visible;
+  overflow: hidden;
   transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
               opacity 0.3s ease,
               padding 0.3s ease,
               margin 0.3s ease;
-  max-height: none; /* Allow content to expand naturally */
+  max-height: 1000px; /* Set a reasonable max height for expansion */
   opacity: 1;
   padding: 1.5rem 2rem;
   margin: 0;
@@ -269,7 +269,7 @@ body {
   max-height: 0 !important;
   opacity: 0;
   padding: 0 !important;
-  margin: 0;
+  margin: 0 !important;
   overflow: hidden;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
               opacity 0.2s ease,
@@ -293,46 +293,35 @@ body {
 /* Remove card margin when content is collapsed */
 .expenses-list-card .collapsible-content.collapsed {
   margin-bottom: 0 !important;
+  display: none;
 }
 
-/* Additional collapse fixes */
-.collapsible-content.collapsed {
-  transform: scaleY(0);
-  transform-origin: top;
-}
+/* Additional collapse fixes - removed transform properties that cause blank space */
 
-.collapsible-content:not(.collapsed) {
-  transform: scaleY(1);
-  transform-origin: top;
-}
-
-/* Smooth animation for form elements */
+/* Smooth animation for form elements - simplified to prevent blank space */
 .collapsible-content form {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .collapsible-content.collapsed form {
-  transform: translateY(-10px);
   opacity: 0;
 }
 
-/* Smooth animation for filter elements */
+/* Smooth animation for filter elements - simplified to prevent blank space */
 .collapsible-content .filters-row {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .collapsible-content.collapsed .filters-row {
-  transform: translateY(-10px);
   opacity: 0;
 }
 
-/* Smooth animation for expenses list */
+/* Smooth animation for expenses list - simplified to prevent blank space */
 .collapsible-content .expenses-list {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .collapsible-content.collapsed .expenses-list {
-  transform: translateY(-10px);
   opacity: 0;
 }
 
@@ -656,10 +645,7 @@ body {
   min-height: auto;
 }
 
-/* Hide extra card-body-modern div that causes space when collapsed */
-.expenses-list-card .card-body-modern:not(.collapsible-content) {
-  display: none;
-}
+/* Removed - no longer needed since pagination is now inside collapsible content */
 
 
 /* Filters */
@@ -1540,25 +1526,15 @@ body {
   }
 }
 
-/* Mobile-specific collapsible content improvements */
+/* Mobile-specific collapsible content improvements - simplified to prevent blank space */
 @media (max-width: 768px) {
   .collapsible-content {
     transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
                 opacity 0.2s ease,
                 padding 0.2s ease,
-                margin 0.2s ease,
-                transform 0.3s ease;
+                margin 0.2s ease;
   }
   
-  .collapsible-content.collapsed {
-    transform: scaleY(0) translateY(-10px);
-    transform-origin: top;
-  }
-  
-  .collapsible-content:not(.collapsed) {
-    transform: scaleY(1) translateY(0);
-    transform-origin: top;
-  }
   
   /* Ensure proper touch interaction on mobile */
   .collapse-toggle-btn {
@@ -1595,8 +1571,7 @@ body {
     transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
                 opacity 0.15s ease,
                 padding 0.15s ease,
-                margin 0.15s ease,
-                transform 0.25s ease;
+                margin 0.15s ease;
   }
   
   .card-header-modern {

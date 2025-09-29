@@ -321,11 +321,9 @@
           <p>Add your first expense using the form above!</p>
         </div>
       </ng-template>
-    </div>
-
-    <div class="card-body-modern">
+      
       <!-- Pagination Controls -->
-      <div class="pagination-controls mb-3" *ngIf="isExpensesListExpanded && getFilteredExpenses().length > itemsPerPage">
+      <div class="pagination-controls mb-3" *ngIf="getFilteredExpenses().length > itemsPerPage">
         <div class="pagination-layout">
           <div class="pagination-info">
             <span class="text-muted">
