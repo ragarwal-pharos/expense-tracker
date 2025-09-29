@@ -488,6 +488,14 @@ import { Subscription } from 'rxjs';
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), -2px 0 0 rgba(59, 130, 246, 0.1);
     }
 
+    /* Prevent background scrolling when modal is open */
+    body.modal-open {
+      overflow: hidden !important;
+      position: fixed !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
     /* Expense List Styles */
     .expense-list-group {
       margin-bottom: 20px;
@@ -716,6 +724,7 @@ export class DialogComponent implements OnInit, OnDestroy {
   selectedOption: string = '';
   fieldValues: { [key: string]: string } = {};
   private subscription: Subscription = new Subscription();
+  private storedScrollY: number | null = null;
 
   constructor(private dialogService: DialogService) {}
 
@@ -735,6 +744,9 @@ export class DialogComponent implements OnInit, OnDestroy {
             });
           }
           
+          // Prevent background scrolling when modal opens
+          this.preventBackgroundScrolling();
+          
           // Focus on input after dialog opens
           setTimeout(() => {
             const input = document.querySelector('.dialog-input') as HTMLInputElement;
@@ -743,6 +755,9 @@ export class DialogComponent implements OnInit, OnDestroy {
               input.select();
             }
           }, 100);
+        } else {
+          // Restore background scrolling when modal closes
+          this.restoreBackgroundScrolling();
         }
       })
     );
@@ -750,6 +765,53 @@ export class DialogComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscription.unsubscribe();
+    // Restore scrolling when component is destroyed
+    this.restoreBackgroundScrolling();
+  }
+
+  private preventBackgroundScrolling(): void {
+    // Store current scroll position
+    const scrollY = window.scrollY;
+    
+    // Add modal-open class to body
+    document.body.classList.add('modal-open');
+    
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    
+    // Store scroll position for restoration
+    this.storedScrollY = scrollY;
+  }
+
+  private restoreBackgroundScrolling(): void {
+    // Remove modal-open class from body
+    document.body.classList.remove('modal-open');
+    
+    // Restore body scrolling when modal is closed
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    
+    // Restore scroll position without animation
+    if (this.storedScrollY !== null) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: this.storedScrollY!,
+          left: 0,
+          behavior: 'instant'
+        });
+        this.storedScrollY = null;
+      });
+    }
   }
 
   onConfirm() {
