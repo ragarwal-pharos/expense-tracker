@@ -20,6 +20,7 @@ import { Subscription } from 'rxjs';
               <span *ngIf="config.type === 'warning'">⚠️</span>
               <span *ngIf="config.type === 'error'">❌</span>
               <span *ngIf="config.type === 'confirm'">❓</span>
+              <span *ngIf="config.type === 'list'" class="category-icon" [style.background-color]="config.categoryColor">{{ config.categoryIcon }}</span>
             </div>
             <h3 class="dialog-title">{{ config.title }}</h3>
           </div>
@@ -136,12 +137,6 @@ import { Subscription } from 'rxjs';
           
           <!-- Expense List -->
           <div class="expense-list-group" *ngIf="config.type === 'list' && config.expenses && config.expenses.length > 0">
-            <div class="category-header" *ngIf="config.categoryName">
-              <div class="category-info">
-                <span class="category-icon" [style.background-color]="config.categoryColor">{{ config.categoryIcon }}</span>
-                <span class="category-name">{{ config.categoryName }}</span>
-              </div>
-            </div>
             <div class="expenses-list">
               <div class="expense-item" *ngFor="let expense of config.expenses">
                 <div class="expense-description">{{ expense.description || 'No description' }}</div>
@@ -500,36 +495,16 @@ import { Subscription } from 'rxjs';
       overflow: hidden;
     }
 
-    .category-header {
-      margin-bottom: 16px;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-
-    .category-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .category-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+    .header-icon .category-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 14px;
       color: white;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .category-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1f2937;
     }
 
     .expenses-list {

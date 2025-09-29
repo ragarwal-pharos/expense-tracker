@@ -270,8 +270,8 @@ export class DialogService {
   ): Promise<void> {
     return new Promise((resolve) => {
       this.dialogSubject.next({
-        title: `${categoryName} Expenses`,
-        message: `Showing ${expenses.length} expense${expenses.length !== 1 ? 's' : ''} for this category:`,
+        title: 'Category Expenses',
+        message: '',
         type: 'list',
         confirmText: 'Close',
         expenses,
