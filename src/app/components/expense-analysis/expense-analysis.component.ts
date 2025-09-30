@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
@@ -44,6 +45,15 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   selectedEndDate = '';
   selectedCategories: string[] = [];
   isCategoryDropdownOpen = false;
+  dropdownAlignment = 'left';
+  
+  // Enhanced filtering options
+  searchQuery = '';
+  minAmount = '';
+  maxAmount = '';
+  selectedDatePreset = '';
+  comparisonMode = false;
+  selectedCategoriesForComparison: string[] = [];
   
   // Available options
   availableCategories: Category[] = [];
@@ -56,7 +66,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   
   constructor(
     private expenseService: ExpenseService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private dialogService: DialogService
   ) {}
 
   async ngOnInit() {
@@ -91,13 +102,10 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   initializeFilters() {
-    // Set default date range to current month
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    this.selectedStartDate = firstDayOfMonth.toISOString().split('T')[0];
-    this.selectedEndDate = lastDayOfMonth.toISOString().split('T')[0];
+    // Set default date range to show all data (no date filtering by default)
+    // This matches the behavior of the reports component
+    this.selectedStartDate = '';
+    this.selectedEndDate = '';
 
     // Initialize categories
     this.availableCategories = this.categories;
@@ -116,7 +124,18 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       // Category filtering (multiple categories)
       const categoryMatch = this.selectedCategories.length === 0 || this.selectedCategories.includes(expense.categoryId);
       
-      return startDateMatch && endDateMatch && categoryMatch;
+      // Smart search filtering
+      const searchMatch = !this.searchQuery || 
+        expense.description?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        expense.notes?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        expense.amount.toString().includes(this.searchQuery) ||
+        expense.location?.toLowerCase().includes(this.searchQuery.toLowerCase());
+      
+      // Amount range filtering
+      const minAmountMatch = !this.minAmount || expense.amount >= parseFloat(this.minAmount);
+      const maxAmountMatch = !this.maxAmount || expense.amount <= parseFloat(this.maxAmount);
+      
+      return startDateMatch && endDateMatch && categoryMatch && searchMatch && minAmountMatch && maxAmountMatch;
     });
   }
 
@@ -182,6 +201,9 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       data.count += 1;
     });
     
+    // Calculate total amount for this specific category across all months
+    const categoryTotalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
     return Array.from(monthlyMap.entries()).map(([monthKey, data]) => {
       const [year, month] = monthKey.split('-');
       const monthNames = [
@@ -189,12 +211,14 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
       ];
       
+      const monthName = monthNames[parseInt(month) - 1];
+      
       return {
-        month: monthNames[parseInt(month) - 1],
+        month: monthName,
         year: parseInt(year),
         amount: data.amount,
         expenseCount: data.count,
-        percentage: this.totalExpenses > 0 ? (data.amount / this.totalExpenses) * 100 : 0
+        percentage: categoryTotalAmount > 0 ? (data.amount / categoryTotalAmount) * 100 : 0
       };
     }).sort((a, b) => {
       if (a.year !== b.year) return b.year - a.year;
@@ -205,6 +229,151 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   onFilterChange() {
     this.updateUsedCategories();
     this.performAnalysis();
+  }
+
+  // Date preset functionality
+  applyDatePreset(preset: string) {
+    const today = new Date();
+    this.selectedDatePreset = preset;
+    
+    switch (preset) {
+      case 'last30':
+        const last30Days = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        this.selectedStartDate = last30Days.toISOString().split('T')[0];
+        this.selectedEndDate = today.toISOString().split('T')[0];
+        break;
+      case 'thisQuarter':
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        const quarterStart = new Date(today.getFullYear(), currentQuarter * 3, 1);
+        const quarterEnd = new Date(today.getFullYear(), currentQuarter * 3 + 3, 0);
+        this.selectedStartDate = quarterStart.toISOString().split('T')[0];
+        this.selectedEndDate = quarterEnd.toISOString().split('T')[0];
+        break;
+      case 'lastYear':
+        const lastYear = new Date(today.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
+        this.selectedStartDate = lastYear.toISOString().split('T')[0];
+        this.selectedEndDate = lastYearEnd.toISOString().split('T')[0];
+        break;
+      case 'thisYear':
+        const thisYear = new Date(today.getFullYear(), 0, 1);
+        this.selectedStartDate = thisYear.toISOString().split('T')[0];
+        this.selectedEndDate = today.toISOString().split('T')[0];
+        break;
+      case 'all':
+        this.selectedStartDate = '';
+        this.selectedEndDate = '';
+        break;
+    }
+    
+    this.onFilterChange();
+  }
+
+  // Clear all filters
+  clearAllFilters() {
+    this.selectedStartDate = '';
+    this.selectedEndDate = '';
+    this.selectedCategories = [];
+    this.searchQuery = '';
+    this.minAmount = '';
+    this.maxAmount = '';
+    this.selectedDatePreset = '';
+    this.comparisonMode = false;
+    this.selectedCategoriesForComparison = [];
+    this.onFilterChange();
+  }
+
+  // Show category expenses using dialog service
+  async showCategoryExpenses(categoryAnalysis: CategoryAnalysis) {
+    const categoryExpenses = this.getExpensesForCategory(categoryAnalysis.category.id);
+    
+    // Prepare expenses data for the dialog
+    const expensesData = categoryExpenses.map(expense => ({
+      id: expense.id,
+      description: expense.description || 'No description',
+      amount: expense.amount,
+      date: expense.date,
+      categoryId: expense.categoryId
+    }));
+
+    // Show the expense list in the dialog
+    await this.dialogService.showExpenseList(
+      expensesData,
+      categoryAnalysis.category.name,
+      categoryAnalysis.category.icon,
+      categoryAnalysis.category.color
+    );
+  }
+
+  // Show monthly expenses using dialog service
+  async showMonthlyExpenses(categoryAnalysis: CategoryAnalysis, monthData: MonthlyData) {
+    // Get expenses for this category in the specific month
+    const monthlyExpenses = this.getExpensesForCategoryAndMonth(categoryAnalysis.category.id, monthData);
+    
+    // Prepare expenses data for the dialog
+    const expensesData = monthlyExpenses.map(expense => ({
+      id: expense.id,
+      description: expense.description || 'No description',
+      amount: expense.amount,
+      date: expense.date,
+      categoryId: expense.categoryId
+    }));
+
+    // Show the expense list in the dialog
+    await this.dialogService.showExpenseList(
+      expensesData,
+      `${categoryAnalysis.category.name} - ${monthData.month} ${monthData.year}`,
+      categoryAnalysis.category.icon,
+      categoryAnalysis.category.color
+    );
+  }
+
+  // Get expenses for a specific category
+  getExpensesForCategory(categoryId: string): Expense[] {
+    return this.getFilteredExpenses().filter(expense => expense.categoryId === categoryId);
+  }
+
+  // Get expenses for a specific category and month
+  getExpensesForCategoryAndMonth(categoryId: string, monthData: MonthlyData): Expense[] {
+    const filteredExpenses = this.getFilteredExpenses();
+    const categoryExpenses = filteredExpenses.filter(expense => expense.categoryId === categoryId);
+    
+    return categoryExpenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      const expenseMonth = expenseDate.getMonth() + 1; // JavaScript months are 0-based
+      const expenseYear = expenseDate.getFullYear();
+      
+      // Convert month name to number
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const targetMonth = monthNames.indexOf(monthData.month) + 1;
+      
+      return expenseMonth === targetMonth && expenseYear === monthData.year;
+    });
+  }
+
+  // Comparison functionality
+  toggleComparisonMode() {
+    this.comparisonMode = !this.comparisonMode;
+    if (!this.comparisonMode) {
+      this.selectedCategoriesForComparison = [];
+    }
+  }
+
+  toggleCategoryForComparison(categoryId: string) {
+    const index = this.selectedCategoriesForComparison.indexOf(categoryId);
+    if (index > -1) {
+      this.selectedCategoriesForComparison.splice(index, 1);
+    } else {
+      if (this.selectedCategoriesForComparison.length < 3) { // Limit to 3 categories for comparison
+        this.selectedCategoriesForComparison.push(categoryId);
+      }
+    }
+  }
+
+  getComparisonCategories(): CategoryAnalysis[] {
+    return this.categoryAnalysis.filter(analysis => 
+      this.selectedCategoriesForComparison.includes(analysis.category.id)
+    );
   }
 
   getCategoryColor(categoryId: string): string {
@@ -266,10 +435,41 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   toggleCategoryDropdown(): void {
     this.isCategoryDropdownOpen = !this.isCategoryDropdownOpen;
     
+    // Calculate dropdown alignment when opening
+    if (this.isCategoryDropdownOpen) {
+      this.calculateDropdownAlignment();
+    }
+    
     // Apply filter when dropdown is closed
     if (!this.isCategoryDropdownOpen) {
       this.onFilterChange();
     }
+  }
+
+  calculateDropdownAlignment(): void {
+    // Use setTimeout to ensure DOM is updated
+    setTimeout(() => {
+      const dropdown = document.querySelector('.multiselect-options');
+      if (dropdown) {
+        const rect = dropdown.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const containerRect = dropdown.parentElement?.getBoundingClientRect();
+        
+        if (containerRect) {
+          const spaceRight = viewportWidth - containerRect.left;
+          const spaceLeft = containerRect.right;
+          const dropdownWidth = Math.min(400, viewportWidth - 32); // 32px for margins
+          
+          if (spaceRight < dropdownWidth && spaceLeft > dropdownWidth) {
+            this.dropdownAlignment = 'right';
+          } else if (spaceRight < dropdownWidth && spaceLeft < dropdownWidth) {
+            this.dropdownAlignment = 'center';
+          } else {
+            this.dropdownAlignment = 'left';
+          }
+        }
+      }
+    }, 0);
   }
 
   isCategorySelected(categoryId: string): boolean {

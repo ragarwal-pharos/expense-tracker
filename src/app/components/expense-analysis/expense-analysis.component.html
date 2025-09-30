@@ -22,14 +22,67 @@
     type="card">
   </app-loading>
 
-  <!-- Filters Section -->
+  <!-- Enhanced Filters Section -->
   <div class="filters-section" *ngIf="!isLoading">
     <div class="filters-header">
-      <h3>🔍 Analysis Filters</h3>
-      <p>Customize your expense analysis by selecting specific time periods and categories</p>
+      <h3>🔍 Smart Analysis Filters</h3>
+      <p>Advanced filtering and search capabilities for detailed expense analysis</p>
+      <div class="filter-actions">
+        <button class="btn-clear-all" (click)="clearAllFilters()" *ngIf="searchQuery || selectedStartDate || selectedEndDate || selectedCategories.length > 0 || minAmount || maxAmount">
+          <span class="clear-icon">🗑️</span>
+          Clear All Filters
+        </button>
+      </div>
+    </div>
+    
+    <!-- Quick Date Presets -->
+    <div class="date-presets-section">
+      <h4>📅 Quick Date Ranges</h4>
+      <div class="preset-buttons">
+        <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'last30'"
+                (click)="applyDatePreset('last30')">
+          Last 30 Days
+        </button>
+        <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'thisQuarter'"
+                (click)="applyDatePreset('thisQuarter')">
+          This Quarter
+        </button>
+        <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'thisYear'"
+                (click)="applyDatePreset('thisYear')">
+          This Year
+        </button>
+        <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'lastYear'"
+                (click)="applyDatePreset('lastYear')">
+          Last Year
+        </button>
+        <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'all'"
+                (click)="applyDatePreset('all')">
+          All Time
+        </button>
+      </div>
+    </div>
+    
+    <!-- Smart Search -->
+    <div class="search-section">
+      <h4>🔍 Smart Search</h4>
+      <div class="search-container">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search by description, amount, notes, or location..."
+          [(ngModel)]="searchQuery"
+          (input)="onFilterChange()">
+        <span class="search-icon">🔍</span>
+      </div>
     </div>
     
     <div class="filters-grid">
+      <!-- Date Range Filters -->
       <div class="filter-group">
         <label class="filter-label">From Date</label>
         <input 
@@ -49,6 +102,29 @@
           (change)="onFilterChange()"
           [max]="getMaxDate()"
           [min]="selectedStartDate">
+      </div>
+      
+      <!-- Amount Range Filters -->
+      <div class="filter-group">
+        <label class="filter-label">Min Amount (₹)</label>
+        <input 
+          type="number" 
+          class="filter-amount-input" 
+          [(ngModel)]="minAmount"
+          (input)="onFilterChange()"
+          placeholder="0"
+          min="0">
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Max Amount (₹)</label>
+        <input 
+          type="number" 
+          class="filter-amount-input" 
+          [(ngModel)]="maxAmount"
+          (input)="onFilterChange()"
+          placeholder="No limit"
+          min="0">
       </div>
       
       <div class="filter-group">
@@ -228,9 +304,12 @@
       <h2>📈 Category-wise Analysis</h2>
       <p>Detailed breakdown of spending by category with monthly trends</p>
     </div>
-    
-    <div class="category-analysis" *ngIf="categoryAnalysis.length > 0">
-      <div class="category-item" *ngFor="let analysis of categoryAnalysis; let i = index">
+    <!-- Normal Category Analysis -->
+    <div class="category-analysis" *ngIf="categoryAnalysis.length > 0 && !comparisonMode">
+      <div class="category-item" 
+           *ngFor="let analysis of categoryAnalysis; let i = index"
+           (click)="showCategoryExpenses(analysis)"
+           [class.clickable]="!comparisonMode">
         <div class="category-header">
           <div class="category-info">
             <div class="category-icon" [style.background-color]="analysis.category.color || '#999'">
@@ -277,7 +356,10 @@
         <div class="monthly-breakdown" *ngIf="analysis.monthlyBreakdown.length > 0">
           <h4>Monthly Breakdown</h4>
           <div class="monthly-chart">
-            <div class="month-item" *ngFor="let month of analysis.monthlyBreakdown">
+            <div class="month-item clickable-month" 
+                 *ngFor="let month of analysis.monthlyBreakdown"
+                 (click)="showMonthlyExpenses(analysis, month); $event.stopPropagation()"
+                 title="Click to view expenses for {{ month.month }} {{ month.year }}">
               <div class="month-header">
                 <span class="month-name">{{ month.month }} {{ month.year }}</span>
                 <span class="month-amount">₹{{ month.amount | number }}</span>
@@ -291,6 +373,10 @@
               <div class="month-details">
                 <span class="month-count">{{ month.expenseCount }} transactions</span>
                 <span class="month-percentage">{{ ((month.amount / analysis.totalAmount) * 100) | number:'1.1-1' }}%</span>
+              </div>
+              <div class="month-click-hint">
+                <span class="click-icon">👆</span>
+                <span class="click-text">Click to view expenses</span>
               </div>
             </div>
           </div>
@@ -333,5 +419,6 @@
       </div>
     </div>
   </div>
+
 
 </div>

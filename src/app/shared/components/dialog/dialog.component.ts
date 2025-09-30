@@ -186,6 +186,12 @@ import { Subscription } from 'rxjs';
       align-items: center;
       z-index: 1000;
       backdrop-filter: blur(4px);
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
+      /* Force center positioning */
+      min-height: 100vh;
+      min-width: 100vw;
     }
 
     .dialog-container {
@@ -199,6 +205,8 @@ import { Subscription } from 'rxjs';
       animation: dialogSlideIn 0.3s ease-out;
       display: flex;
       flex-direction: column;
+      margin: auto;
+      position: relative;
     }
 
     /* Larger height for expense list modals */
@@ -894,6 +902,14 @@ export class DialogComponent implements OnInit, OnDestroy {
     
     // Store scroll position for restoration
     this.storedScrollY = scrollY;
+    
+    // Ensure dialog appears in center of viewport
+    setTimeout(() => {
+      const overlay = document.querySelector('.dialog-overlay');
+      if (overlay) {
+        overlay.scrollTop = 0;
+      }
+    }, 0);
   }
 
   private restoreBackgroundScrolling(): void {
