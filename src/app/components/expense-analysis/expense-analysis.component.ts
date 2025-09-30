@@ -2,9 +2,16 @@ import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { BaseChartDirective } from 'ng2-charts';
+import { Chart, registerables } from 'chart.js';
+
+// Register Chart.js components
+Chart.register(...registerables);
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { ChartService, TrendData, PieData, BarData } from '../../core/services/chart.service';
+import { ChartConfigService } from '../../core/services/chart-config.service';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
@@ -30,7 +37,7 @@ interface MonthlyData {
 @Component({
   selector: 'app-expense-analysis',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LoadingComponent],
+  imports: [CommonModule, FormsModule, RouterModule, LoadingComponent, BaseChartDirective],
   templateUrl: './expense-analysis.component.html',
   styleUrls: ['./expense-analysis.component.scss']
 })
@@ -64,10 +71,19 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   totalExpenseCount = 0;
   averageExpenseAmount = 0;
   
+  // Chart data
+  trendData: TrendData | null = null;
+  pieData: PieData | null = null;
+  barData: BarData | null = null;
+  showCharts = false;
+  
+  
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private chartService: ChartService,
+    private chartConfigService: ChartConfigService
   ) {}
 
   async ngOnInit() {
@@ -106,6 +122,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     // This matches the behavior of the reports component
     this.selectedStartDate = '';
     this.selectedEndDate = '';
+    this.selectedDatePreset = 'all'; // Set "All Time" as default selected filter
 
     // Initialize categories
     this.availableCategories = this.categories;
@@ -229,6 +246,17 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   onFilterChange() {
     this.updateUsedCategories();
     this.performAnalysis();
+    if (this.showCharts) {
+      this.generateChartData();
+    }
+  }
+
+  // Helper method to format dates for input fields (timezone-safe)
+  formatDateForInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   // Date preset functionality
@@ -237,28 +265,40 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     this.selectedDatePreset = preset;
     
     switch (preset) {
+      case 'thisMonth':
+        // Get the first day of current month
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const thisMonthStart = new Date(year, month, 1);
+        // Get the last day of current month
+        const thisMonthEnd = new Date(year, month + 1, 0);
+        
+        // Format dates to avoid timezone issues
+        this.selectedStartDate = this.formatDateForInput(thisMonthStart);
+        this.selectedEndDate = this.formatDateForInput(thisMonthEnd);
+        break;
       case 'last30':
         const last30Days = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-        this.selectedStartDate = last30Days.toISOString().split('T')[0];
-        this.selectedEndDate = today.toISOString().split('T')[0];
+        this.selectedStartDate = this.formatDateForInput(last30Days);
+        this.selectedEndDate = this.formatDateForInput(today);
         break;
       case 'thisQuarter':
         const currentQuarter = Math.floor(today.getMonth() / 3);
         const quarterStart = new Date(today.getFullYear(), currentQuarter * 3, 1);
         const quarterEnd = new Date(today.getFullYear(), currentQuarter * 3 + 3, 0);
-        this.selectedStartDate = quarterStart.toISOString().split('T')[0];
-        this.selectedEndDate = quarterEnd.toISOString().split('T')[0];
+        this.selectedStartDate = this.formatDateForInput(quarterStart);
+        this.selectedEndDate = this.formatDateForInput(quarterEnd);
         break;
       case 'lastYear':
         const lastYear = new Date(today.getFullYear() - 1, 0, 1);
         const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
-        this.selectedStartDate = lastYear.toISOString().split('T')[0];
-        this.selectedEndDate = lastYearEnd.toISOString().split('T')[0];
+        this.selectedStartDate = this.formatDateForInput(lastYear);
+        this.selectedEndDate = this.formatDateForInput(lastYearEnd);
         break;
       case 'thisYear':
         const thisYear = new Date(today.getFullYear(), 0, 1);
-        this.selectedStartDate = thisYear.toISOString().split('T')[0];
-        this.selectedEndDate = today.toISOString().split('T')[0];
+        this.selectedStartDate = this.formatDateForInput(thisYear);
+        this.selectedEndDate = this.formatDateForInput(today);
         break;
       case 'all':
         this.selectedStartDate = '';
@@ -277,11 +317,94 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     this.searchQuery = '';
     this.minAmount = '';
     this.maxAmount = '';
-    this.selectedDatePreset = '';
+    this.selectedDatePreset = 'all'; // Reset to "All Time" filter
     this.comparisonMode = false;
     this.selectedCategoriesForComparison = [];
     this.onFilterChange();
   }
+
+  // Clear search text
+  clearSearch() {
+    this.searchQuery = '';
+    this.onFilterChange();
+  }
+
+  // Generate chart data
+  generateChartData() {
+    const filteredExpenses = this.getFilteredExpenses();
+    
+    if (filteredExpenses.length === 0) {
+      this.trendData = null;
+      this.pieData = null;
+      this.barData = null;
+      return;
+    }
+
+    // Use default 12 months for charts
+    const months = 12;
+    this.trendData = this.chartService.generateTrendData(filteredExpenses, months);
+    this.pieData = this.chartService.generatePieData(filteredExpenses, this.categories);
+    this.barData = this.chartService.generateBarData(filteredExpenses, months);
+  }
+
+  // Toggle charts visibility
+  toggleCharts(event?: Event) {
+    // Prevent default behavior and stop propagation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    this.showCharts = !this.showCharts;
+    
+    if (this.showCharts) {
+      // Generate chart data
+      this.generateChartData();
+    }
+    
+    // Remove focus from the button to prevent focus issues
+    if (event && event.target) {
+      (event.target as HTMLElement).blur();
+    }
+  }
+
+  // Get chart options
+  getTrendOptions() {
+    return this.chartService.getTrendOptions();
+  }
+
+  getPieOptions() {
+    return this.chartService.getPieOptions();
+  }
+
+  getBarOptions() {
+    return this.chartService.getBarOptions();
+  }
+
+  getSparklineOptions() {
+    return this.chartService.getSparklineOptions();
+  }
+
+  // Generate sparkline data for a category
+  getCategorySparklineData(categoryId: string) {
+    const filteredExpenses = this.getFilteredExpenses();
+    const data = this.chartService.generateSparklineData(filteredExpenses, categoryId);
+    
+    return {
+      labels: Array.from({ length: 30 }, (_, i) => ''),
+      datasets: [{
+        data: data,
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 0
+      }]
+    };
+  }
+
 
   // Show category expenses using dialog service
   async showCategoryExpenses(categoryAnalysis: CategoryAnalysis) {

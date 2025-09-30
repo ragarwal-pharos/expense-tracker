@@ -40,6 +40,11 @@
       <h4>📅 Quick Date Ranges</h4>
       <div class="preset-buttons">
         <button class="preset-btn" 
+                [class.active]="selectedDatePreset === 'thisMonth'"
+                (click)="applyDatePreset('thisMonth')">
+          This Month
+        </button>
+        <button class="preset-btn" 
                 [class.active]="selectedDatePreset === 'last30'"
                 (click)="applyDatePreset('last30')">
           Last 30 Days
@@ -77,7 +82,13 @@
           placeholder="Search by description, amount, notes, or location..."
           [(ngModel)]="searchQuery"
           (input)="onFilterChange()">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon" *ngIf="!searchQuery">🔍</span>
+        <span class="clear-icon" 
+              *ngIf="searchQuery" 
+              (click)="clearSearch()"
+              title="Clear search">
+          ✕
+        </span>
       </div>
     </div>
     
@@ -234,6 +245,86 @@
     </div>
   </div>
 
+  <!-- Show Charts Button -->
+  <div class="show-charts-section" *ngIf="!isLoading && !showCharts">
+    <div class="charts-header">
+      <div class="charts-title">
+        <h3>Interactive Data Visualization</h3>
+        <p>Visual insights into your spending patterns and trends</p>
+      </div>
+      <div class="charts-controls">
+        <button class="btn-charts" (click)="toggleCharts($event)">
+          <span class="chart-icon">📊</span>
+          Show Charts
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Charts Section -->
+  <div class="charts-section" *ngIf="!isLoading && showCharts">
+    <div class="charts-header">
+      <div class="charts-title">
+        <h3>Interactive Data Visualization</h3>
+        <p>Visual insights into your spending patterns and trends</p>
+      </div>
+      <div class="charts-controls">
+        <button class="btn-charts" (click)="toggleCharts($event)" [class.active]="showCharts">
+          <span class="chart-icon">📊</span>
+          Hide Charts
+        </button>
+      </div>
+    </div>
+    
+    
+    <div class="charts-grid">
+      <!-- Trend Line Chart -->
+      <div class="chart-card" *ngIf="trendData">
+        <div class="chart-header">
+          <h4>📈 Spending Trends</h4>
+          <p>Monthly spending patterns over time</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="trendData"
+                  [options]="getTrendOptions()"
+                  type="line">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Pie Chart -->
+      <div class="chart-card" *ngIf="pieData">
+        <div class="chart-header">
+          <h4>🥧 Category Breakdown</h4>
+          <p>Spending distribution by category</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="pieData"
+                  [options]="getPieOptions()"
+                  type="pie">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Bar Chart -->
+      <div class="chart-card" *ngIf="barData">
+        <div class="chart-header">
+          <h4>📊 Monthly Comparison</h4>
+          <p>Monthly spending comparison</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="barData"
+                  [options]="getBarOptions()"
+                  type="bar">
+          </canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Orphaned Expenses Warning -->
   <div class="orphaned-warning" *ngIf="!isLoading && hasOrphanedExpenses()">
     <div class="warning-content">
@@ -379,6 +470,19 @@
                 <span class="click-text">Click to view expenses</span>
               </div>
             </div>
+          </div>
+        </div>
+        
+        <!-- Sparkline Chart -->
+        <div class="sparkline-section" *ngIf="showCharts">
+          <h4>📈 30-Day Trend</h4>
+          <div class="sparkline-container">
+            <canvas baseChart
+                    [data]="getCategorySparklineData(analysis.category.id)"
+                    [options]="getSparklineOptions()"
+                    type="line"
+                    height="60">
+            </canvas>
           </div>
         </div>
       </div>
