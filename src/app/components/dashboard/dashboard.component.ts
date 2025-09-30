@@ -1012,6 +1012,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         route: '/reports'
       },
       {
+        title: 'Expense Analysis',
+        action: 'Category Breakdown',
+        icon: '📈',
+        route: '/analysis'
+      },
+      {
         title: 'Manage Categories',
         action: 'Organize',
         icon: '🏷️',

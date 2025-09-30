@@ -1,0 +1,337 @@
+<div class="analysis-container">
+  <!-- Header Section -->
+  <div class="analysis-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="analysis-title">📊 Expense Analysis</h1>
+        <p class="analysis-subtitle">Detailed category-wise spending analysis across months</p>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn primary" (click)="exportAnalysis()">
+          <span class="action-icon">📥</span>
+          <span class="action-text">Export Analysis</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <app-loading 
+    *ngIf="isLoading" 
+    message="Loading expense analysis..." 
+    type="card">
+  </app-loading>
+
+  <!-- Filters Section -->
+  <div class="filters-section" *ngIf="!isLoading">
+    <div class="filters-header">
+      <h3>🔍 Analysis Filters</h3>
+      <p>Customize your expense analysis by selecting specific time periods and categories</p>
+    </div>
+    
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label class="filter-label">From Date</label>
+        <input 
+          type="date" 
+          class="filter-date-input" 
+          [(ngModel)]="selectedStartDate"
+          (change)="onFilterChange()"
+          [max]="getMaxDate()">
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">To Date</label>
+        <input 
+          type="date" 
+          class="filter-date-input" 
+          [(ngModel)]="selectedEndDate"
+          (change)="onFilterChange()"
+          [max]="getMaxDate()"
+          [min]="selectedStartDate">
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">
+          <span class="label-icon">🏷️</span>
+          Categories
+        </label>
+        <div class="multiselect-container">
+          <div class="multiselect-dropdown" 
+               [class.open]="isCategoryDropdownOpen" 
+               (click)="toggleCategoryDropdown()"
+               role="combobox"
+               [attr.aria-expanded]="isCategoryDropdownOpen"
+               [attr.aria-haspopup]="true"
+               tabindex="0"
+               (keydown.enter)="toggleCategoryDropdown()"
+               (keydown.escape)="isCategoryDropdownOpen = false">
+            <div class="multiselect-display">
+              <div class="selection-content">
+                <span *ngIf="selectedCategories.length === 0" class="placeholder">
+                  <span class="placeholder-icon">📋</span>
+                  All Categories
+                </span>
+                <span *ngIf="selectedCategories.length === 1" class="single-selection">
+                  <span class="selection-icon">{{ getCategoryIcon(selectedCategories[0]) }}</span>
+                  {{ getCategoryName(selectedCategories[0]) }}
+                </span>
+                <span *ngIf="selectedCategories.length > 1" class="multiple-selection">
+                  <span class="selection-badge">{{ selectedCategories.length }}</span>
+                  categories selected
+                </span>
+              </div>
+              <span class="dropdown-arrow" [class.rotated]="isCategoryDropdownOpen">▼</span>
+            </div>
+            <div class="multiselect-options" 
+                 *ngIf="isCategoryDropdownOpen"
+                 role="listbox"
+                 [attr.aria-label]="'Category selection options'">
+              
+              <!-- Header Section -->
+              <div class="options-header">
+                <span class="header-text">Select Categories</span>
+                <span class="header-count">{{ selectedCategories.length }} of {{ availableCategories.length }}</span>
+              </div>
+              
+              <!-- Scrollable Content Area -->
+              <div class="options-content">
+                <!-- No categories message -->
+                <div class="no-categories-message" *ngIf="availableCategories.length === 0">
+                  <div class="message-icon">📭</div>
+                  <div class="message-text">
+                    <div class="message-title">No Categories Found</div>
+                    <div class="message-subtitle">No categories available</div>
+                  </div>
+                </div>
+                
+                <!-- Category options -->
+                <div class="option-item" 
+                     *ngFor="let category of availableCategories; trackBy: trackByCategoryId"
+                     role="option"
+                     [attr.aria-selected]="isCategorySelected(category.id)">
+                  <label class="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      [value]="category.id"
+                      [checked]="isCategorySelected(category.id)"
+                      (change)="toggleCategorySelection(category.id)"
+                      [attr.aria-label]="'Select ' + category.name">
+                    <span class="checkbox-custom"></span>
+                    <span class="option-text">
+                      <span class="category-icon">{{ category.icon }}</span>
+                      <span class="category-name">{{ category.name }}</span>
+                      <span class="category-count" *ngIf="getCategoryExpenseCount(category.id) > 0">
+                        ({{ getCategoryExpenseCount(category.id) }})
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Fixed Action Buttons -->
+              <div class="multiselect-actions">
+                <button class="action-btn select-all" 
+                        (click)="selectAllCategories()"
+                        [disabled]="selectedCategories.length === availableCategories.length">
+                  <span class="btn-icon">✅</span>
+                  Select All
+                </button>
+                <button class="action-btn clear-all" 
+                        (click)="clearAllCategories()"
+                        [disabled]="selectedCategories.length === 0">
+                  <span class="btn-icon">🗑️</span>
+                  Clear All
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="filter-summary">
+      <div class="summary-info">
+        <span class="summary-label">Analysis Period:</span>
+        <span class="summary-value">{{ getFilterLabel() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Orphaned Expenses Warning -->
+  <div class="orphaned-warning" *ngIf="!isLoading && hasOrphanedExpenses()">
+    <div class="warning-content">
+      <div class="warning-icon">⚠️</div>
+      <div class="warning-text">
+        <h3>Orphaned Expenses Detected</h3>
+        <p>You have {{ getOrphanedExpensesCount() }} expenses (₹{{ getOrphanedExpensesAmount() | number }}) with missing categories. 
+           These expenses reference category IDs that no longer exist in your categories list.</p>
+        <div class="warning-actions">
+          <button class="btn btn-outline" routerLink="/mapper">
+            <span class="btn-icon">🔧</span>
+            Auto-Fix with Mapper
+          </button>
+          <button class="btn btn-outline" routerLink="/expenses">
+            <span class="btn-icon">✏️</span>
+            Fix Manually
+          </button>
+          <button class="btn btn-outline" routerLink="/categories">
+            <span class="btn-icon">🏷️</span>
+            Manage Categories
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-section" *ngIf="!isLoading">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-header">
+          <span class="card-icon">💰</span>
+          <span class="card-title">Total Expenses</span>
+        </div>
+        <div class="card-content">
+          <div class="card-value">₹{{ totalExpenses | number }}</div>
+          <div class="card-subtitle">{{ totalExpenseCount }} transactions</div>
+        </div>
+      </div>
+      
+      <div class="summary-card">
+        <div class="card-header">
+          <span class="card-icon">📊</span>
+          <span class="card-title">Average per Expense</span>
+        </div>
+        <div class="card-content">
+          <div class="card-value">₹{{ averageExpenseAmount | number:'1.0-0' }}</div>
+          <div class="card-subtitle">Per transaction</div>
+        </div>
+      </div>
+      
+      <div class="summary-card">
+        <div class="card-header">
+          <span class="card-icon">🏷️</span>
+          <span class="card-title">Categories</span>
+        </div>
+        <div class="card-content">
+          <div class="card-value">{{ categoryAnalysis.length }}</div>
+          <div class="card-subtitle">Active categories</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Analysis Section -->
+  <div class="analysis-section" *ngIf="!isLoading">
+    <div class="section-header">
+      <h2>📈 Category-wise Analysis</h2>
+      <p>Detailed breakdown of spending by category with monthly trends</p>
+    </div>
+    
+    <div class="category-analysis" *ngIf="categoryAnalysis.length > 0">
+      <div class="category-item" *ngFor="let analysis of categoryAnalysis; let i = index">
+        <div class="category-header">
+          <div class="category-info">
+            <div class="category-icon" [style.background-color]="analysis.category.color || '#999'">
+              {{ analysis.category.icon || '📌' }}
+            </div>
+            <div class="category-details">
+              <h3 class="category-name">{{ analysis.category.name }}</h3>
+              <div class="category-rank">#{{ i + 1 }}</div>
+            </div>
+          </div>
+          
+          <div class="category-stats">
+            <div class="stat-item">
+              <span class="stat-label">Total Amount</span>
+              <span class="stat-value">₹{{ analysis.totalAmount | number }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Percentage</span>
+              <span class="stat-value">{{ analysis.percentage | number:'1.1-1' }}%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Transactions</span>
+              <span class="stat-value">{{ analysis.expenseCount }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Average</span>
+              <span class="stat-value">₹{{ analysis.averageAmount | number:'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Category Progress Bar -->
+        <div class="category-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" 
+                 [style.width.%]="analysis.percentage"
+                 [style.background-color]="analysis.category.color || '#999'">
+            </div>
+          </div>
+          <div class="progress-label">{{ analysis.percentage | number:'1.1-1' }}%</div>
+        </div>
+        
+        <!-- Monthly Breakdown -->
+        <div class="monthly-breakdown" *ngIf="analysis.monthlyBreakdown.length > 0">
+          <h4>Monthly Breakdown</h4>
+          <div class="monthly-chart">
+            <div class="month-item" *ngFor="let month of analysis.monthlyBreakdown">
+              <div class="month-header">
+                <span class="month-name">{{ month.month }} {{ month.year }}</span>
+                <span class="month-amount">₹{{ month.amount | number }}</span>
+              </div>
+              <div class="month-bar">
+                <div class="bar-fill" 
+                     [style.width.%]="(month.amount / analysis.totalAmount) * 100"
+                     [style.background-color]="analysis.category.color || '#999'">
+                </div>
+              </div>
+              <div class="month-details">
+                <span class="month-count">{{ month.expenseCount }} transactions</span>
+                <span class="month-percentage">{{ ((month.amount / analysis.totalAmount) * 100) | number:'1.1-1' }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="empty-state" *ngIf="categoryAnalysis.length === 0">
+      <div class="empty-icon">📊</div>
+      <h3>No Data Found</h3>
+      <p>No expenses found for the selected filters. Try adjusting your date range or category selection.</p>
+    </div>
+  </div>
+
+  <!-- Top Categories Summary -->
+  <div class="top-categories-section" *ngIf="!isLoading && categoryAnalysis.length > 0">
+    <div class="section-header">
+      <h2>🏆 Top Categories</h2>
+      <p>Your highest spending categories</p>
+    </div>
+    
+    <div class="top-categories-grid">
+      <div class="top-category-card" *ngFor="let category of getTopCategories(5); let i = index">
+        <div class="rank-badge">{{ i + 1 }}</div>
+        <div class="category-icon" [style.background-color]="category.category.color || '#999'">
+          {{ category.category.icon || '📌' }}
+        </div>
+        <div class="category-info">
+          <h4 class="category-name">{{ category.category.name }}</h4>
+          <div class="category-amount">₹{{ category.totalAmount | number }}</div>
+          <div class="category-percentage">{{ category.percentage | number:'1.1-1' }}%</div>
+        </div>
+        <div class="category-trend" *ngIf="getCategoryTrend(category.category.id).trend !== 'stable'">
+          <span class="trend-icon" [class]="'trend-' + getCategoryTrend(category.category.id).trend">
+            {{ getCategoryTrend(category.category.id).trend === 'up' ? '📈' : 
+               getCategoryTrend(category.category.id).trend === 'down' ? '📉' : '🆕' }}
+          </span>
+          <span class="trend-text">{{ getCategoryTrend(category.category.id).trend }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

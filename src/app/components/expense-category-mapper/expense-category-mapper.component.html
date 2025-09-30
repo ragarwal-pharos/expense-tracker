@@ -1,0 +1,194 @@
+<div class="mapper-container">
+  <!-- Header -->
+  <div class="mapper-header">
+    <h1>🔧 Expense Category Mapper</h1>
+    <p>Map orphaned expenses to proper categories based on your analysis</p>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="loading-spinner">⏳</div>
+    <p>Loading orphaned expenses...</p>
+  </div>
+
+  <!-- No Orphaned Expenses -->
+  <div class="no-orphaned" *ngIf="!isLoading && orphanedCategories.length === 0">
+    <div class="success-icon">✅</div>
+    <h3>No Orphaned Expenses Found!</h3>
+    <p>All your expenses have valid categories. Your data is clean!</p>
+  </div>
+
+  <!-- Orphaned Expenses Summary -->
+  <div class="orphaned-summary" *ngIf="!isLoading && orphanedCategories.length > 0">
+    <h2>📊 Orphaned Expenses Summary</h2>
+    <div class="summary-grid">
+      <div class="summary-card" *ngFor="let category of orphanedCategories">
+        <div class="card-header">
+          <span class="category-id">{{ getOrphanedCategoryDisplay(category.categoryId) }}</span>
+          <span class="expense-count">{{ category.count }} expenses</span>
+        </div>
+        <div class="card-content">
+          <div class="amount">₹{{ category.amount | number }}</div>
+          <div class="description">{{ getOrphanedCategoryDescription(category.categoryId) }}</div>
+          
+          <!-- Expense Details List -->
+          <div class="expense-details">
+            <h4>📝 Expenses in this group:</h4>
+            <div class="expense-list">
+              <div class="expense-item" *ngFor="let expense of category.expenses">
+                <div class="expense-info">
+                  <div class="expense-name">{{ expense.description || 'No description' }}</div>
+                  <div class="expense-meta">
+                    <span class="expense-amount">₹{{ expense.amount | number }}</span>
+                    <span class="expense-date">{{ expense.date | date:'MMM dd, yyyy' }}</span>
+                  </div>
+                </div>
+                <div class="expense-extra" *ngIf="expense.paymentMethod || expense.notes">
+                  <div class="expense-notes" *ngIf="expense.notes">{{ expense.notes }}</div>
+                  <div class="expense-payment" *ngIf="expense.paymentMethod">Payment: {{ expense.paymentMethod }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-primary" (click)="addMapping(category.categoryId)">
+            <span class="btn-icon">🔗</span>
+            Map to Category
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Mappings -->
+  <div class="mappings-section" *ngIf="mappings.length > 0">
+    <h2>🔗 Category Mappings</h2>
+    <div class="mappings-list">
+      <div class="mapping-item" *ngFor="let mapping of mappings; let i = index">
+        <div class="mapping-header">
+          <span class="mapping-label">Mapping {{ i + 1 }}</span>
+          <button class="btn btn-danger btn-sm" (click)="removeMapping(i)">
+            <span class="btn-icon">✕</span>
+            Remove
+          </button>
+        </div>
+        <div class="mapping-content">
+          <div class="mapping-from">
+            <label>From (Orphaned Category):</label>
+            <div class="orphaned-category">
+              {{ getOrphanedCategoryDisplay(mapping.orphanedCategoryId) }}
+            </div>
+            
+            <!-- Show expenses that will be affected -->
+            <div class="affected-expenses" *ngIf="getExpensesForMapping(mapping.orphanedCategoryId).length > 0">
+              <h5>📝 Expenses that will be updated:</h5>
+              <div class="expense-preview-list">
+                <div class="expense-preview-item" *ngFor="let expense of getExpensesForMapping(mapping.orphanedCategoryId)">
+                  <div class="preview-expense-info">
+                    <div class="preview-expense-name">{{ expense.description || 'No description' }}</div>
+                    <div class="preview-expense-meta">
+                      <span class="preview-amount">₹{{ expense.amount | number }}</span>
+                      <span class="preview-date">{{ expense.date | date:'MMM dd' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mapping-to">
+            <label>To (Target Category):</label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="mapping.targetCategoryId"
+              (change)="onTargetCategoryChange(mapping, mapping.targetCategoryId)">
+              <option value="">Select target category...</option>
+              <option *ngFor="let category of availableCategories" [value]="category.id">
+                {{ category.icon }} {{ category.name }}
+              </option>
+            </select>
+          </div>
+          <div class="mapping-description">
+            <label>Description (Optional):</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="mapping.description"
+              placeholder="e.g., Map empty categories to Food & Dining">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons" *ngIf="mappings.length > 0">
+    <button 
+      class="btn btn-secondary" 
+      (click)="validateMappings()"
+      [disabled]="isMapping">
+      <span class="btn-icon">✅</span>
+      Validate Mappings
+    </button>
+    <button 
+      class="btn btn-primary" 
+      (click)="applyMappings()"
+      [disabled]="isMapping">
+      <span class="btn-icon" *ngIf="!isMapping">🚀</span>
+      <span class="btn-icon" *ngIf="isMapping">⏳</span>
+      {{ isMapping ? 'Applying...' : 'Apply Mappings' }}
+    </button>
+  </div>
+
+  <!-- Mapping Results -->
+  <div class="mapping-results" *ngIf="mappingResults">
+    <h2>📊 Mapping Results</h2>
+    <div class="results-summary">
+      <div class="result-item success">
+        <span class="result-icon">✅</span>
+        <span class="result-label">Successfully Updated:</span>
+        <span class="result-value">{{ mappingResults.success }} expenses</span>
+      </div>
+      <div class="result-item failed" *ngIf="mappingResults.failed > 0">
+        <span class="result-icon">❌</span>
+        <span class="result-label">Failed Updates:</span>
+        <span class="result-value">{{ mappingResults.failed }} expenses</span>
+      </div>
+    </div>
+    
+    <div class="errors-list" *ngIf="mappingResults.errors.length > 0">
+      <h3>❌ Errors:</h3>
+      <ul>
+        <li *ngFor="let error of mappingResults.errors">{{ error }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions" *ngIf="!isLoading">
+    <h2>⚡ Quick Actions</h2>
+    <div class="actions-grid">
+      <button class="action-card" (click)="loadData()">
+        <span class="action-icon">🔄</span>
+        <div class="action-content">
+          <h4>Refresh Data</h4>
+          <p>Reload orphaned expenses</p>
+        </div>
+      </button>
+      <a class="action-card" routerLink="/expenses">
+        <span class="action-icon">💸</span>
+        <div class="action-content">
+          <h4>View Expenses</h4>
+          <p>Go to expenses page</p>
+        </div>
+      </a>
+      <a class="action-card" routerLink="/analysis">
+        <span class="action-icon">📊</span>
+        <div class="action-content">
+          <h4>View Analysis</h4>
+          <p>Go to analysis page</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>

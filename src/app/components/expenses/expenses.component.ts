@@ -132,6 +132,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         this.expenses = expenses;
         console.log(`Received ${expenses.length} expenses from Firebase`);
         
+        // Log orphaned expenses details
+        this.logOrphanedExpensesDetails();
+        
         // If in edit mode, load the expense for editing
         if (this.isEditMode && this.editingExpenseId) {
           this.loadExpenseForEditing();
@@ -891,6 +894,85 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   clearCategory() {
     this.newExpense.categoryId = '';
+  }
+
+  // Log detailed information about orphaned expenses
+  logOrphanedExpensesDetails(): void {
+    if (!this.expenses || !this.categories) {
+      console.log('⏳ Data not loaded yet, skipping orphaned expenses check');
+      return;
+    }
+
+    const orphanedExpenses = this.expenses.filter(expense => 
+      !this.categories.find(c => c.id === expense.categoryId)
+    );
+    
+    if (orphanedExpenses.length === 0) {
+      console.log('✅ No orphaned expenses found - all expenses have valid categories!');
+      return;
+    }
+
+    console.group('🚨 ORPHANED EXPENSES DETECTED (Expenses Page)');
+    console.log(`📊 Total orphaned expenses: ${orphanedExpenses.length}`);
+    
+    const orphanedAmount = orphanedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    console.log(`💰 Total orphaned amount: ₹${orphanedAmount.toLocaleString()}`);
+    
+    // Group by category ID
+    const orphanedByCategoryId = new Map<string, Expense[]>();
+    orphanedExpenses.forEach(expense => {
+      if (!orphanedByCategoryId.has(expense.categoryId)) {
+        orphanedByCategoryId.set(expense.categoryId, []);
+      }
+      orphanedByCategoryId.get(expense.categoryId)!.push(expense);
+    });
+
+    console.log(`🏷️ Unique orphaned category IDs: ${orphanedByCategoryId.size}`);
+    
+    // Log details for each orphaned category ID
+    orphanedByCategoryId.forEach((expenses, categoryId) => {
+      const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      console.group(`📌 Category ID: "${categoryId}" (${expenses.length} expenses, ₹${totalAmount.toLocaleString()})`);
+      
+      expenses.forEach((expense, index) => {
+        console.log(`${index + 1}. ${expense.description || 'No description'} - ₹${expense.amount.toLocaleString()} (${expense.date})`);
+        console.log(`   ID: ${expense.id}`);
+        console.log(`   Category ID: "${expense.categoryId}"`);
+        console.log(`   Payment Method: ${expense.paymentMethod || 'Not specified'}`);
+        console.log(`   Priority: ${expense.priority || 'Not specified'}`);
+        if (expense.notes) console.log(`   Notes: ${expense.notes}`);
+        if (expense.location) console.log(`   Location: ${expense.location}`);
+        console.log('---');
+      });
+      
+      console.groupEnd();
+    });
+
+    // Log available categories for reference
+    console.group('🏷️ Available Categories (for reference)');
+    this.categories.forEach(category => {
+      console.log(`ID: "${category.id}" | Name: ${category.name} | Icon: ${category.icon} | Color: ${category.color}`);
+    });
+    console.groupEnd();
+
+    // Log summary statistics
+    console.group('📈 Summary Statistics');
+    console.log(`📊 Total expenses: ${this.expenses.length}`);
+    console.log(`✅ Valid expenses: ${this.expenses.length - orphanedExpenses.length}`);
+    console.log(`❌ Orphaned expenses: ${orphanedExpenses.length}`);
+    console.log(`📊 Orphaned percentage: ${((orphanedExpenses.length / this.expenses.length) * 100).toFixed(2)}%`);
+    
+    const validExpensesAmount = this.expenses.reduce((sum, expense) => {
+      const isValid = this.categories.find(c => c.id === expense.categoryId);
+      return isValid ? sum + expense.amount : sum;
+    }, 0);
+    
+    console.log(`💰 Valid expenses amount: ₹${validExpensesAmount.toLocaleString()}`);
+    console.log(`💰 Orphaned expenses amount: ₹${orphanedAmount.toLocaleString()}`);
+    console.log(`📊 Orphaned amount percentage: ${((orphanedAmount / (validExpensesAmount + orphanedAmount)) * 100).toFixed(2)}%`);
+    console.groupEnd();
+
+    console.groupEnd();
   }
 
   // Amount input validation methods
