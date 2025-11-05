@@ -28,7 +28,7 @@
       <h3>🔍 Smart Analysis Filters</h3>
       <p>Advanced filtering and search capabilities for detailed expense analysis</p>
       <div class="filter-actions">
-        <button class="btn-clear-all" (click)="clearAllFilters()" *ngIf="searchQuery || selectedStartDate || selectedEndDate || selectedCategories.length > 0 || minAmount || maxAmount">
+        <button class="btn-clear-all" (click)="clearAllFilters()" *ngIf="selectedDatePreset !== 'thisMonth'">
           <span class="clear-icon">🗑️</span>
           Clear All Filters
         </button>
@@ -43,11 +43,6 @@
                 [class.active]="selectedDatePreset === 'thisMonth'"
                 (click)="applyDatePreset('thisMonth')">
           This Month
-        </button>
-        <button class="preset-btn" 
-                [class.active]="selectedDatePreset === 'last30'"
-                (click)="applyDatePreset('last30')">
-          Last 30 Days
         </button>
         <button class="preset-btn" 
                 [class.active]="selectedDatePreset === 'thisQuarter'"
@@ -146,13 +141,13 @@
         <div class="multiselect-container">
           <div class="multiselect-dropdown" 
                [class.open]="isCategoryDropdownOpen" 
-               (click)="toggleCategoryDropdown()"
+               (click)="toggleCategoryDropdown($event)"
                role="combobox"
                [attr.aria-expanded]="isCategoryDropdownOpen"
                [attr.aria-haspopup]="true"
                tabindex="0"
-               (keydown.enter)="toggleCategoryDropdown()"
-               (keydown.escape)="isCategoryDropdownOpen = false">
+               (keydown.enter)="toggleCategoryDropdown($event)"
+               (keydown.escape)="isCategoryDropdownOpen = false; onFilterChange()">
             <div class="multiselect-display">
               <div class="selection-content">
                 <span *ngIf="selectedCategories.length === 0" class="placeholder">
@@ -196,13 +191,15 @@
                 <div class="option-item" 
                      *ngFor="let category of availableCategories; trackBy: trackByCategoryId"
                      role="option"
-                     [attr.aria-selected]="isCategorySelected(category.id)">
-                  <label class="checkbox-label">
+                     [attr.aria-selected]="isCategorySelected(category.id)"
+                     (click)="$event.stopPropagation()">
+                  <label class="checkbox-label" (click)="$event.stopPropagation()">
                     <input 
                       type="checkbox" 
                       [value]="category.id"
                       [checked]="isCategorySelected(category.id)"
-                      (change)="toggleCategorySelection(category.id)"
+                      (change)="toggleCategorySelection(category.id, $event)"
+                      (click)="$event.stopPropagation()"
                       [attr.aria-label]="'Select ' + category.name">
                     <span class="checkbox-custom"></span>
                     <span class="option-text">
@@ -217,15 +214,15 @@
               </div>
               
               <!-- Fixed Action Buttons -->
-              <div class="multiselect-actions">
+              <div class="multiselect-actions" (click)="$event.stopPropagation()">
                 <button class="action-btn select-all" 
-                        (click)="selectAllCategories()"
+                        (click)="selectAllCategories(); $event.stopPropagation()"
                         [disabled]="selectedCategories.length === availableCategories.length">
                   <span class="btn-icon">✅</span>
                   Select All
                 </button>
                 <button class="action-btn clear-all" 
-                        (click)="clearAllCategories()"
+                        (click)="clearAllCategories(); $event.stopPropagation()"
                         [disabled]="selectedCategories.length === 0">
                   <span class="btn-icon">🗑️</span>
                   Clear All
@@ -392,8 +389,35 @@
   <!-- Category Analysis Section -->
   <div class="analysis-section" *ngIf="!isLoading">
     <div class="section-header">
-      <h2>📈 Category-wise Analysis</h2>
-      <p>Detailed breakdown of spending by category with monthly trends</p>
+      <div class="section-title-group">
+        <div>
+          <h2>📈 Category-wise Analysis</h2>
+          <p>Detailed breakdown of spending by category with monthly trends</p>
+        </div>
+        <div class="sort-controls" *ngIf="categoryAnalysis.length > 0">
+          <div class="sort-group">
+            <label class="sort-label">
+              <span class="sort-icon">🔄</span>
+              Sort by:
+            </label>
+            <select 
+              class="sort-select" 
+              [(ngModel)]="sortBy"
+              (change)="onSortChange()">
+              <option value="percentage">Percentage</option>
+              <option value="transactionCount">Transaction Count</option>
+              <option value="average">Average Amount</option>
+              <option value="name">Category Name</option>
+            </select>
+            <button 
+              class="sort-order-btn" 
+              (click)="toggleSortOrder()"
+              [title]="sortOrder === 'asc' ? 'Ascending - Click for Descending' : 'Descending - Click for Ascending'">
+              <span class="sort-arrow" [class.asc]="sortOrder === 'asc'">▼</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- Normal Category Analysis -->
     <div class="category-analysis" *ngIf="categoryAnalysis.length > 0 && !comparisonMode">

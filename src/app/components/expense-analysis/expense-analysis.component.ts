@@ -28,6 +28,7 @@ interface CategoryAnalysis {
 interface MonthlyData {
   month: string;
   year: number;
+  monthNumber?: number; // Optional month number for sorting
   amount: number;
   expenseCount: number;
   percentage: number;
@@ -58,7 +59,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   searchQuery = '';
   minAmount = '';
   maxAmount = '';
-  selectedDatePreset = '';
+  selectedDatePreset = 'thisMonth'; // Default to "This Month"
   comparisonMode = false;
   selectedCategoriesForComparison: string[] = [];
   
@@ -76,6 +77,10 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   pieData: PieData | null = null;
   barData: BarData | null = null;
   showCharts = false;
+  
+  // Sorting options
+  sortBy: 'percentage' | 'transactionCount' | 'average' | 'name' = 'percentage';
+  sortOrder: 'asc' | 'desc' = 'desc';
   
   
   constructor(
@@ -101,7 +106,11 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   onDocumentClick(event: Event): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.multiselect-container')) {
-      this.isCategoryDropdownOpen = false;
+      // Apply filter when dropdown is closed by clicking outside
+      if (this.isCategoryDropdownOpen) {
+        this.isCategoryDropdownOpen = false;
+        this.onFilterChange();
+      }
     }
   }
 
@@ -118,14 +127,11 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   initializeFilters() {
-    // Set default date range to show all data (no date filtering by default)
-    // This matches the behavior of the reports component
-    this.selectedStartDate = '';
-    this.selectedEndDate = '';
-    this.selectedDatePreset = 'all'; // Set "All Time" as default selected filter
+    // Apply default date range preset ("This Month")
+    this.applyDatePreset('thisMonth');
 
-    // Initialize categories
-    this.availableCategories = this.categories;
+    // Initialize categories - only show categories that have expenses
+    this.updateAvailableCategories();
     this.updateUsedCategories();
   }
 
@@ -199,7 +205,10 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         averageAmount,
         monthlyBreakdown
       };
-    }).sort((a, b) => b.totalAmount - a.totalAmount);
+    });
+    
+    // Apply sorting
+    this.applySorting();
   }
 
   calculateMonthlyBreakdown(expenses: Expense[]): MonthlyData[] {
@@ -221,26 +230,62 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     // Calculate total amount for this specific category across all months
     const categoryTotalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
     
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    
     return Array.from(monthlyMap.entries()).map(([monthKey, data]) => {
       const [year, month] = monthKey.split('-');
-      const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      
       const monthName = monthNames[parseInt(month) - 1];
       
       return {
         month: monthName,
         year: parseInt(year),
+        monthNumber: parseInt(month), // Add month number for sorting
         amount: data.amount,
         expenseCount: data.count,
         percentage: categoryTotalAmount > 0 ? (data.amount / categoryTotalAmount) * 100 : 0
       };
     }).sort((a, b) => {
+      // Sort by year descending (most recent first)
       if (a.year !== b.year) return b.year - a.year;
-      return b.amount - a.amount;
+      // Sort by month descending (most recent month first) when years are equal
+      return b.monthNumber - a.monthNumber;
     });
+  }
+
+  applySorting() {
+    this.categoryAnalysis.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (this.sortBy) {
+        case 'percentage':
+          comparison = a.percentage - b.percentage;
+          break;
+        case 'transactionCount':
+          comparison = a.expenseCount - b.expenseCount;
+          break;
+        case 'average':
+          comparison = a.averageAmount - b.averageAmount;
+          break;
+        case 'name':
+          comparison = a.category.name.localeCompare(b.category.name);
+          break;
+      }
+      
+      // Apply sort order
+      return this.sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }
+
+  onSortChange() {
+    this.applySorting();
+  }
+
+  toggleSortOrder() {
+    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    this.applySorting();
   }
 
   onFilterChange() {
@@ -311,16 +356,15 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
 
   // Clear all filters
   clearAllFilters() {
-    this.selectedStartDate = '';
-    this.selectedEndDate = '';
     this.selectedCategories = [];
     this.searchQuery = '';
     this.minAmount = '';
     this.maxAmount = '';
-    this.selectedDatePreset = 'all'; // Reset to "All Time" filter
     this.comparisonMode = false;
     this.selectedCategoriesForComparison = [];
-    this.onFilterChange();
+    
+    // Reset to "This Month" filter (default)
+    this.applyDatePreset('thisMonth');
   }
 
   // Clear search text
@@ -409,6 +453,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   // Show category expenses using dialog service
   async showCategoryExpenses(categoryAnalysis: CategoryAnalysis) {
     const categoryExpenses = this.getExpensesForCategory(categoryAnalysis.category.id);
+    const expenseCount = categoryExpenses.length;
     
     // Prepare expenses data for the dialog
     const expensesData = categoryExpenses.map(expense => ({
@@ -419,10 +464,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       categoryId: expense.categoryId
     }));
 
+    // Create title with expense count
+    const titleWithCount = `${categoryAnalysis.category.name} (${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'})`;
+
     // Show the expense list in the dialog
     await this.dialogService.showExpenseList(
       expensesData,
-      categoryAnalysis.category.name,
+      titleWithCount,
       categoryAnalysis.category.icon,
       categoryAnalysis.category.color
     );
@@ -432,6 +480,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   async showMonthlyExpenses(categoryAnalysis: CategoryAnalysis, monthData: MonthlyData) {
     // Get expenses for this category in the specific month
     const monthlyExpenses = this.getExpensesForCategoryAndMonth(categoryAnalysis.category.id, monthData);
+    const expenseCount = monthlyExpenses.length;
     
     // Prepare expenses data for the dialog
     const expensesData = monthlyExpenses.map(expense => ({
@@ -442,12 +491,16 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       categoryId: expense.categoryId
     }));
 
+    // Create title with expense count
+    const titleWithCount = `${categoryAnalysis.category.name} - ${monthData.month} ${monthData.year} (${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'})`;
+
     // Show the expense list in the dialog
     await this.dialogService.showExpenseList(
       expensesData,
-      `${categoryAnalysis.category.name} - ${monthData.month} ${monthData.year}`,
+      titleWithCount,
       categoryAnalysis.category.icon,
-      categoryAnalysis.category.color
+      categoryAnalysis.category.color,
+      expenseCount === 0 ? 'No expenses found for this category in the selected month.' : undefined
     );
   }
 
@@ -533,6 +586,17 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     return category.id;
   }
 
+  // Get categories that have expenses (from all expenses, not filtered)
+  getCategoriesWithExpenses(): Category[] {
+    const categoryIdsWithExpenses = [...new Set(this.expenses.map(expense => expense.categoryId))];
+    return this.categories.filter(category => categoryIdsWithExpenses.includes(category.id));
+  }
+
+  // Update available categories to show only those with expenses
+  updateAvailableCategories(): void {
+    this.availableCategories = this.getCategoriesWithExpenses();
+  }
+
   // Get only categories that have expenses in the current filtered data
   getUsedCategories(): Category[] {
     const filteredExpenses = this.getFilteredExpenses();
@@ -555,7 +619,12 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   // Multiselect category methods
-  toggleCategoryDropdown(): void {
+  toggleCategoryDropdown(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    const wasOpen = this.isCategoryDropdownOpen;
     this.isCategoryDropdownOpen = !this.isCategoryDropdownOpen;
     
     // Calculate dropdown alignment when opening
@@ -563,8 +632,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       this.calculateDropdownAlignment();
     }
     
-    // Apply filter when dropdown is closed
-    if (!this.isCategoryDropdownOpen) {
+    // Apply filter when dropdown is closed (only if it was open before)
+    if (wasOpen && !this.isCategoryDropdownOpen) {
       this.onFilterChange();
     }
   }
@@ -599,24 +668,30 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     return this.selectedCategories.includes(categoryId);
   }
 
-  toggleCategorySelection(categoryId: string): void {
+  toggleCategorySelection(categoryId: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
     const index = this.selectedCategories.indexOf(categoryId);
     if (index > -1) {
       this.selectedCategories.splice(index, 1);
     } else {
       this.selectedCategories.push(categoryId);
     }
-    // Don't call onFilterChange() here - let user select multiple categories first
+    // Apply filter immediately when category selection changes
+    this.onFilterChange();
   }
 
   selectAllCategories(): void {
     this.selectedCategories = this.availableCategories.map(cat => cat.id);
-    // Don't call onFilterChange() here - let user see all selected categories
+    // Apply filter immediately when all categories are selected
+    this.onFilterChange();
   }
 
   clearAllCategories(): void {
     this.selectedCategories = [];
-    // Don't call onFilterChange() here - let user see cleared state
+    // Apply filter immediately when all categories are cleared
+    this.onFilterChange();
   }
 
 

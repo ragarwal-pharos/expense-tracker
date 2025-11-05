@@ -121,14 +121,15 @@
               </button>
             </div>
           </div>
+
+          <div class="form-group" style="align-self: center;">
+            <button type="submit" class="btn-add-category" [disabled]="!newCategory.name.trim() || isDuplicateCategory">
+              <span class="btn-icon">➕</span>
+              <span class="btn-text">Add Category</span>
+            </button>
+          </div>
         </div>
-        
-        <div class="button-container">
-          <button type="submit" class="btn-add-category" [disabled]="!newCategory.name.trim() || isDuplicateCategory">
-            <span class="btn-icon">➕</span>
-            <span class="btn-text">Add Category</span>
-          </button>
-        </div>
+    
       </form>
     </div>
   </div>
@@ -209,7 +210,10 @@
     </div>
     
     <div class="categories-grid" *ngIf="getFilteredCategories().length > 0 && !isLoading">
-      <div class="category-card" *ngFor="let category of getFilteredCategories()">
+      <div class="category-card" 
+           *ngFor="let category of getFilteredCategories()"
+           (click)="showCategoryExpenses(category, $event)"
+           [class.clickable]="true">
         <div class="category-content">
           <div class="category-info">
             <div class="category-color-indicator" [ngStyle]="{'background': category.color}"></div>
@@ -220,7 +224,7 @@
             </div>
           </div>
           
-          <div class="category-actions">
+          <div class="category-actions" (click)="$event.stopPropagation()">
             <button class="btn-edit" (click)="updateCategory(category)" title="Edit category">
               <span class="edit-icon">✏️</span>
               <span class="edit-text">Edit</span>

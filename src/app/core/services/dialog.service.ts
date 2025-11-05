@@ -266,12 +266,13 @@ export class DialogService {
     }>,
     categoryName: string,
     categoryIcon?: string,
-    categoryColor?: string
+    categoryColor?: string,
+    message?: string
   ): Promise<void> {
     return new Promise((resolve) => {
       this.dialogSubject.next({
         title: categoryName,
-        message: '',
+        message: message || '',
         type: 'list',
         confirmText: 'Close',
         expenses,

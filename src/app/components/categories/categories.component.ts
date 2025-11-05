@@ -502,4 +502,41 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     
     return insights;
   }
+
+  // Show category expenses using dialog service
+  async showCategoryExpenses(category: Category, event?: Event) {
+    // Prevent event propagation if called from card click
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    const expenseCount = this.getCategoryUsage(category.id);
+    const categoryExpenses = this.getExpensesForCategory(category.id);
+    
+    // Prepare expenses data for the dialog
+    const expensesData = categoryExpenses.map(expense => ({
+      id: expense.id,
+      description: expense.description || 'No description',
+      amount: expense.amount,
+      date: expense.date,
+      categoryId: expense.categoryId
+    }));
+
+    // Create title with expense count
+    const titleWithCount = `${category.name} (${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'})`;
+
+    // Show the expense list in the dialog (will show empty state if no expenses)
+    await this.dialogService.showExpenseList(
+      expensesData,
+      titleWithCount,
+      category.icon,
+      category.color,
+      expenseCount === 0 ? 'This category has no expenses yet.' : undefined
+    );
+  }
+
+  // Get expenses for a specific category
+  getExpensesForCategory(categoryId: string): Expense[] {
+    return this.expenses.filter(expense => expense.categoryId === categoryId);
+  }
 } 

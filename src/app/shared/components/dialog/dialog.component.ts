@@ -150,7 +150,7 @@ import { Subscription } from 'rxjs';
           <div class="empty-expenses" *ngIf="config.type === 'list' && (!config.expenses || config.expenses.length === 0)">
             <div class="empty-icon">📝</div>
             <h6>No Expenses Found</h6>
-            <p>No expenses found for this category in the selected month.</p>
+            <p>{{ config.message || 'No expenses found for this category.' }}</p>
           </div>
         </div>
 
