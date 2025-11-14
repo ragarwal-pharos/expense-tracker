@@ -7,11 +7,14 @@ import { CategoryService } from '../../core/services/category.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { ActionHistoryService } from '../../core/services/action-history.service';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { Subscription } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 @Component({
   selector: 'app-expenses',
@@ -71,8 +74,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   isLoading: boolean = true;
   isSaving: boolean = false;
   isDeleting: boolean = false;
+  deletingExpenseIds: Set<string> = new Set(); // Track which expenses are being deleted
   isEditing: boolean = false;
   isFiltering: boolean = false;
+  isGeneratingPDF: boolean = false;
+  isPrinting: boolean = false;
 
   // Expand/Collapse states
   isAddExpenseExpanded: boolean = true;
@@ -82,7 +88,23 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Search focus state
   isSearchFocused: boolean = false;
 
+  // Category suggestions
+  categorySuggestions: Category[] = [];
+  showSuggestions: boolean = false;
+
+  // Bulk selection properties
+  bulkSelectionMode: boolean = false;
+  selectedExpenseIds: Set<string> = new Set();
+  isBulkDeleting: boolean = false;
+
   private subscription: Subscription = new Subscription();
+
+  // Action history and undo
+  lastDeletedExpense: Expense | null = null;
+  lastUpdatedExpense: Expense | null = null;
+  deletedExpenseIds: Set<string> = new Set(); // Track expenses marked for deletion
+  deletedExpensesData: Map<string, Expense> = new Map(); // Store expense data for undo
+  expenseUndoTimeouts: Map<string, any> = new Map(); // Track timeouts per expense
 
   constructor(
     private expenseService: ExpenseService,
@@ -90,6 +112,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     private firebaseService: FirebaseService,
     private filterStateService: FilterStateService,
     private dialogService: DialogService,
+    private actionHistoryService: ActionHistoryService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -129,8 +152,18 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     // Subscribe to Firebase observables for real-time updates
     this.subscription.add(
       this.firebaseService.expenses$.subscribe(expenses => {
-        this.expenses = expenses;
-        console.log(`Received ${expenses.length} expenses from Firebase`);
+        // Merge deleted expenses back into the list temporarily for undo functionality
+        const deletedExpensesToKeep: Expense[] = [];
+        this.deletedExpenseIds.forEach(expenseId => {
+          const deletedExpense = this.deletedExpensesData.get(expenseId);
+          if (deletedExpense) {
+            deletedExpensesToKeep.push(deletedExpense);
+          }
+        });
+        
+        // Combine Firebase expenses with temporarily deleted expenses
+        this.expenses = [...expenses, ...deletedExpensesToKeep];
+        console.log(`Received ${expenses.length} expenses from Firebase, ${deletedExpensesToKeep.length} deleted expenses kept for undo`);
         
         // Log orphaned expenses details
         this.logOrphanedExpensesDetails();
@@ -257,6 +290,14 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     if (expense) {
       this.newExpense = { ...expense };
       this.amountInput = expense.amount.toString();
+      
+      // Check if category is valid when loading for editing
+      const categoryValidation = this.validateCategoryExists(expense.categoryId);
+      if (!categoryValidation.exists) {
+        console.warn('Expense has invalid category:', expense.categoryId);
+        // Category will be validated when user tries to save
+      }
+      
       console.log('Loaded expense for editing:', expense);
     } else {
       console.error('Expense not found for editing:', this.editingExpenseId);
@@ -288,6 +329,24 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       const amount = parseFloat(this.amountInput);
       if (isNaN(amount) || amount <= 0) {
         await this.dialogService.warning('Please enter a valid amount greater than 0.');
+        return;
+      }
+
+      // Final category validation before saving
+      const categoryValidation = this.validateCategoryExists(this.newExpense.categoryId);
+      if (!categoryValidation.exists) {
+        if (categoryValidation.wasDeleted) {
+          await this.dialogService.error(
+            'The selected category no longer exists. It may have been deleted. Please select a different category.',
+            'Category Deleted'
+          );
+        } else {
+          await this.dialogService.error(
+            'Invalid category selected. Please select a valid category from the list.',
+            'Invalid Category'
+          );
+        }
+        this.newExpense.categoryId = '';
         return;
       }
 
@@ -327,6 +386,31 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Final category validation before saving
+      const categoryValidation = this.validateCategoryExists(this.newExpense.categoryId);
+      if (!categoryValidation.exists) {
+        if (categoryValidation.wasDeleted) {
+          await this.dialogService.error(
+            'The selected category no longer exists. It may have been deleted. Please select a different category.',
+            'Category Deleted'
+          );
+        } else {
+          await this.dialogService.error(
+            'Invalid category selected. Please select a valid category from the list.',
+            'Invalid Category'
+          );
+        }
+        // Don't clear category in edit mode, just show error
+        return;
+      }
+
+      // Store original expense for undo
+      const originalExpense = this.expenses.find(e => e.id === this.editingExpenseId);
+      if (originalExpense) {
+        this.lastUpdatedExpense = { ...originalExpense };
+        this.actionHistoryService.addAction('update', originalExpense);
+      }
+
       const updatedExpense: Expense = {
         ...this.newExpense,
         amount: amount
@@ -347,6 +431,19 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error updating expense:', error);
       await this.dialogService.error('Error updating expense. Please try again.');
+    }
+  }
+
+  async undoLastUpdate() {
+    if (!this.lastUpdatedExpense) return;
+
+    try {
+      await this.expenseService.update(this.lastUpdatedExpense);
+      this.lastUpdatedExpense = null;
+      await this.dialogService.success('Expense update reverted successfully!');
+    } catch (error) {
+      console.error('Error undoing update:', error);
+      await this.dialogService.error('Error reverting expense. Please try again.');
     }
   }
 
@@ -482,15 +579,458 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     );
     if (!confirmed) return;
 
-    this.isDeleting = true;
+    // Mark this specific expense as being deleted
+    this.deletingExpenseIds.add(expense.id);
+
+    // Store expense for undo
+    this.lastDeletedExpense = { ...expense };
+    this.deletedExpensesData.set(expense.id, { ...expense }); // Store full expense data
+    this.actionHistoryService.addAction('delete', expense);
+
+    // Mark expense as deleted (show undo on tile)
+    this.deletedExpenseIds.add(expense.id);
+    
+    // Set timeout to actually delete after 5 seconds
+    const timeout = setTimeout(async () => {
+      await this.finalizeDelete(expense.id);
+    }, 5000);
+    
+    this.expenseUndoTimeouts.set(expense.id, timeout);
+
+    // Actually delete from backend
     try {
       await this.expenseService.delete(expense.id);
-      await this.dialogService.success('Expense deleted successfully!');
     } catch (error) {
       console.error('Error deleting expense:', error);
+      // Remove from deleted set if deletion failed
+      this.deletedExpenseIds.delete(expense.id);
+      this.deletingExpenseIds.delete(expense.id);
+      if (this.expenseUndoTimeouts.has(expense.id)) {
+        clearTimeout(this.expenseUndoTimeouts.get(expense.id));
+        this.expenseUndoTimeouts.delete(expense.id);
+      }
       await this.dialogService.error('Error deleting expense. Please try again.');
     } finally {
-      this.isDeleting = false;
+      this.deletingExpenseIds.delete(expense.id);
+    }
+  }
+
+  isExpenseBeingDeleted(expenseId: string): boolean {
+    return this.deletingExpenseIds.has(expenseId);
+  }
+
+  async undoDelete(expenseId: string) {
+    const expense = this.deletedExpensesData.get(expenseId);
+    if (!expense) return;
+
+    // Clear timeout
+    if (this.expenseUndoTimeouts.has(expenseId)) {
+      clearTimeout(this.expenseUndoTimeouts.get(expenseId));
+      this.expenseUndoTimeouts.delete(expenseId);
+    }
+
+    // Remove from deleted set
+    this.deletedExpenseIds.delete(expenseId);
+    this.deletedExpensesData.delete(expenseId);
+
+    try {
+      // Recreate the expense
+      const { id, ...expenseData } = expense;
+      await this.expenseService.add(expenseData);
+      await this.dialogService.success('Expense restored successfully!');
+    } catch (error) {
+      console.error('Error undoing delete:', error);
+      await this.dialogService.error('Error restoring expense. Please try again.');
+    }
+  }
+
+  async finalizeDelete(expenseId: string) {
+    // Remove from deleted set and clear timeout
+    this.deletedExpenseIds.delete(expenseId);
+    this.deletedExpensesData.delete(expenseId);
+    this.expenseUndoTimeouts.delete(expenseId);
+    
+    // Remove the expense from the local expenses array if it still exists
+    // (it should already be removed by Firebase, but we ensure it's gone)
+    this.expenses = this.expenses.filter(e => e.id !== expenseId);
+    
+    // Expense is already deleted from backend, just remove from local state
+    // The real-time listener will handle the removal, but we ensure it's gone immediately
+  }
+
+  isExpenseDeleted(expenseId: string): boolean {
+    return this.deletedExpenseIds.has(expenseId);
+  }
+
+  // Export Functions
+  generateShareableReport(expenses: Expense[]): string {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const dateRange = this.getDateRangeText();
+    
+    let report = `📊 Expense Report\n`;
+    report += `═══════════════════════════════════\n\n`;
+    report += `Period: ${dateRange}\n`;
+    report += `Total Expenses: ${expenses.length}\n`;
+    report += `Total Amount: ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n`;
+    report += `═══════════════════════════════════\n\n`;
+
+    // Group by category
+    const categoryTotals: { [key: string]: { total: number; count: number; expenses: Expense[] } } = {};
+    expenses.forEach(expense => {
+      const categoryName = this.getCategoryName(expense.categoryId) || 'Uncategorized';
+      if (!categoryTotals[categoryName]) {
+        categoryTotals[categoryName] = { total: 0, count: 0, expenses: [] };
+      }
+      categoryTotals[categoryName].total += expense.amount;
+      categoryTotals[categoryName].count++;
+      categoryTotals[categoryName].expenses.push(expense);
+    });
+
+    // Category summary
+    report += `📋 Category Summary:\n`;
+    Object.keys(categoryTotals).sort((a, b) => categoryTotals[b].total - categoryTotals[a].total).forEach(category => {
+      const data = categoryTotals[category];
+      const percentage = total > 0 ? ((data.total / total) * 100).toFixed(1) : '0.0';
+      report += `  • ${category}: ₹${data.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${data.count} items, ${percentage}%)\n`;
+    });
+
+    report += `\n═══════════════════════════════════\n\n`;
+    report += `📝 Expense Details:\n\n`;
+
+    // Expense list
+    expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).forEach((expense, index) => {
+      const categoryName = this.getCategoryName(expense.categoryId) || 'Uncategorized';
+      const date = new Date(expense.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      report += `${index + 1}. ${expense.description || 'No description'}\n`;
+      report += `   Date: ${date} | Amount: ₹${expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Category: ${categoryName}\n`;
+      if (expense.notes) {
+        report += `   Notes: ${expense.notes}\n`;
+      }
+      report += `\n`;
+    });
+
+    report += `═══════════════════════════════════\n`;
+    report += `Generated on: ${new Date().toLocaleString('en-IN')}\n`;
+
+    return report;
+  }
+
+  getDateRangeText(): string {
+    if (this.filterDateFrom && this.filterDateTo) {
+      return `${this.filterDateFrom} to ${this.filterDateTo}`;
+    } else if (this.filterDateFrom) {
+      return `From ${this.filterDateFrom}`;
+    } else if (this.filterDateTo) {
+      return `Until ${this.filterDateTo}`;
+    } else if (this.filterDate) {
+      return this.filterDate;
+    } else if (this.filterCategory) {
+      return `Category: ${this.getCategoryName(this.filterCategory)}`;
+    }
+    return 'All Time';
+  }
+
+  async exportToPDF() {
+    const filteredExpenses = this.getFilteredExpenses();
+    if (filteredExpenses.length === 0) {
+      await this.dialogService.warning('No expenses to export. Please adjust your filters.');
+      return;
+    }
+
+    if (this.isGeneratingPDF) {
+      return; // Prevent multiple clicks
+    }
+
+    this.isGeneratingPDF = true;
+    
+    try {
+      // Create HTML content for PDF
+      const htmlContent = this.generatePDFHTML(filteredExpenses);
+      
+      // Create a temporary container in current window
+      const tempContainer = document.createElement('div');
+      tempContainer.id = 'pdf-export-container';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '794px';
+      tempContainer.style.background = 'white';
+      tempContainer.style.zIndex = '-1';
+      tempContainer.style.padding = '20px';
+      tempContainer.style.visibility = 'visible';
+      tempContainer.style.opacity = '1';
+      document.body.appendChild(tempContainer);
+      
+      // Parse and inject HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      const bodyContent = doc.body;
+      const styles = doc.head.querySelectorAll('style');
+      
+      // Add styles to head
+      styles.forEach(style => {
+        const styleElement = document.createElement('style');
+        styleElement.textContent = style.textContent || '';
+        document.head.appendChild(styleElement);
+      });
+      
+      // Add content to container
+      tempContainer.innerHTML = bodyContent.innerHTML;
+      
+      // Wait for rendering
+      await new Promise(resolve => {
+        setTimeout(() => {
+          // Force reflow
+          tempContainer.offsetHeight;
+          resolve(true);
+        }, 500);
+      });
+      
+      // Use html2canvas to capture
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: tempContainer.scrollWidth,
+        height: tempContainer.scrollHeight
+      });
+      
+      // Calculate PDF dimensions
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+      
+      // Add first page
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      // Save PDF
+      pdf.save(`expense_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      // Clean up
+      document.body.removeChild(tempContainer);
+      // Remove temporary styles
+      styles.forEach(() => {
+        const lastStyle = document.head.querySelector('style:last-of-type');
+        if (lastStyle) {
+          document.head.removeChild(lastStyle);
+        }
+      });
+      
+      await this.dialogService.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      await this.dialogService.error('Error exporting to PDF. Please try again.');
+    } finally {
+      this.isGeneratingPDF = false;
+    }
+  }
+
+  generatePDFHTML(expenses: Expense[]): string {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const dateRange = this.getDateRangeText();
+    const now = new Date().toLocaleString('en-IN');
+
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Expense Report</title>
+        <style>
+          @media print {
+            @page { margin: 1cm; }
+            body { margin: 0; }
+          }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            color: #333;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            color: #667eea;
+            margin: 0;
+            font-size: 28px;
+          }
+          .summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+          }
+          .summary-label {
+            font-weight: 600;
+            color: #555;
+          }
+          .summary-value {
+            color: #333;
+            font-weight: 700;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+          }
+          td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          .amount {
+            text-align: right;
+            font-weight: 600;
+          }
+          .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>📊 Expense Report</h1>
+          <p>Generated on: ${now}</p>
+        </div>
+        
+        <div class="summary">
+          <div class="summary-row">
+            <span class="summary-label">Period:</span>
+            <span class="summary-value">${dateRange}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total Expenses:</span>
+            <span class="summary-value">${expenses.length}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total Amount:</span>
+            <span class="summary-value">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th class="amount">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).forEach(expense => {
+      const categoryName = this.getCategoryName(expense.categoryId) || 'Uncategorized';
+      const date = new Date(expense.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      const description = this.escapeHtml(expense.description || 'No description');
+      const catName = this.escapeHtml(categoryName);
+      html += `
+        <tr>
+          <td>${date}</td>
+          <td>${description}</td>
+          <td>${catName}</td>
+          <td class="amount">₹${expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+        
+        <div class="footer">
+          <p>This report was generated from Expense Tracker</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return html;
+  }
+
+  escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async printExpenses() {
+    const filteredExpenses = this.getFilteredExpenses();
+    if (filteredExpenses.length === 0) {
+      await this.dialogService.warning('No expenses to print. Please adjust your filters.');
+      return;
+    }
+
+    if (this.isPrinting) {
+      return; // Prevent multiple clicks
+    }
+
+    this.isPrinting = true;
+    
+    try {
+      // Create HTML content (same as PDF)
+      const htmlContent = this.generatePDFHTML(filteredExpenses);
+      
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        await this.dialogService.error('Please allow pop-ups to print.');
+        return;
+      }
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load, then print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      };
+    } catch (error) {
+      console.error('Error printing expenses:', error);
+      await this.dialogService.error('Error printing expenses. Please try again.');
+    } finally {
+      this.isPrinting = false;
     }
   }
 
@@ -506,8 +1046,27 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    if (!this.newExpense.categoryId) {
+    if (!this.newExpense.categoryId || this.newExpense.categoryId.trim() === '') {
       await this.dialogService.warning('Please select a category.');
+      return false;
+    }
+
+    // Validate category exists
+    const categoryExists = this.validateCategoryExists(this.newExpense.categoryId);
+    if (!categoryExists.exists) {
+      if (categoryExists.wasDeleted) {
+        await this.dialogService.error(
+          'The selected category no longer exists. It may have been deleted. Please select a different category.',
+          'Category Deleted'
+        );
+      } else {
+        await this.dialogService.error(
+          'Invalid category selected. Please select a valid category from the list.',
+          'Invalid Category'
+        );
+      }
+      // Clear invalid category selection
+      this.newExpense.categoryId = '';
       return false;
     }
 
@@ -530,6 +1089,86 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     return true;
+  }
+
+  // Validate if category exists
+  validateCategoryExists(categoryId: string): { exists: boolean; wasDeleted: boolean; category?: Category } {
+    if (!categoryId || categoryId.trim() === '') {
+      return { exists: false, wasDeleted: false };
+    }
+
+    const category = this.categories.find(c => c.id === categoryId);
+    if (category) {
+      return { exists: true, wasDeleted: false, category };
+    }
+
+    // Check if this category ID was used in any expense (indicating it was deleted)
+    const wasUsed = this.expenses.some(e => e.categoryId === categoryId);
+    return { exists: false, wasDeleted: wasUsed };
+  }
+
+  // Auto-suggest categories based on description
+  suggestCategories(description: string): Category[] {
+    if (!description || description.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = description.toLowerCase().trim();
+    const suggestions: { category: Category; score: number }[] = [];
+
+    // Check each category for matches
+    this.categories.forEach(category => {
+      let score = 0;
+      const categoryName = category.name.toLowerCase();
+      
+      // Exact match gets highest score
+      if (categoryName === searchTerm) {
+        score = 100;
+      }
+      // Contains match
+      else if (categoryName.includes(searchTerm) || searchTerm.includes(categoryName)) {
+        score = 50;
+      }
+      // Word match (check if any word in description matches category name)
+      else {
+        const descriptionWords = searchTerm.split(/\s+/);
+        const categoryWords = categoryName.split(/\s+/);
+        
+        descriptionWords.forEach(word => {
+          if (word.length >= 3) { // Only consider words with 3+ characters
+            categoryWords.forEach(catWord => {
+              if (catWord.includes(word) || word.includes(catWord)) {
+                score += 10;
+              }
+            });
+          }
+        });
+      }
+
+      // Check if category has been used recently for similar descriptions
+      const recentExpenses = this.expenses
+        .filter(e => e.categoryId === category.id && e.description)
+        .slice(0, 10); // Check last 10 expenses in this category
+      
+      recentExpenses.forEach(expense => {
+        if (expense.description) {
+          const expenseDesc = expense.description.toLowerCase();
+          if (expenseDesc.includes(searchTerm) || searchTerm.includes(expenseDesc)) {
+            score += 5; // Boost score if similar descriptions exist
+          }
+        }
+      });
+
+      if (score > 0) {
+        suggestions.push({ category, score });
+      }
+    });
+
+    // Sort by score descending and return top 3
+    return suggestions
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(s => s.category);
   }
 
   isFormValid(): boolean {
@@ -557,6 +1196,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       receiptNumber: ''
     };
     this.amountInput = '';
+    this.showSuggestions = false;
+    this.categorySuggestions = [];
   }
 
   getFilteredExpenses(): Expense[] {
@@ -894,6 +1535,176 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   clearCategory() {
     this.newExpense.categoryId = '';
+    this.showSuggestions = false;
+    this.categorySuggestions = [];
+  }
+
+  onCategoryChange() {
+    // Hide suggestions when category is selected
+    this.showSuggestions = false;
+    this.categorySuggestions = [];
+  }
+
+  onDescriptionChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const description = input.value;
+    
+    // Show suggestions if description has content and no category is selected
+    if (description && description.trim().length >= 2 && !this.newExpense.categoryId) {
+      this.categorySuggestions = this.suggestCategories(description);
+      this.showSuggestions = this.categorySuggestions.length > 0;
+    } else {
+      this.showSuggestions = false;
+      this.categorySuggestions = [];
+    }
+  }
+
+  selectSuggestedCategory(category: Category) {
+    this.newExpense.categoryId = category.id;
+    this.showSuggestions = false;
+    this.categorySuggestions = [];
+  }
+
+  // Bulk Selection Methods
+  onSelectionModeToggle(event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    this.bulkSelectionMode = checkbox.checked;
+    if (!this.bulkSelectionMode) {
+      this.selectedExpenseIds.clear();
+    }
+  }
+
+  toggleExpenseSelection(expenseId: string) {
+    if (this.selectedExpenseIds.has(expenseId)) {
+      this.selectedExpenseIds.delete(expenseId);
+    } else {
+      this.selectedExpenseIds.add(expenseId);
+    }
+  }
+
+  onExpenseTileClick(expenseId: string, event: Event) {
+    // Only handle tile click in bulk selection mode and if expense is not deleted
+    if (!this.bulkSelectionMode || this.isExpenseDeleted(expenseId)) {
+      return;
+    }
+
+    // Don't toggle if clicking on interactive elements (buttons, links, etc.)
+    const target = event.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('input[type="checkbox"]')) {
+      return;
+    }
+
+    // Toggle selection
+    this.toggleExpenseSelection(expenseId);
+  }
+
+  toggleSelectAll() {
+    const filteredExpenses = this.getFilteredExpenses();
+    const allFilteredSelected = filteredExpenses.every(e => this.selectedExpenseIds.has(e.id));
+    
+    if (allFilteredSelected) {
+      // Deselect all filtered expenses
+      filteredExpenses.forEach(e => this.selectedExpenseIds.delete(e.id));
+    } else {
+      // Select all filtered expenses across all pages
+      filteredExpenses.forEach(e => this.selectedExpenseIds.add(e.id));
+    }
+  }
+
+  isAllSelected(): boolean {
+    const filteredExpenses = this.getFilteredExpenses();
+    return filteredExpenses.length > 0 && filteredExpenses.every(e => this.selectedExpenseIds.has(e.id));
+  }
+
+  getTotalFilteredCount(): number {
+    return this.getFilteredExpenses().length;
+  }
+
+  getSelectedExpensesTotal(): number {
+    return Array.from(this.selectedExpenseIds)
+      .map(id => this.expenses.find(e => e.id === id))
+      .filter(e => e !== undefined)
+      .reduce((sum, e) => sum + (e?.amount || 0), 0);
+  }
+
+  // Bulk Delete
+  async bulkDeleteExpenses() {
+    if (this.selectedExpenseIds.size === 0) {
+      await this.dialogService.warning('Please select at least one expense to delete.');
+      return;
+    }
+
+    const count = this.selectedExpenseIds.size;
+    const total = this.getSelectedExpensesTotal();
+    const confirmMessage = `Are you sure you want to delete ${count} expense(s) totaling ₹${total.toLocaleString('en-IN')}? This action cannot be undone.`;
+    
+    const confirmed = await this.dialogService.confirm(
+      confirmMessage,
+      'Delete Expenses'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      this.isBulkDeleting = true;
+      const expenseIds = Array.from(this.selectedExpenseIds);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const expenseId of expenseIds) {
+        try {
+          const expense = this.expenses.find(e => e.id === expenseId);
+          if (expense) {
+            // Store expense for undo
+            this.deletedExpensesData.set(expense.id, { ...expense });
+            this.actionHistoryService.addAction('delete', expense);
+            
+            // Mark expense as deleted (show undo on tile)
+            this.deletedExpenseIds.add(expense.id);
+            
+            // Set timeout to finalize delete after 5 seconds
+            const timeout = setTimeout(async () => {
+              await this.finalizeDelete(expense.id);
+            }, 5000);
+            this.expenseUndoTimeouts.set(expense.id, timeout);
+          }
+          
+          await this.expenseService.delete(expenseId);
+          successCount++;
+        } catch (error) {
+          console.error(`Error deleting expense ${expenseId}:`, error);
+          // Clean up if deletion failed
+          this.deletedExpenseIds.delete(expenseId);
+          this.deletedExpensesData.delete(expenseId);
+          if (this.expenseUndoTimeouts.has(expenseId)) {
+            clearTimeout(this.expenseUndoTimeouts.get(expenseId));
+            this.expenseUndoTimeouts.delete(expenseId);
+          }
+          failCount++;
+        }
+      }
+
+      this.selectedExpenseIds.clear();
+      
+      if (failCount === 0) {
+        // Don't show success message for bulk delete - let users see undo buttons
+        // await this.dialogService.success(`Successfully deleted ${successCount} expense(s)!`);
+      } else {
+        await this.dialogService.warning(`Deleted ${successCount} expense(s), but ${failCount} failed.`);
+      }
+
+      // Exit bulk mode if all selected expenses are deleted
+      if (this.selectedExpenseIds.size === 0) {
+        this.bulkSelectionMode = false;
+      }
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      await this.dialogService.error('Error deleting expenses. Please try again.');
+    } finally {
+      this.isBulkDeleting = false;
+    }
   }
 
   // Log detailed information about orphaned expenses
@@ -1259,11 +2070,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       amount,
       percentage: (amount / expenses.reduce((sum, e) => sum + e.amount, 0)) * 100
     }));
-  }
-
-  // Validate if a category exists
-  validateCategoryExists(categoryId: string): boolean {
-    return this.categories.some(cat => cat.id === categoryId);
   }
 
   // Get category by ID with validation

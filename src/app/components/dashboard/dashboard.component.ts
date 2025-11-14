@@ -173,7 +173,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         categoryColor: category?.color || '#666',
         categoryIcon: category?.icon || '📌',
         amount,
-        percentage: (amount / this.totalSpent) * 100
+        percentage: this.totalSpent > 0 ? (amount / this.totalSpent) * 100 : 0
       };
     }).sort((a, b) => b.amount - a.amount);
   }
@@ -770,7 +770,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (topCategory && topCategory.amount > this.monthlyTotal * 0.4) {
       return {
         title: `Reduce ${topCategory.name} spending`,
-        description: `This category represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your expenses`
+        description: this.getFilteredTotal() > 0 ? `This category represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your expenses` : 'This category has no expenses'
       };
     }
     return null;
@@ -968,10 +968,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Category Concentration Warning
     const topCategory = this.getTopSpendingCategory();
-    if (topCategory && (topCategory.amount / this.getFilteredTotal()) > 0.5) {
+    if (topCategory && this.getFilteredTotal() > 0 && (topCategory.amount / this.getFilteredTotal()) > 0.5) {
       insights.push({
         title: 'Category Concentration Alert',
-        description: `${topCategory.name} represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your spending. Consider diversifying.`
+        description: this.getFilteredTotal() > 0 ? `${topCategory.name} represents ${((topCategory.amount / this.getFilteredTotal()) * 100).toFixed(1)}% of your spending. Consider diversifying.` : 'No spending data available'
       });
     }
     
@@ -1213,7 +1213,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Category concentration
     const topCategory = this.getTopSpendingCategory();
-    if (topCategory && (topCategory.amount / this.getFilteredTotal()) > 0.6) {
+    if (topCategory && this.getFilteredTotal() > 0 && (topCategory.amount / this.getFilteredTotal()) > 0.6) {
       recommendations.push({
         title: 'Category Diversification',
         description: `Consider reducing spending in ${topCategory.name} category.`,
@@ -1249,33 +1249,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Quick summary cards data
   getQuickSummaryCards(): { title: string; value: string; change: string; trend: 'up' | 'down' | 'stable'; icon: string }[] {
+    const topCategory = this.getTopSpendingCategory();
+    const filteredTotal = this.getFilteredTotal();
+    const filteredExpenses = this.getFilteredExpenses();
+    
     return [
       {
         title: 'Total Spent',
-        value: `₹${this.getFilteredTotal().toLocaleString()}`,
+        value: `₹${filteredTotal.toLocaleString()}`,
         change: 'Current period',
         trend: 'stable',
         icon: '💰'
       },
       {
         title: 'Expense Count',
-        value: this.getFilteredExpenses().length.toString(),
-        change: `${this.getFilteredExpenses().length} this period`,
+        value: filteredExpenses.length.toString(),
+        change: `${filteredExpenses.length} this period`,
         trend: 'stable',
         icon: '📊'
       },
       {
         title: 'Average Per Expense',
-        value: `₹${(this.getFilteredTotal() / Math.max(this.getFilteredExpenses().length, 1)).toFixed(0)}`,
+        value: `₹${(filteredTotal / Math.max(filteredExpenses.length, 1)).toFixed(0)}`,
         change: 'Per transaction',
         trend: 'stable',
         icon: '📈'
       },
       {
         title: 'Top Category',
-        value: this.getTopSpendingCategory()?.name || 'No Data',
-        change: this.getTopSpendingCategory() && this.getFilteredTotal() > 0 ? 
-          `${((this.getTopSpendingCategory()!.amount / this.getFilteredTotal()) * 100).toFixed(1)}%` : 
+        value: topCategory?.name || 'No Data',
+        change: topCategory && filteredTotal > 0 ? 
+          `${((topCategory.amount / filteredTotal) * 100).toFixed(1)}%` : 
           'No expenses',
         trend: 'stable',
         icon: '🏷️'

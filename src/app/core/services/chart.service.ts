@@ -67,6 +67,13 @@ export class ChartService {
     }
   }
 
+  // Format number in Indian numbering system (lakhs, crores)
+  private formatIndianNumber(value: number): string {
+    // Use toLocaleString with 'en-IN' locale which formats numbers in Indian style
+    // This automatically handles: 1,00,000 (lakh), 1,00,00,000 (crore), etc.
+    return value.toLocaleString('en-IN');
+  }
+
   // Generate trend line data for spending over time
   generateTrendData(expenses: Expense[], months: number = 12): TrendData {
     // Start from July 2025
@@ -206,6 +213,13 @@ export class ChartService {
         tooltip: {
           mode: 'index' as const,
           intersect: false,
+          callbacks: {
+            label: function(context: any) {
+              const label = context.dataset.label || '';
+              const value = context.parsed.y;
+              return `${label}: ₹${value.toFixed(2)}`;
+            }
+          }
         }
       },
       scales: {
@@ -220,9 +234,14 @@ export class ChartService {
           display: true,
           title: {
             display: true,
-            text: 'Amount ($)'
+            text: 'Amount (₹)'
           },
-          beginAtZero: true
+          beginAtZero: true,
+          ticks: {
+            callback: (value: any) => {
+              return this.formatIndianNumber(Number(value));
+            }
+          }
         }
       },
       interaction: {
@@ -251,8 +270,8 @@ export class ChartService {
               const label = context.label || '';
               const value = context.parsed;
               const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(1);
-              return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+              return `${label}: ₹${value.toFixed(2)} (${percentage}%)`;
             }
           }
         }
@@ -268,6 +287,15 @@ export class ChartService {
         legend: {
           display: true,
           position: 'top' as const,
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context: any) {
+              const label = context.dataset.label || '';
+              const value = context.parsed.y;
+              return `${label}: ₹${value.toFixed(2)}`;
+            }
+          }
         }
       },
       scales: {
@@ -282,9 +310,14 @@ export class ChartService {
           display: true,
           title: {
             display: true,
-            text: 'Amount ($)'
+            text: 'Amount (₹)'
           },
-          beginAtZero: true
+          beginAtZero: true,
+          ticks: {
+            callback: (value: any) => {
+              return this.formatIndianNumber(Number(value));
+            }
+          }
         }
       }
     };

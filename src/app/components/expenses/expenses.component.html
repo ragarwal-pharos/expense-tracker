@@ -1,17 +1,37 @@
 <div class="container-fluid px-4 py-3">
   <!-- Page Header -->
   <div class="page-header mb-4">
-    <div class="d-flex align-items-center">
-      <div class="header-icon me-3">
-        <span class="fs-1">💸</span>
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <div class="header-icon me-3">
+          <span class="fs-1">💸</span>
+        </div>
+        <div>
+          <h1 class="page-title mb-1">
+            {{ filterCategory && getCategoryName(filterCategory) ? getCategoryName(filterCategory) + ' Expenses' : 'Expenses' }}
+          </h1>
+          <p class="mb-0">
+            {{ filterCategory && getCategoryName(filterCategory) ? 'Viewing expenses for ' + getCategoryName(filterCategory) : 'Track and manage your daily expenses' }}
+          </p>
+        </div>
       </div>
-      <div>
-        <h1 class="page-title mb-1">
-          {{ filterCategory && getCategoryName(filterCategory) ? getCategoryName(filterCategory) + ' Expenses' : 'Expenses' }}
-        </h1>
-        <p class="mb-0">
-          {{ filterCategory && getCategoryName(filterCategory) ? 'Viewing expenses for ' + getCategoryName(filterCategory) : 'Track and manage your daily expenses' }}
-        </p>
+      <div class="header-actions" *ngIf="!isLoading && getFilteredExpenses().length > 0">
+        <button 
+          class="btn-header-action" 
+          (click)="exportToPDF()" 
+          title="Download PDF"
+          [disabled]="isGeneratingPDF || isPrinting">
+          <span class="btn-icon">📄</span>
+          <span class="btn-text">PDF</span>
+        </button>
+        <button 
+          class="btn-header-action" 
+          (click)="printExpenses()" 
+          title="Print Expenses"
+          [disabled]="isGeneratingPDF || isPrinting">
+          <span class="btn-icon">🖨️</span>
+          <span class="btn-text">Print</span>
+        </button>
       </div>
     </div>
   </div>
@@ -21,6 +41,13 @@
     *ngIf="isLoading" 
     message="Loading expenses..." 
     type="card">
+  </app-loading>
+
+  <!-- PDF Generation Loader -->
+  <app-loading 
+    *ngIf="isGeneratingPDF || isPrinting" 
+    [message]="isGeneratingPDF ? 'Generating PDF...' : 'Preparing print...'"
+    [fullscreen]="true">
   </app-loading>
   
   <!-- Global Search Bar -->
@@ -108,9 +135,11 @@
             <div class="category-select-container">
               <select 
                 class="form-select" 
+                [class.invalid-category]="newExpense.categoryId && !validateCategoryExists(newExpense.categoryId).exists"
                 id="expenseCategory"
                 [(ngModel)]="newExpense.categoryId" 
                 name="categoryId" 
+                (change)="onCategoryChange()"
                 required>
                 <option value="" [selected]="!newExpense.categoryId">🏷️ Select a category</option>
                 <option *ngFor="let cat of categories" [value]="cat.id">
@@ -126,6 +155,30 @@
                 ✕
               </button>
             </div>
+            <!-- Category validation message -->
+            <div *ngIf="newExpense.categoryId && !validateCategoryExists(newExpense.categoryId).exists" class="category-error-message">
+              <span class="error-icon">⚠️</span>
+              <span *ngIf="validateCategoryExists(newExpense.categoryId).wasDeleted">
+                This category was deleted. Please select a different category.
+              </span>
+              <span *ngIf="!validateCategoryExists(newExpense.categoryId).wasDeleted">
+                Invalid category selected. Please choose a valid category.
+              </span>
+            </div>
+            <!-- Category suggestions -->
+            <div *ngIf="showSuggestions && categorySuggestions.length > 0 && !newExpense.categoryId" class="category-suggestions">
+              <div class="suggestions-header">💡 Suggested categories:</div>
+              <div class="suggestions-list">
+                <button 
+                  type="button"
+                  class="suggestion-item"
+                  *ngFor="let suggestion of categorySuggestions"
+                  (click)="selectSuggestedCategory(suggestion)">
+                  <span class="suggestion-icon">{{suggestion.icon}}</span>
+                  <span class="suggestion-name">{{suggestion.name}}</span>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label for="expenseDescription" class="form-label-modern">Description</label>
@@ -135,7 +188,8 @@
               id="expenseDescription"
               placeholder="e.g., Lunch at restaurant, Uber ride, Movie ticket, Groceries, etc."
               [(ngModel)]="newExpense.description" 
-              name="description">
+              name="description"
+              (input)="onDescriptionChange($event)">
           </div>
           <div class="form-group button-group">
             <label class="form-label-modern">&nbsp;</label>
@@ -266,8 +320,22 @@
         </div>
         <div class="d-flex align-items-center gap-3">
           <div class="expenses-summary" *ngIf="isExpensesListExpanded">
-            <div class="total-amount">{{getTotalAmount() | currency:'INR'}}</div>
-            <div class="expenses-count">{{getFilteredExpenses().length}} expenses</div>
+            <div class="total-amount">
+              {{bulkSelectionMode && selectedExpenseIds.size > 0 ? (getSelectedExpensesTotal() | currency:'INR') : (getTotalAmount() | currency:'INR')}}
+            </div>
+            <div class="expenses-count">
+              {{bulkSelectionMode && selectedExpenseIds.size > 0 ? (selectedExpenseIds.size + (selectedExpenseIds.size === 1 ? ' expense' : ' expenses') + ' selected') : (getFilteredExpenses().length + ' expenses')}}
+            </div>
+          </div>
+          <div class="selection-mode-toggle" *ngIf="isExpensesListExpanded">
+            <label class="toggle-switch">
+              <input 
+                type="checkbox" 
+                [checked]="bulkSelectionMode"
+                (change)="onSelectionModeToggle($event)">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{bulkSelectionMode ? 'Selection Mode' : 'Normal Mode'}}</span>
+            </label>
           </div>
           <button class="collapse-toggle-btn" type="button" (click)="toggleExpensesListSection()">
             <span class="collapse-icon" [class.rotated]="!isExpensesListExpanded">▼</span>
@@ -290,30 +358,88 @@
         </app-skeleton>
       </div>
 
+      <!-- Bulk Actions Bar -->
+      <div class="bulk-actions-bar" *ngIf="bulkSelectionMode && isExpensesListExpanded">
+        <div class="bulk-actions-left">
+          <button class="btn-select-all" (click)="toggleSelectAll()" type="button">
+            <span class="btn-icon">{{isAllSelected() ? '☑️' : '☐'}}</span>
+            <span class="btn-text">{{isAllSelected() ? 'Deselect All' : 'Select All'}} ({{getTotalFilteredCount()}})</span>
+          </button>
+          <span class="selection-hint" *ngIf="selectedExpenseIds.size === 0">
+            Select expenses to perform bulk actions
+          </span>
+          <span class="selection-progress" *ngIf="selectedExpenseIds.size > 0 && !isAllSelected()">
+            {{selectedExpenseIds.size}} of {{getTotalFilteredCount()}} selected
+          </span>
+        </div>
+        <div class="bulk-actions-right" *ngIf="selectedExpenseIds.size > 0">
+          <button 
+            class="btn-bulk-action btn-bulk-delete" 
+            (click)="bulkDeleteExpenses()" 
+            type="button"
+            [disabled]="isBulkDeleting">
+            <app-loading 
+              *ngIf="isBulkDeleting" 
+              message="Deleting..." 
+              type="button" 
+              size="small">
+            </app-loading>
+            <span *ngIf="!isBulkDeleting" class="btn-content-vertical">
+              <span class="btn-icon">🗑️</span>
+              <span class="btn-text">Delete</span>
+              <span class="btn-count">({{selectedExpenseIds.size}})</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
       <div class="expenses-list" *ngIf="!isLoading && getFilteredExpenses().length > 0; else noExpenses">
-        <div class="expense-item" *ngFor="let expense of getPaginatedExpenses(); let i = index" 
-             [style.animation-delay]="i * 0.1 + 's'">
+        <div class="expense-item" 
+             *ngFor="let expense of getPaginatedExpenses(); let i = index" 
+             [class.selected]="bulkSelectionMode && selectedExpenseIds.has(expense.id)"
+             [class.selection-mode]="bulkSelectionMode"
+             [class.deleted]="isExpenseDeleted(expense.id)"
+             [style.animation-delay]="i * 0.1 + 's'"
+             (click)="onExpenseTileClick(expense.id, $event)">
+          <!-- Checkbox for bulk selection - only visible in selection mode -->
+          <div class="expense-checkbox" *ngIf="bulkSelectionMode && !isExpenseDeleted(expense.id)">
+            <input 
+              type="checkbox" 
+              [checked]="selectedExpenseIds.has(expense.id)"
+              (change)="toggleExpenseSelection(expense.id)"
+              [id]="'expense-' + expense.id">
+            <label [for]="'expense-' + expense.id"></label>
+          </div>
           <div class="expense-description">{{expense.description || 'No description'}}</div>
           <div class="expense-date">{{expense.date | date:'MMM dd, yyyy'}}</div>
           <div class="expense-right">
             <div class="expense-amount">{{expense.amount | currency:'INR'}}</div>
-            <div class="expense-actions">
-              <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit">
+            <!-- Undo option when deleted -->
+            <div class="expense-undo" *ngIf="isExpenseDeleted(expense.id)">
+              <button class="btn-undo-inline" (click)="undoDelete(expense.id)">
+                <span class="undo-icon-inline">↶</span>
+                <span class="undo-text">Undo</span>
+              </button>
+            </div>
+            <!-- Normal actions when not deleted -->
+            <div class="expense-actions" [class.hidden]="bulkSelectionMode || isExpenseDeleted(expense.id)">
+              <button class="btn-action edit-btn" (click)="editExpense(expense)" title="Edit" [disabled]="isExpenseBeingDeleted(expense.id)">
                 <span class="action-icon">✏️</span>
               </button>
-              <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete" [disabled]="isDeleting">
+              <button class="btn-action delete-btn" (click)="deleteExpense(expense)" title="Delete" [disabled]="isExpenseBeingDeleted(expense.id)">
                 <app-loading 
-                  *ngIf="isDeleting" 
+                  *ngIf="isExpenseBeingDeleted(expense.id)" 
                   message="Deleting..." 
                   type="button" 
                   size="small">
                 </app-loading>
-                <span class="action-icon" *ngIf="!isDeleting">🗑️</span>
+                <span class="action-icon" *ngIf="!isExpenseBeingDeleted(expense.id)">🗑️</span>
               </button>
             </div>
           </div>
         </div>
       </div>
+
       <ng-template #noExpenses>
         <div class="no-expenses">
           <div class="no-expenses-icon">📋</div>

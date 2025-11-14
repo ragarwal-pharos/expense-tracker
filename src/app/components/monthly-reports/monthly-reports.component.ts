@@ -583,7 +583,7 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     csv += `Report Period: ${report.monthName}\n`;
     csv += `Total Amount Spent: ₹${report.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
     csv += `Total Number of Expenses: ${report.expenseCount.toLocaleString('en-IN')}\n`;
-    csv += `Average Amount per Expense: ₹${(report.totalAmount / report.expenseCount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    csv += `Average Amount per Expense: ₹${(report.expenseCount > 0 ? (report.totalAmount / report.expenseCount) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
     csv += `Number of Categories Used: ${report.categoryBreakdown.length}\n`;
     csv += '\n';
     

@@ -489,24 +489,7 @@
                 <span class="month-count">{{ month.expenseCount }} transactions</span>
                 <span class="month-percentage">{{ ((month.amount / analysis.totalAmount) * 100) | number:'1.1-1' }}%</span>
               </div>
-              <div class="month-click-hint">
-                <span class="click-icon">👆</span>
-                <span class="click-text">Click to view expenses</span>
-              </div>
             </div>
-          </div>
-        </div>
-        
-        <!-- Sparkline Chart -->
-        <div class="sparkline-section" *ngIf="showCharts">
-          <h4>📈 30-Day Trend</h4>
-          <div class="sparkline-container">
-            <canvas baseChart
-                    [data]="getCategorySparklineData(analysis.category.id)"
-                    [options]="getSparklineOptions()"
-                    type="line"
-                    height="60">
-            </canvas>
           </div>
         </div>
       </div>

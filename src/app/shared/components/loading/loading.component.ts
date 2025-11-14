@@ -32,15 +32,19 @@ import { CommonModule } from '@angular/common';
     }
 
     .loading-container.fullscreen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.9);
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(5px);
-      z-index: 9999;
+      z-index: 99999 !important;
       min-height: 100vh;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     .loading-container.inline {
@@ -67,6 +71,8 @@ import { CommonModule } from '@angular/common';
     .loading-spinner {
       text-align: center;
       color: #666;
+      position: relative;
+      z-index: 100000;
     }
 
     .spinner {

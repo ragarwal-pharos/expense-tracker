@@ -298,7 +298,7 @@
                   <div class="stat-item">
                     <span class="stat-icon">💰</span>
                     <span class="stat-label">Average</span>
-                    <span class="stat-value">₹{{ (categoryTotals[category?.id || ''] / getExpensesByCategory(category?.id || '').length).toFixed(0) }}</span>
+                    <span class="stat-value">₹{{ (getExpensesByCategory(category?.id || '').length > 0 ? (categoryTotals[category?.id || ''] / getExpensesByCategory(category?.id || '').length) : 0).toFixed(0) }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-icon">📈</span>
