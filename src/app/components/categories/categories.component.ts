@@ -28,9 +28,9 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   // Enhanced filtering and search
   searchTerm: string = '';
-  filterByUsage: 'all' | 'used' | 'unused' = 'all';
-  sortBy: 'name' | 'usage' | 'color' = 'name';
-  sortOrder: 'asc' | 'desc' = 'asc';
+  filterByUsage: 'all' | 'used' | 'unused' = 'used';
+  sortBy: 'name' | 'usage' | 'amount' = 'usage';
+  sortOrder: 'asc' | 'desc' = 'desc';
   showAdvancedOptions: boolean = false;
 
   // Validation properties
@@ -301,9 +301,11 @@ export class CategoriesComponent implements OnInit, OnDestroy {
           aValue = usageStats[a.id] || 0;
           bValue = usageStats[b.id] || 0;
           break;
-        case 'color':
-          aValue = a.color || '';
-          bValue = b.color || '';
+        case 'amount':
+          const categoryExpensesA = this.getExpensesForCategory(a.id);
+          const categoryExpensesB = this.getExpensesForCategory(b.id);
+          aValue = categoryExpensesA.reduce((sum, expense) => sum + expense.amount, 0);
+          bValue = categoryExpensesB.reduce((sum, expense) => sum + expense.amount, 0);
           break;
         default:
           aValue = a.name.toLowerCase();
@@ -522,6 +524,9 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       categoryId: expense.categoryId
     }));
 
+    // Calculate total expense amount
+    const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
     // Create title with expense count
     const titleWithCount = `${category.name} (${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'})`;
 
@@ -531,7 +536,8 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       titleWithCount,
       category.icon,
       category.color,
-      expenseCount === 0 ? 'This category has no expenses yet.' : undefined
+      expenseCount === 0 ? 'This category has no expenses yet.' : undefined,
+      totalAmount
     );
   }
 

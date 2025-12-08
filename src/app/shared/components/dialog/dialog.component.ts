@@ -24,9 +24,14 @@ import { Subscription } from 'rxjs';
             </div>
             <h3 class="dialog-title">{{ config.title }}</h3>
           </div>
-          <button class="close-btn" (click)="onCancel()" *ngIf="config.type === 'confirm' && config.cancelText">
-            <span>✕</span>
-          </button>
+          <div class="header-right">
+            <span class="total-amount" *ngIf="config.type === 'list' && config.totalAmount !== undefined">
+              {{ config.totalAmount | currency:'INR' }}
+            </span>
+            <button class="close-btn" (click)="onCancel()" *ngIf="config.type === 'confirm' && config.cancelText">
+              <span>✕</span>
+            </button>
+          </div>
         </div>
 
         <!-- Dialog Body -->
@@ -239,6 +244,13 @@ import { Subscription } from 'rxjs';
       display: flex;
       align-items: center;
       gap: 12px;
+      flex: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .header-icon {
@@ -250,6 +262,15 @@ import { Subscription } from 'rxjs';
       font-size: 18px;
       font-weight: 600;
       color: #1f2937;
+    }
+
+    .total-amount {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      padding: 4px 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
     }
 
     .close-btn {

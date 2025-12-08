@@ -33,6 +33,7 @@ export interface DialogConfig {
   categoryName?: string;
   categoryIcon?: string;
   categoryColor?: string;
+  totalAmount?: number;
 }
 
 export interface DialogResult {
@@ -267,7 +268,8 @@ export class DialogService {
     categoryName: string,
     categoryIcon?: string,
     categoryColor?: string,
-    message?: string
+    message?: string,
+    totalAmount?: number
   ): Promise<void> {
     return new Promise((resolve) => {
       this.dialogSubject.next({
@@ -278,7 +280,8 @@ export class DialogService {
         expenses,
         categoryName,
         categoryIcon,
-        categoryColor
+        categoryColor,
+        totalAmount
       });
 
       const subscription = this.result$.subscribe(result => {
