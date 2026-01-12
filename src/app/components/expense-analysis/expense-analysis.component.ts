@@ -774,9 +774,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       return { trend: 'stable', percentage: 0 };
     }
     
-    const sortedMonths = category.monthlyBreakdown.sort((a, b) => {
+    // Create a copy before sorting to avoid mutating the original array
+    // Sort in ascending order (oldest first) for trend calculation
+    const sortedMonths = [...category.monthlyBreakdown].sort((a, b) => {
+      // Sort by year ascending (oldest first)
       if (a.year !== b.year) return a.year - b.year;
-      return parseInt(a.month) - parseInt(b.month);
+      // Sort by month ascending (oldest month first) when years are equal
+      return (a.monthNumber ?? 0) - (b.monthNumber ?? 0);
     });
     
     const recent = sortedMonths[sortedMonths.length - 1];
