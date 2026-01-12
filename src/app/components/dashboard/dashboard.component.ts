@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -8,7 +8,7 @@ import { FirebaseService } from '../../core/services/firebase.service';
 import { FilterStateService } from '../../core/services/filter-state.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
 
@@ -49,7 +49,8 @@ interface Insight {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, LoadingComponent],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   expenses: Expense[] = [];
@@ -91,6 +92,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isDeletingExpense: boolean = false;
   
   private subscription: Subscription = new Subscription();
+  private categoryMap: Map<string, Category> = new Map();
+  private calculationCache: { expenses: Expense[], categories: Category[], totals?: any, breakdown?: any[] } | null = null;
 
   constructor(
     private expenseService: ExpenseService,
@@ -98,7 +101,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private firebaseService: FirebaseService,
     private filterStateService: FilterStateService,
     private dialogService: DialogService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -111,22 +115,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.availableYears.push(year.toString());
     }
     
-    // Subscribe to Firebase observables for real-time updates
+    // Subscribe to Firebase observables for real-time updates using combineLatest for efficiency
     this.subscription.add(
-      this.firebaseService.expenses$.subscribe(expenses => {
+      combineLatest([
+        this.firebaseService.expenses$,
+        this.firebaseService.categories$
+      ]).subscribe(([expenses, categories]) => {
         this.expenses = expenses;
-        this.calculateTotals();
-        this.calculateCategoryBreakdown();
-        this.getRecentExpenses();
-        this.calculateWeeklyData();
-        console.log(`Received ${expenses.length} expenses from Firebase`);
-      })
-    );
-
-    this.subscription.add(
-      this.firebaseService.categories$.subscribe(categories => {
         this.categories = categories;
-        console.log(`Received ${categories.length} categories from Firebase`);
+        
+        // Build category map for O(1) lookups
+        this.categoryMap.clear();
+        this.categories.forEach(cat => this.categoryMap.set(cat.id, cat));
+        
+        // Only recalculate if data changed
+        const cacheKey = `${expenses.length}-${categories.length}`;
+        if (!this.calculationCache || 
+            this.calculationCache.expenses.length !== expenses.length ||
+            this.calculationCache.categories.length !== categories.length) {
+          this.calculateTotals();
+          this.calculateCategoryBreakdown();
+          this.getRecentExpenses();
+          this.calculateWeeklyData();
+          this.calculationCache = { expenses, categories };
+        }
+        
+        this.cdr.markForCheck(); // Trigger change detection for OnPush
       })
     );
 
@@ -134,6 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.firebaseService.loading$.subscribe(loading => {
         this.isLoading = loading;
+        this.cdr.markForCheck();
       })
     );
 
@@ -230,17 +245,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.name || 'Unknown';
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.color || '#666';
   }
 
   getCategoryIcon(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.icon || '📌';
   }
 

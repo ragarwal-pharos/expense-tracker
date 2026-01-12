@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -10,7 +10,7 @@ import { DialogService } from '../../core/services/dialog.service';
 import { ActionHistoryService } from '../../core/services/action-history.service';
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
 import jsPDF from 'jspdf';
@@ -21,7 +21,8 @@ import html2canvas from 'html2canvas';
   standalone: true,
   imports: [CommonModule, FormsModule, LoadingComponent, SkeletonComponent],
   templateUrl: './expenses.component.html',
-  styleUrls: ['./expenses.component.scss']
+  styleUrls: ['./expenses.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ExpensesComponent implements OnInit, OnDestroy {
   expenses: Expense[] = [];
@@ -98,6 +99,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   isBulkDeleting: boolean = false;
 
   private subscription: Subscription = new Subscription();
+  private categoryMap: Map<string, Category> = new Map();
 
   // Action history and undo
   lastDeletedExpense: Expense | null = null;
@@ -114,7 +116,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     private dialogService: DialogService,
     private actionHistoryService: ActionHistoryService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -149,9 +152,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Subscribe to Firebase observables for real-time updates
+    // Subscribe to Firebase observables for real-time updates using combineLatest for efficiency
     this.subscription.add(
-      this.firebaseService.expenses$.subscribe(expenses => {
+      combineLatest([
+        this.firebaseService.expenses$,
+        this.firebaseService.categories$
+      ]).subscribe(([expenses, categories]) => {
         // Merge deleted expenses back into the list temporarily for undo functionality
         const deletedExpensesToKeep: Expense[] = [];
         this.deletedExpenseIds.forEach(expenseId => {
@@ -163,7 +169,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         
         // Combine Firebase expenses with temporarily deleted expenses
         this.expenses = [...expenses, ...deletedExpensesToKeep];
-        console.log(`Received ${expenses.length} expenses from Firebase, ${deletedExpensesToKeep.length} deleted expenses kept for undo`);
+        
+        // Build category map for O(1) lookups
+        this.categories = categories;
+        this.categoryMap.clear();
+        this.categories.forEach(cat => this.categoryMap.set(cat.id, cat));
         
         // Log orphaned expenses details
         this.logOrphanedExpensesDetails();
@@ -172,13 +182,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         if (this.isEditMode && this.editingExpenseId) {
           this.loadExpenseForEditing();
         }
-      })
-    );
-
-    this.subscription.add(
-      this.firebaseService.categories$.subscribe(categories => {
-        this.categories = categories;
-        console.log(`Received ${categories.length} categories from Firebase`);
+        
+        this.cdr.markForCheck(); // Trigger change detection for OnPush
       })
     );
 
@@ -186,6 +191,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.firebaseService.loading$.subscribe(loading => {
         this.isLoading = loading;
+        this.cdr.markForCheck();
       })
     );
 
@@ -1427,17 +1433,17 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(id: string): string {
-    const category = this.categories.find(c => c.id === id);
+    const category = this.categoryMap.get(id); // Use Map for O(1) lookup
     return category?.name || 'Unknown';
   }
 
   getCategoryColor(id: string): string {
-    const category = this.categories.find(c => c.id === id);
+    const category = this.categoryMap.get(id); // Use Map for O(1) lookup
     return category?.color || '#999';
   }
 
   getCategoryIcon(id: string): string {
-    const category = this.categories.find(c => c.id === id);
+    const category = this.categoryMap.get(id); // Use Map for O(1) lookup
     return category?.icon || '📌';
   }
 

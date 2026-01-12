@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseCategoryMapperService, CategoryMapping } from '../../core/services/expense-category-mapper.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { Category } from '../../core/models/category.model';
 import { Expense } from '../../core/models/expense.model';
+import { Subscription, combineLatest } from 'rxjs';
 
 interface OrphanedCategorySummary {
   categoryId: string;
@@ -17,23 +19,48 @@ interface OrphanedCategorySummary {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './expense-category-mapper.component.html',
-  styleUrls: ['./expense-category-mapper.component.scss']
+  styleUrls: ['./expense-category-mapper.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ExpenseCategoryMapperComponent implements OnInit {
+export class ExpenseCategoryMapperComponent implements OnInit, OnDestroy {
   orphanedCategories: OrphanedCategorySummary[] = [];
   availableCategories: Category[] = [];
   mappings: CategoryMapping[] = [];
   isLoading = true;
   isMapping = false;
   mappingResults: any = null;
+  private subscription: Subscription = new Subscription();
 
   constructor(
-    private mapperService: ExpenseCategoryMapperService
+    private mapperService: ExpenseCategoryMapperService,
+    private firebaseService: FirebaseService,
+    private cdr: ChangeDetectorRef
   ) {}
 
-  async ngOnInit() {
-    await this.loadData();
-    this.isLoading = false;
+  ngOnInit() {
+    // Subscribe to Firebase observables for real-time updates
+    this.subscription.add(
+      combineLatest([
+        this.firebaseService.expenses$,
+        this.firebaseService.categories$
+      ]).subscribe(([expenses, categories]) => {
+        // Reload orphaned expenses summary when data changes
+        this.loadData();
+        this.cdr.markForCheck(); // Trigger change detection for OnPush
+      })
+    );
+
+    // Subscribe to loading state
+    this.subscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+        this.cdr.markForCheck();
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   async loadData() {
@@ -44,8 +71,13 @@ export class ExpenseCategoryMapperComponent implements OnInit {
       
       console.log('📊 Orphaned expenses summary:', summary);
       console.log('🏷️ Available categories:', this.availableCategories);
+      
+      this.isLoading = false;
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error loading data:', error);
+      this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 

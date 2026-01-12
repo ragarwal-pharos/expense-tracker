@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../core/services/category.service';
@@ -7,14 +7,15 @@ import { FirebaseService } from '../../core/services/firebase.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { Category } from '../../core/models/category.model';
 import { Expense } from '../../core/models/expense.model';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 
 @Component({
   selector: 'app-categories',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './categories.component.html',
-  styleUrls: ['./categories.component.scss']
+  styleUrls: ['./categories.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoriesComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
@@ -55,28 +56,34 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     private categoryService: CategoryService,
     private expenseService: ExpenseService,
     private firebaseService: FirebaseService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    // Subscribe to Firebase observables for real-time updates
+    // Subscribe to Firebase observables for real-time updates using combineLatest for efficiency
     this.subscription.add(
-      this.firebaseService.categories$.subscribe(categories => {
+      combineLatest([
+        this.firebaseService.categories$,
+        this.firebaseService.expenses$
+      ]).subscribe(([categories, expenses]) => {
         this.categories = categories;
-        this.calculateAnalytics();
-        console.log(`Received ${categories.length} categories from Firebase`);
-      })
-    );
-
-    this.subscription.add(
-      this.firebaseService.expenses$.subscribe(expenses => {
         this.expenses = expenses;
         this.calculateAnalytics();
-        console.log(`Received ${expenses.length} expenses from Firebase`);
+        this.cdr.markForCheck(); // Trigger change detection for OnPush
       })
     );
 
-    this.loadData();
+    // Subscribe to loading state
+    this.subscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+        this.cdr.markForCheck();
+      })
+    );
+
+    // Firebase observables will automatically load data when user is authenticated
+    // No need for manual loadData() call as it creates redundant API requests
   }
 
   ngOnDestroy() {

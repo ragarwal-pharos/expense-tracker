@@ -4,14 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, registerables } from 'chart.js';
-import { Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Subject, Subscription, combineLatest } from 'rxjs';
+import { debounceTime, take } from 'rxjs/operators';
 import { isDevMode } from '@angular/core';
 
 // Register Chart.js components
 Chart.register(...registerables);
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ChartService, TrendData, PieData, BarData } from '../../core/services/chart.service';
 import { ChartConfigService } from '../../core/services/chart-config.service';
@@ -95,10 +96,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   private filterLabelCache: string = '';
   private filterChangeSubject = new Subject<void>();
   private filterChangeSubscription: any;
+  private dataSubscription: Subscription = new Subscription();
+  private dataLoaded = false;
   
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
+    private firebaseService: FirebaseService,
     private dialogService: DialogService,
     private chartService: ChartService,
     private chartConfigService: ChartConfigService,
@@ -112,12 +116,10 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     });
   }
 
-  async ngOnInit() {
-    await this.loadData();
-    this.initializeFilters();
-    this.performAnalysis();
-    this.isLoading = false;
-    this.cdr.markForCheck(); // Trigger change detection for OnPush
+  ngOnInit() {
+    // Use Firebase observables for faster loading and real-time updates
+    // This uses already-loaded data if available and gets real-time updates
+    this.loadDataFromObservables();
   }
 
   ngOnDestroy() {
@@ -125,6 +127,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     if (this.filterChangeSubscription) {
       this.filterChangeSubscription.unsubscribe();
     }
+    this.dataSubscription.unsubscribe();
     this.filterChangeSubject.complete();
     // Clear caches
     this.cachedFilteredExpenses = null;
@@ -145,6 +148,62 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Load data using Firebase observables for faster loading
+  // This uses already-loaded data if available and provides real-time updates
+  loadDataFromObservables() {
+    // Subscribe to both expenses and categories observables
+    // combineLatest will emit as soon as both have values (even if already loaded)
+    this.dataSubscription.add(
+      combineLatest([
+        this.firebaseService.expenses$,
+        this.firebaseService.categories$
+      ]).subscribe(([expenses, categories]) => {
+        // Update data as soon as it arrives
+        this.expenses = expenses;
+        this.categories = categories;
+        
+        // Build category map for O(1) lookups
+        this.categoryMap.clear();
+        this.categories.forEach(cat => this.categoryMap.set(cat.id, cat));
+        
+        // Only initialize filters and perform analysis on first load
+        if (!this.dataLoaded) {
+          this.initializeFilters();
+          this.dataLoaded = true;
+          
+          // Log detailed information about orphaned expenses (only in dev mode, first time)
+          if (isDevMode()) {
+            this.logOrphanedExpensesDetails();
+          }
+        }
+        
+        // Perform analysis whenever data changes
+        this.performAnalysis();
+        
+        // Invalidate cache when data changes
+        this.invalidateCache();
+        
+        // Update loading state
+        if (this.isLoading) {
+          this.isLoading = false;
+          this.cdr.markForCheck(); // Trigger change detection for OnPush
+        }
+      })
+    );
+    
+    // Also subscribe to loading state
+    this.dataSubscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        // Only set loading to true if we haven't loaded data yet
+        if (!this.dataLoaded) {
+          this.isLoading = loading;
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+  
+  // Legacy async method kept for backward compatibility (not used anymore)
   async loadData() {
     try {
       this.expenses = await this.expenseService.getAll();

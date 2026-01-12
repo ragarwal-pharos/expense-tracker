@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { CategoryService } from '../../core/services/category.service';
+import { FirebaseService } from '../../core/services/firebase.service';
 import { DialogService } from '../../core/services/dialog.service';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { Expense } from '../../core/models/expense.model';
 import { Category } from '../../core/models/category.model';
 
@@ -13,7 +14,8 @@ import { Category } from '../../core/models/category.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './monthly-reports.component.html',
-  styleUrls: ['./monthly-reports.component.scss']
+  styleUrls: ['./monthly-reports.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MonthlyReportsComponent implements OnInit, OnDestroy {
   expenses: Expense[] = [];
@@ -53,38 +55,50 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
 
   // Loading states
   isLoading: boolean = true;
-
+  private subscription: Subscription = new Subscription();
+  private categoryMap: Map<string, Category> = new Map();
 
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
-    private dialogService: DialogService
+    private firebaseService: FirebaseService,
+    private dialogService: DialogService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    this.loadData();
+    // Subscribe to Firebase observables for real-time updates using combineLatest for efficiency
+    this.subscription.add(
+      combineLatest([
+        this.firebaseService.expenses$,
+        this.firebaseService.categories$
+      ]).subscribe(([expenses, categories]) => {
+        this.expenses = expenses;
+        this.categories = categories;
+        
+        // Build category map for O(1) lookups
+        this.categoryMap.clear();
+        this.categories.forEach(cat => this.categoryMap.set(cat.id, cat));
+        
+        // Generate monthly reports after loading data
+        this.generateMonthlyReports();
+        this.calculateAnalytics();
+        
+        this.cdr.markForCheck(); // Trigger change detection for OnPush
+      })
+    );
+
+    // Subscribe to loading state
+    this.subscription.add(
+      this.firebaseService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+        this.cdr.markForCheck();
+      })
+    );
   }
 
   ngOnDestroy() {
-    // Component cleanup if needed
-  }
-
-  async loadData() {
-    try {
-      this.isLoading = true;
-      // Optimize: Use cached data if available, only reload if empty
-      this.expenses = await this.expenseService.getAll();
-      this.categories = await this.categoryService.getAll();
-      
-      // Generate monthly reports after loading data
-      this.generateMonthlyReports();
-      this.calculateAnalytics();
-      
-    } catch (error) {
-      console.error('Error loading reports:', error);
-    } finally {
-      this.isLoading = false;
-    }
+    this.subscription.unsubscribe();
   }
 
   generateMonthlyReports() {
@@ -937,17 +951,17 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category ? category.name : 'Unknown';
   }
 
   getCategoryIcon(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category && category.icon ? category.icon : '📌';
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category && category.color ? category.color : '#6c757d';
   }
 
