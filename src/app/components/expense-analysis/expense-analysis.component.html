@@ -510,7 +510,7 @@
     </div>
     
     <div class="top-categories-grid">
-      <div class="top-category-card" *ngFor="let category of getTopCategories(5); let i = index">
+      <div class="top-category-card" *ngFor="let category of topCategoriesWithTrends; let i = index">
         <div class="rank-badge">{{ i + 1 }}</div>
         <div class="category-icon" [style.background-color]="category.category.color || '#999'">
           {{ category.category.icon || '📌' }}
@@ -520,12 +520,12 @@
           <div class="category-amount">₹{{ category.totalAmount | number }}</div>
           <div class="category-percentage">{{ category.percentage | number:'1.1-1' }}%</div>
         </div>
-        <div class="category-trend" *ngIf="getCategoryTrend(category.category.id).trend !== 'stable'">
-          <span class="trend-icon" [class]="'trend-' + getCategoryTrend(category.category.id).trend">
-            {{ getCategoryTrend(category.category.id).trend === 'up' ? '📈' : 
-               getCategoryTrend(category.category.id).trend === 'down' ? '📉' : '🆕' }}
+        <div class="category-trend" *ngIf="category.trend.trend !== 'stable'">
+          <span class="trend-icon" [class]="'trend-' + category.trend.trend">
+            {{ category.trend.trend === 'up' ? '📈' : 
+               category.trend.trend === 'down' ? '📉' : '🆕' }}
           </span>
-          <span class="trend-text">{{ getCategoryTrend(category.category.id).trend }}</span>
+          <span class="trend-text">{{ category.trend.trend }}</span>
         </div>
       </div>
     </div>

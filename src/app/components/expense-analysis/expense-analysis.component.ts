@@ -1,9 +1,12 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, registerables } from 'chart.js';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { isDevMode } from '@angular/core';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -40,7 +43,8 @@ interface MonthlyData {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, LoadingComponent, BaseChartDirective],
   templateUrl: './expense-analysis.component.html',
-  styleUrls: ['./expense-analysis.component.scss']
+  styleUrls: ['./expense-analysis.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   expenses: Expense[] = [];
@@ -82,24 +86,51 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   sortBy: 'percentage' | 'transactionCount' | 'average' | 'name' = 'percentage';
   sortOrder: 'asc' | 'desc' = 'desc';
   
+  // Performance optimization: Cached values
+  private cachedFilteredExpenses: Expense[] | null = null;
+  private filterCacheKey: string = '';
+  private categoryMap: Map<string, Category> = new Map();
+  private categoryTrendCache: Map<string, { trend: string; percentage: number }> = new Map();
+  private categoryExpenseCountCache: Map<string, number> = new Map();
+  private filterLabelCache: string = '';
+  private filterChangeSubject = new Subject<void>();
+  private filterChangeSubscription: any;
   
   constructor(
     private expenseService: ExpenseService,
     private categoryService: CategoryService,
     private dialogService: DialogService,
     private chartService: ChartService,
-    private chartConfigService: ChartConfigService
-  ) {}
+    private chartConfigService: ChartConfigService,
+    private cdr: ChangeDetectorRef
+  ) {
+    // Debounce filter changes to avoid excessive recalculations
+    this.filterChangeSubscription = this.filterChangeSubject.pipe(
+      debounceTime(300)
+    ).subscribe(() => {
+      this.onFilterChangeDebounced();
+    });
+  }
 
   async ngOnInit() {
     await this.loadData();
     this.initializeFilters();
     this.performAnalysis();
     this.isLoading = false;
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
   }
 
   ngOnDestroy() {
-    // Cleanup if needed
+    // Cleanup subscriptions
+    if (this.filterChangeSubscription) {
+      this.filterChangeSubscription.unsubscribe();
+    }
+    this.filterChangeSubject.complete();
+    // Clear caches
+    this.cachedFilteredExpenses = null;
+    this.categoryMap.clear();
+    this.categoryTrendCache.clear();
+    this.categoryExpenseCountCache.clear();
   }
 
   @HostListener('document:click', ['$event'])
@@ -119,11 +150,32 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       this.expenses = await this.expenseService.getAll();
       this.categories = await this.categoryService.getAll();
       
-      // Log detailed information about orphaned expenses
-      this.logOrphanedExpensesDetails();
+      // Build category map for O(1) lookups
+      this.categoryMap.clear();
+      this.categories.forEach(cat => this.categoryMap.set(cat.id, cat));
+      
+      // Log detailed information about orphaned expenses (only in dev mode)
+      if (isDevMode()) {
+        this.logOrphanedExpensesDetails();
+      }
+      
+      // Invalidate cache when data changes
+      this.invalidateCache();
     } catch (error) {
       console.error('Error loading data:', error);
     }
+  }
+  
+  private invalidateCache(): void {
+    this.cachedFilteredExpenses = null;
+    this.filterCacheKey = '';
+    this.categoryTrendCache.clear();
+    this.categoryExpenseCountCache.clear();
+    this.filterLabelCache = '';
+  }
+  
+  private getFilterCacheKey(): string {
+    return `${this.selectedStartDate}|${this.selectedEndDate}|${this.selectedCategories.join(',')}|${this.searchQuery}|${this.minAmount}|${this.maxAmount}`;
   }
 
   initializeFilters() {
@@ -136,7 +188,15 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   getFilteredExpenses(): Expense[] {
-    return this.expenses.filter(expense => {
+    const cacheKey = this.getFilterCacheKey();
+    
+    // Return cached result if filters haven't changed
+    if (this.cachedFilteredExpenses !== null && this.filterCacheKey === cacheKey) {
+      return this.cachedFilteredExpenses;
+    }
+    
+    // Perform filtering
+    const filtered = this.expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       const expenseDateString = expenseDate.toISOString().split('T')[0];
       
@@ -160,6 +220,12 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       
       return startDateMatch && endDateMatch && categoryMatch && searchMatch && minAmountMatch && maxAmountMatch;
     });
+    
+    // Cache the result
+    this.cachedFilteredExpenses = filtered;
+    this.filterCacheKey = cacheKey;
+    
+    return filtered;
   }
 
   performAnalysis() {
@@ -179,9 +245,9 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       categoryMap.get(expense.categoryId)!.push(expense);
     });
     
-    // Create category analysis
+    // Create category analysis - use cached category map for O(1) lookup
     this.categoryAnalysis = Array.from(categoryMap.entries()).map(([categoryId, expenses]) => {
-      const category = this.categories.find(c => c.id === categoryId);
+      const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
       const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
       const percentage = this.totalExpenses > 0 ? (totalAmount / this.totalExpenses) * 100 : 0;
       const averageAmount = expenses.length > 0 ? totalAmount / expenses.length : 0;
@@ -207,8 +273,18 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       };
     });
     
+    // Clear trend cache when analysis changes
+    this.categoryTrendCache.clear();
+    this.categoryExpenseCountCache.clear();
+    
     // Apply sorting
     this.applySorting();
+    
+    // Update pre-computed top categories with trends
+    this.updateTopCategoriesWithTrends();
+    
+    // Trigger change detection manually for OnPush
+    this.cdr.markForCheck();
   }
 
   calculateMonthlyBreakdown(expenses: Expense[]): MonthlyData[] {
@@ -277,23 +353,36 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       // Apply sort order
       return this.sortOrder === 'asc' ? comparison : -comparison;
     });
+    
+    // Update pre-computed top categories with trends after sorting
+    this.updateTopCategoriesWithTrends();
   }
 
   onSortChange() {
     this.applySorting();
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
   }
 
   toggleSortOrder() {
     this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
     this.applySorting();
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
   }
 
   onFilterChange() {
+    // Invalidate cache when filters change
+    this.invalidateCache();
+    // Use debounced version for better performance
+    this.filterChangeSubject.next();
+  }
+  
+  private onFilterChangeDebounced() {
     this.updateUsedCategories();
     this.performAnalysis();
     if (this.showCharts) {
       this.generateChartData();
     }
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
   }
 
   // Helper method to format dates for input fields (timezone-safe)
@@ -351,7 +440,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         break;
     }
     
-    this.onFilterChange();
+    // Apply immediately for date presets (no debounce)
+    this.invalidateCache();
+    this.updateUsedCategories();
+    this.performAnalysis();
+    if (this.showCharts) {
+      this.generateChartData();
+    }
   }
 
   // Clear all filters
@@ -370,7 +465,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   // Clear search text
   clearSearch() {
     this.searchQuery = '';
-    this.onFilterChange();
+    // Apply immediately when clearing search
+    this.invalidateCache();
+    this.updateUsedCategories();
+    this.performAnalysis();
+    if (this.showCharts) {
+      this.generateChartData();
+    }
   }
 
   // Generate chart data
@@ -553,21 +654,26 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.color || '#999';
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.name || 'Unknown Category';
   }
 
   getCategoryIcon(categoryId: string): string {
-    const category = this.categories.find(c => c.id === categoryId);
+    const category = this.categoryMap.get(categoryId); // Use Map for O(1) lookup
     return category?.icon || '❓';
   }
 
   getCategoryExpenseCount(categoryId: string): number {
+    // Check cache first
+    if (this.categoryExpenseCountCache.has(categoryId)) {
+      return this.categoryExpenseCountCache.get(categoryId)!;
+    }
+    
     // Get expenses filtered by date range only (not by category)
     const dateFilteredExpenses = this.expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
@@ -579,7 +685,9 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
       return startDateMatch && endDateMatch;
     });
     
-    return dateFilteredExpenses.filter(expense => expense.categoryId === categoryId).length;
+    const count = dateFilteredExpenses.filter(expense => expense.categoryId === categoryId).length;
+    this.categoryExpenseCountCache.set(categoryId, count);
+    return count;
   }
 
   trackByCategoryId(index: number, category: Category): string {
@@ -588,8 +696,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
 
   // Get categories that have expenses (from all expenses, not filtered)
   getCategoriesWithExpenses(): Category[] {
-    const categoryIdsWithExpenses = [...new Set(this.expenses.map(expense => expense.categoryId))];
-    return this.categories.filter(category => categoryIdsWithExpenses.includes(category.id));
+    const categoryIdsWithExpenses = new Set(this.expenses.map(expense => expense.categoryId));
+    return this.categories.filter(category => categoryIdsWithExpenses.has(category.id));
   }
 
   // Update available categories to show only those with expenses
@@ -600,8 +708,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   // Get only categories that have expenses in the current filtered data
   getUsedCategories(): Category[] {
     const filteredExpenses = this.getFilteredExpenses();
-    const usedCategoryIds = [...new Set(filteredExpenses.map(expense => expense.categoryId))];
-    return this.categories.filter(category => usedCategoryIds.includes(category.id));
+    const usedCategoryIds = new Set(filteredExpenses.map(expense => expense.categoryId));
+    return this.categories.filter(category => usedCategoryIds.has(category.id));
   }
 
   // Update used categories when filters change
@@ -696,6 +804,13 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
 
 
   getFilterLabel(): string {
+    // Return cached value if dates haven't changed
+    const dateKey = `${this.selectedStartDate}|${this.selectedEndDate}`;
+    if (this.filterLabelCache && this.filterLabelCache.startsWith(dateKey)) {
+      return this.filterLabelCache.split('|')[1];
+    }
+    
+    let result: string;
     if (this.selectedStartDate && this.selectedEndDate) {
       const startDate = new Date(this.selectedStartDate);
       const endDate = new Date(this.selectedEndDate);
@@ -711,7 +826,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         year: 'numeric' 
       });
       
-      return `${startFormatted} to ${endFormatted}`;
+      result = `${startFormatted} to ${endFormatted}`;
     } else if (this.selectedStartDate) {
       const startDate = new Date(this.selectedStartDate);
       const startFormatted = startDate.toLocaleDateString('en-US', { 
@@ -719,7 +834,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         day: 'numeric', 
         year: 'numeric' 
       });
-      return `From ${startFormatted}`;
+      result = `From ${startFormatted}`;
     } else if (this.selectedEndDate) {
       const endDate = new Date(this.selectedEndDate);
       const endFormatted = endDate.toLocaleDateString('en-US', { 
@@ -727,9 +842,14 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
         day: 'numeric', 
         year: 'numeric' 
       });
-      return `Until ${endFormatted}`;
+      result = `Until ${endFormatted}`;
+    } else {
+      result = 'All time';
     }
-    return 'All time';
+    
+    // Cache the result with the date key
+    this.filterLabelCache = `${dateKey}|${result}`;
+    return result;
   }
 
   exportAnalysis() {
@@ -767,11 +887,28 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
   getTopCategories(limit: number = 5): CategoryAnalysis[] {
     return this.categoryAnalysis.slice(0, limit);
   }
+  
+  // Pre-computed top categories with trends for template optimization
+  topCategoriesWithTrends: Array<CategoryAnalysis & { trend: { trend: string; percentage: number } }> = [];
+  
+  private updateTopCategoriesWithTrends(): void {
+    this.topCategoriesWithTrends = this.getTopCategories(5).map(category => ({
+      ...category,
+      trend: this.getCategoryTrend(category.category.id)
+    }));
+  }
 
   getCategoryTrend(categoryId: string): { trend: string; percentage: number } {
+    // Check cache first
+    if (this.categoryTrendCache.has(categoryId)) {
+      return this.categoryTrendCache.get(categoryId)!;
+    }
+    
     const category = this.categoryAnalysis.find(c => c.category.id === categoryId);
     if (!category || category.monthlyBreakdown.length < 2) {
-      return { trend: 'stable', percentage: 0 };
+      const result = { trend: 'stable', percentage: 0 };
+      this.categoryTrendCache.set(categoryId, result);
+      return result;
     }
     
     // Create a copy before sorting to avoid mutating the original array
@@ -786,21 +923,30 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     const recent = sortedMonths[sortedMonths.length - 1];
     const previous = sortedMonths[sortedMonths.length - 2];
     
+    let result: { trend: string; percentage: number };
     if (previous.amount === 0) {
-      return { trend: 'new', percentage: 100 };
+      result = { trend: 'new', percentage: 100 };
+    } else {
+      const change = ((recent.amount - previous.amount) / previous.amount) * 100;
+      
+      if (change > 10) {
+        result = { trend: 'up', percentage: change };
+      } else if (change < -10) {
+        result = { trend: 'down', percentage: Math.abs(change) };
+      } else {
+        result = { trend: 'stable', percentage: Math.abs(change) };
+      }
     }
     
-    const change = ((recent.amount - previous.amount) / previous.amount) * 100;
-    
-    if (change > 10) return { trend: 'up', percentage: change };
-    if (change < -10) return { trend: 'down', percentage: Math.abs(change) };
-    return { trend: 'stable', percentage: Math.abs(change) };
+    // Cache the result
+    this.categoryTrendCache.set(categoryId, result);
+    return result;
   }
 
   // Get orphaned expenses (expenses with missing categories)
   getOrphanedExpenses(): Expense[] {
     return this.expenses.filter(expense => 
-      !this.categories.find(c => c.id === expense.categoryId)
+      !this.categoryMap.has(expense.categoryId) // Use Map for O(1) lookup
     );
   }
 
@@ -906,7 +1052,7 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     console.log(`📊 Orphaned percentage: ${((orphanedExpenses.length / this.expenses.length) * 100).toFixed(2)}%`);
     
     const validExpensesAmount = this.expenses.reduce((sum, expense) => {
-      const isValid = this.categories.find(c => c.id === expense.categoryId);
+      const isValid = this.categoryMap.has(expense.categoryId); // Use Map for O(1) lookup
       return isValid ? sum + expense.amount : sum;
     }, 0);
     
