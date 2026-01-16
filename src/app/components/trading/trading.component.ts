@@ -382,13 +382,31 @@ export class TradingComponent implements OnInit, OnDestroy {
 
     try {
       await this.tradingService.update(trade);
+      
+      // Clear caches to force recalculation
+      this._cachedFilteredTrades = [];
+      this._cachedFilteredTradesKey = '';
+      this._cachedDailySummary = [];
+      this._cachedStatistics = null;
+      
+      // Force reload trades to ensure we have the latest data
+      await this.firebaseService.loadTrades();
+      
+      // Force change detection to update UI immediately
+      this.cdr.detectChanges();
+      
       await this.dialogService.success('Trade updated successfully!');
+      
+      // Force change detection again after dialog closes
+      setTimeout(() => {
+        this.cdr.detectChanges();
+      }, 100);
     } catch (error) {
       console.error('Error updating trade:', error);
       await this.dialogService.error('Error updating trade. Please try again.');
     } finally {
       this.isSaving = false;
-      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     }
   }
 
@@ -425,6 +443,17 @@ export class TradingComponent implements OnInit, OnDestroy {
     // Return cached result if filters haven't changed
     if (this._cachedFilteredTradesKey === cacheKey && this._cachedFilteredTrades.length >= 0) {
       return this._cachedFilteredTrades;
+    }
+    
+    // Reset pagination if filters changed (but not if it's just a page navigation)
+    const previousCacheKey = this._cachedFilteredTradesKey;
+    if (previousCacheKey && previousCacheKey !== cacheKey) {
+      // Only reset if filters actually changed (not just trades.length)
+      const previousFilters = previousCacheKey.split('|').slice(0, -1).join('|');
+      const currentFilters = cacheKey.split('|').slice(0, -1).join('|');
+      if (previousFilters !== currentFilters) {
+        this.currentPage = 1;
+      }
     }
     
     let filtered = [...this.trades];
@@ -532,6 +561,15 @@ export class TradingComponent implements OnInit, OnDestroy {
   // Get paginated trades
   getPaginatedTrades(): Trade[] {
     const filtered = this.getFilteredTrades();
+    const totalPages = Math.ceil(filtered.length / this.itemsPerPage);
+    
+    // Ensure currentPage is within valid bounds
+    if (this.currentPage > totalPages && totalPages > 0) {
+      this.currentPage = totalPages;
+    } else if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+    
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     return filtered.slice(startIndex, startIndex + this.itemsPerPage);
   }
@@ -655,7 +693,9 @@ export class TradingComponent implements OnInit, OnDestroy {
     netPnl: number;
   }> {
     // Return cached result if trades haven't changed
-    if (this._cachedDailySummary.length > 0 && this.trades.length === this._cachedDailySummary.reduce((sum, day) => sum + day.totalTrades, 0)) {
+    // Check if cache is valid by comparing total trade count
+    const cachedTotalTrades = this._cachedDailySummary.reduce((sum, day) => sum + day.totalTrades, 0);
+    if (this._cachedDailySummary.length > 0 && this.trades.length === cachedTotalTrades && cachedTotalTrades > 0) {
       return this._cachedDailySummary;
     }
     
@@ -793,7 +833,8 @@ export class TradingComponent implements OnInit, OnDestroy {
 
   // Format currency
   formatCurrency(amount: number): string {
-    return `₹${Math.round(amount).toLocaleString('en-IN')}`;
+    const absoluteAmount = Math.abs(amount);
+    return `₹${Math.round(absoluteAmount).toLocaleString('en-IN')}`;
   }
 
   // Format percentage
