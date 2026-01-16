@@ -126,6 +126,7 @@ export class ExpenseCategoryMapperComponent implements OnInit, OnDestroy {
     }
 
     this.isMapping = true;
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
     try {
       console.log('🔄 Applying category mappings...');
       const result = await this.mapperService.mapOrphanedExpenses(this.mappings);
@@ -143,6 +144,7 @@ export class ExpenseCategoryMapperComponent implements OnInit, OnDestroy {
       console.error('❌ Mapping failed:', error);
     } finally {
       this.isMapping = false;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush to hide loader
     }
   }
 

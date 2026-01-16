@@ -761,6 +761,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     this.isGeneratingPDF = true;
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
     
     try {
       // Create HTML content for PDF
@@ -856,6 +857,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       await this.dialogService.error('Error exporting to PDF. Please try again.');
     } finally {
       this.isGeneratingPDF = false;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush to hide loader
     }
   }
 
@@ -1024,6 +1026,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
 
     this.isPrinting = true;
+    this.cdr.markForCheck(); // Trigger change detection for OnPush
     
     try {
       // Create HTML content (same as PDF)
@@ -1050,6 +1053,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       await this.dialogService.error('Error printing expenses. Please try again.');
     } finally {
       this.isPrinting = false;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush to hide loader
     }
   }
 

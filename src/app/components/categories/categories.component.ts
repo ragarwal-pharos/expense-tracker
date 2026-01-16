@@ -93,6 +93,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   async loadData() {
     try {
       this.isLoading = true;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush
       this.categories = await this.categoryService.getAll();
       this.expenses = await this.expenseService.getAll();
       this.calculateAnalytics();
@@ -100,6 +101,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       console.error('Error loading data:', error);
     } finally {
       this.isLoading = false;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush
     }
   }
 

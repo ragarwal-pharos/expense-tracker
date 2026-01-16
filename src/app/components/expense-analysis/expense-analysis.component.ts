@@ -826,6 +826,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
           } else {
             this.dropdownAlignment = 'left';
           }
+          // Trigger change detection for OnPush after alignment is calculated
+          this.cdr.markForCheck();
         }
       }
     }, 0);
