@@ -17,10 +17,11 @@ export interface DialogConfig {
   fields?: Array<{
     name: string;
     label: string;
-    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
+    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color' | 'select';
     value: string;
     placeholder?: string;
     required?: boolean;
+    options?: Array<{value: string, label: string}>; // For select type fields
   }>;
   // For expense lists
   expenses?: Array<{
@@ -29,6 +30,17 @@ export interface DialogConfig {
     amount: number;
     date: string;
     categoryId: string;
+  }>;
+  // For trade lists
+  trades?: Array<{
+    id: string;
+    symbol: string;
+    indexValue: number;
+    tradeType: 'call' | 'put';
+    isProfit: boolean;
+    amount: number;
+    date: string;
+    notes?: string;
   }>;
   categoryName?: string;
   categoryIcon?: string;
@@ -225,10 +237,11 @@ export class DialogService {
   form(fields: Array<{
     name: string;
     label: string;
-    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color';
+    type: 'text' | 'number' | 'date' | 'email' | 'password' | 'color' | 'select';
     value: string;
     placeholder?: string;
     required?: boolean;
+    options?: Array<{value: string, label: string}>;
   }>, title: string = 'Edit', message: string = 'Please fill in the details:'): Promise<{ [key: string]: string } | null> {
     return new Promise((resolve) => {
       this.dialogSubject.next({
@@ -281,6 +294,43 @@ export class DialogService {
         categoryName,
         categoryIcon,
         categoryColor,
+        totalAmount
+      });
+
+      const subscription = this.result$.subscribe(result => {
+        if (result) {
+          subscription.unsubscribe();
+          this.dialogSubject.next(null);
+          this.resultSubject.next(null);
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Method to show trade list
+  showTradeList(
+    trades: Array<{
+      id: string;
+      symbol: string;
+      indexValue: number;
+      tradeType: 'call' | 'put';
+      isProfit: boolean;
+      amount: number;
+      date: string;
+      notes?: string;
+    }>,
+    title: string,
+    message?: string,
+    totalAmount?: number
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      this.dialogSubject.next({
+        title,
+        message: message || '',
+        type: 'list',
+        confirmText: 'Close',
+        trades,
         totalAmount
       });
 

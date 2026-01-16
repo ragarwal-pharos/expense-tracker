@@ -1,0 +1,515 @@
+<div class="container-fluid px-4 py-3">
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <div class="header-icon me-3">
+          <span class="fs-1">📈</span>
+        </div>
+        <div>
+          <h1 class="page-title mb-1">Trading</h1>
+          <p class="mb-0">Track your share market trades, profits, and losses</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <app-loading 
+    *ngIf="isLoading" 
+    message="Loading trades..." 
+    type="card">
+  </app-loading>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4" *ngIf="!isLoading">
+    <div class="col-md-3 mb-3">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">Total Trades</div>
+          <div class="stat-value">{{ trades.length }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-label">Total Profit</div>
+          <div class="stat-value profit">{{ formatCurrency(getTotalProfitAmount()) }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="stat-card">
+        <div class="stat-icon">❌</div>
+        <div class="stat-content">
+          <div class="stat-label">Total Loss</div>
+          <div class="stat-value loss">{{ formatCurrency(getTotalLossAmount()) }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <div class="stat-label">Net P&L</div>
+          <div class="stat-value" [class]="getProfitLossClass(getNetProfitLoss())">
+            {{ formatCurrency(getNetProfitLoss()) }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Search Bar -->
+  <div class="search-card mb-4" *ngIf="!isLoading">
+    <div class="card-body-modern">
+      <div class="search-container">
+        <div class="search-input-group">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Search trades by any property (index, amount, date, type, notes...)"
+            [(ngModel)]="globalSearch"
+            name="globalSearch">
+          <button 
+            *ngIf="globalSearch" 
+            class="clear-search-btn" 
+            (click)="globalSearch = ''" 
+            title="Clear search">
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Trade Form -->
+  <div class="add-trade-card mb-4" *ngIf="!isLoading">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">➕</span>
+          <h5 class="mb-0">Add New Trade</h5>
+        </div>
+        <button class="collapse-toggle-btn" type="button" (click)="toggleAddTradeSection()">
+          <span class="collapse-icon" [class.rotated]="!isAddTradeExpanded">▼</span>
+        </button>
+      </div>
+    </div>
+    <div class="card-body-modern" *ngIf="isAddTradeExpanded">
+      <form (ngSubmit)="addTrade()">
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Index *</label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="newTrade.symbol"
+              name="symbol"
+              required>
+              <option value="" disabled selected>Select Index</option>
+              <option *ngFor="let index of availableIndices" [value]="index">
+                {{ index.toUpperCase() }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Index Value *</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              [(ngModel)]="indexValueInput"
+              placeholder="Enter index value"
+              step="0.01"
+              min="0.01"
+              name="indexValue"
+              required>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Trade Type *</label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="newTrade.tradeType"
+              name="tradeType"
+              required>
+              <option value="" disabled selected>Select Trade Type</option>
+              <option *ngFor="let type of availableTradeTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Profit/Loss *</label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="newTrade.isProfit"
+              name="isProfit"
+              required>
+              <option [ngValue]="undefined" disabled selected>Select Profit/Loss</option>
+              <option [ngValue]="true">Profit</option>
+              <option [ngValue]="false">Loss</option>
+            </select>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Amount *</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              [(ngModel)]="amountInput"
+              placeholder="Enter amount"
+              step="0.01"
+              min="0.01"
+              name="amount"
+              required>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label">Trade Date *</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              [(ngModel)]="newTrade.date"
+              name="date"
+              required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Notes</label>
+            <textarea 
+              class="form-control" 
+              [(ngModel)]="newTrade.notes"
+              rows="2"
+              placeholder="Additional notes about this trade..."
+              name="notes"></textarea>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="isSaving || !isAddTradeFormValid()">
+            <span *ngIf="!isSaving">Add Trade</span>
+            <span *ngIf="isSaving">Saving...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-card mb-4" *ngIf="!isLoading">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center justify-content-between w-100">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">🔍</span>
+          <h5 class="mb-0">Filters</h5>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button 
+            class="btn btn-sm btn-outline-secondary clear-filters-btn"
+            (click)="clearFilters()"
+            [disabled]="!hasActiveFilters()"
+            title="Clear all filters">
+            <span class="clear-icon">🗑️</span>
+            <span class="clear-text">Clear Filters</span>
+          </button>
+          <button class="collapse-toggle-btn" type="button" (click)="toggleFiltersSection()">
+            <span class="collapse-icon" [class.rotated]="!isFiltersExpanded">▼</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body-modern" *ngIf="isFiltersExpanded">
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Index</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="filterSymbol">
+            <option value="">All Indices</option>
+            <option *ngFor="let index of availableIndices" [value]="index">
+              {{ index.toUpperCase() }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Profit/Loss</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="filterProfitLoss">
+            <option value="">All</option>
+            <option value="profit">Profit Only</option>
+            <option value="loss">Loss Only</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Trade Type</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="filterTradeType">
+            <option value="">All Types</option>
+            <option value="call">Call</option>
+            <option value="put">Put</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Date From</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            [(ngModel)]="filterDateFrom">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Date To</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            [(ngModel)]="filterDateTo">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Sort By</label>
+          <select class="form-select" [(ngModel)]="sortBy">
+            <option value="date">Date</option>
+            <option value="symbol">Index</option>
+            <option value="tradeType">Trade Type</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Sort Order</label>
+          <select class="form-select" [(ngModel)]="sortOrder">
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Summary -->
+  <div class="daily-summary-card mb-4" *ngIf="!isLoading && getFilteredDailySummary().length > 0">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">📅</span>
+          <h5 class="mb-0">Daily Summary (Net P&L per Day)</h5>
+        </div>
+      </div>
+    </div>
+    <div class="card-body-modern">
+      <!-- Desktop Table View -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover daily-summary-table">
+          <thead>
+            <tr>
+              <th style="width: 30px;"></th>
+              <th>Date</th>
+              <th>Total Trades</th>
+              <th>Profit Trades</th>
+              <th>Loss Trades</th>
+              <th>Total Profit</th>
+              <th>Total Loss</th>
+              <th>Net P&L</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let day of getFilteredDailySummary(); trackBy: trackByDate"
+              class="daily-summary-row"
+              (click)="showDailyTrades(day.date)"
+              style="cursor: pointer;">
+              <td>
+                <span class="expand-icon">👁️</span>
+              </td>
+              <td><strong>{{ day.date }}</strong></td>
+              <td>{{ day.totalTrades }}</td>
+              <td>
+                <span class="badge bg-success">{{ day.profitCount }}</span>
+              </td>
+              <td>
+                <span class="badge bg-danger">{{ day.lossCount }}</span>
+              </td>
+              <td class="profit">{{ formatCurrency(day.totalProfit) }}</td>
+              <td class="loss">{{ formatCurrency(day.totalLoss) }}</td>
+              <td>
+                <strong [class]="getProfitLossClass(day.netPnl)">{{ formatCurrency(day.netPnl) }}</strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="daily-summary-cards-mobile d-md-none">
+          <div
+            *ngFor="let day of getFilteredDailySummary(); trackBy: trackByDate"
+            class="daily-summary-card-mobile"
+            (click)="showDailyTrades(day.date)">
+          <div class="daily-summary-header">
+            <div class="daily-summary-left">
+              <div class="daily-summary-date">{{ day.date }}</div>
+              <div class="daily-summary-count">{{ day.totalTrades }} trade{{ day.totalTrades !== 1 ? 's' : '' }}</div>
+            </div>
+            <div class="daily-summary-right">
+              <div class="daily-summary-net">
+                <strong [class]="getProfitLossClass(day.netPnl)">{{ formatCurrency(day.netPnl) }}</strong>
+              </div>
+              <span class="expand-icon">👁️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trades List -->
+  <div class="trades-list-card mb-4" *ngIf="!isLoading">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">📋</span>
+          <h5 class="mb-0">
+            Trades ({{ getFilteredTrades().length }})
+          </h5>
+        </div>
+        <button class="collapse-toggle-btn" type="button" (click)="toggleTradesListSection()">
+          <span class="collapse-icon" [class.rotated]="!isTradesListExpanded">▼</span>
+        </button>
+      </div>
+    </div>
+    <div class="card-body-modern" *ngIf="isTradesListExpanded">
+      <div *ngIf="getFilteredTrades().length === 0" class="empty-state">
+        <div class="empty-icon">📊</div>
+        <h5>No trades found</h5>
+        <p>Start tracking your trades by adding a new trade above.</p>
+      </div>
+      
+      <!-- Desktop Table View -->
+      <div *ngIf="getFilteredTrades().length > 0" class="table-responsive d-none d-md-block">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Index</th>
+              <th>Index Value</th>
+              <th>Type</th>
+              <th>Profit/Loss</th>
+              <th>Amount</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let trade of getPaginatedTrades(); trackBy: trackByTradeId" [class.deleting]="deletingTradeIds.has(trade.id)">
+              <td>{{ trade.date }}</td>
+              <td><strong>{{ trade.symbol.toUpperCase() }}</strong></td>
+              <td>{{ trade.indexValue || 0 | number:'1.2-2' }}</td>
+              <td>
+                <span class="badge" [class.bg-info]="trade.tradeType === 'call'" [class.bg-warning]="trade.tradeType === 'put'">
+                  {{ (trade.tradeType || 'N/A').toUpperCase() }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [class.bg-success]="trade.isProfit" [class.bg-danger]="!trade.isProfit">
+                  {{ trade.isProfit ? 'PROFIT' : 'LOSS' }}
+                </span>
+              </td>
+              <td [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
+                <strong>{{ formatCurrency(trade.amount || 0) }}</strong>
+              </td>
+              <td>{{ trade.notes || '-' }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button 
+                    class="btn btn-outline-primary"
+                    (click)="editTrade(trade)"
+                    title="Edit">
+                    ✏️
+                  </button>
+                  <button 
+                    class="btn btn-outline-danger"
+                    (click)="deleteTrade(trade)"
+                    [disabled]="deletingTradeIds.has(trade.id)"
+                    title="Delete">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div *ngIf="getFilteredTrades().length > 0" class="trades-cards-mobile d-md-none">
+        <div
+          *ngFor="let trade of getPaginatedTrades(); trackBy: trackByTradeId"
+          class="trade-card-mobile"
+          [class.deleting]="deletingTradeIds.has(trade.id)">
+          <div class="trade-card-header-compact">
+            <div class="trade-card-left">
+              <div class="trade-card-date">{{ trade.date }}</div>
+              <div class="trade-card-index"><strong>{{ trade.symbol.toUpperCase() }}</strong></div>
+            </div>
+            <div class="trade-card-right">
+              <div class="trade-card-amount" [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
+                <strong>{{ formatCurrency(trade.amount || 0) }}</strong>
+              </div>
+              <div class="trade-card-actions">
+                <button 
+                  class="btn-icon"
+                  (click)="editTrade(trade)"
+                  title="Edit">
+                  ✏️
+                </button>
+                <button 
+                  class="btn-icon"
+                  (click)="deleteTrade(trade)"
+                  [disabled]="deletingTradeIds.has(trade.id)"
+                  title="Delete">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="trade-card-body-compact">
+            <div class="trade-card-badges">
+              <span class="badge" [class.bg-info]="trade.tradeType === 'call'" [class.bg-warning]="trade.tradeType === 'put'">
+                {{ (trade.tradeType || 'N/A').toUpperCase() }}
+              </span>
+              <span class="badge" [class.bg-success]="trade.isProfit" [class.bg-danger]="!trade.isProfit">
+                {{ trade.isProfit ? 'PROFIT' : 'LOSS' }}
+              </span>
+            </div>
+            <div class="trade-card-meta">
+              <span class="trade-meta-item">Index Value: {{ trade.indexValue || 0 | number:'1.2-2' }}</span>
+              <span class="trade-meta-item" *ngIf="trade.notes">{{ trade.notes }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div *ngIf="getTotalPages() > 1" class="pagination-container mt-3">
+        <nav>
+          <ul class="pagination justify-content-center">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" (click)="previousPage()" href="javascript:void(0)">Previous</a>
+            </li>
+            <li 
+              *ngFor="let page of getPageNumbers()" 
+              class="page-item" 
+              [class.active]="page === currentPage">
+              <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">{{ page }}</a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
+              <a class="page-link" (click)="nextPage()" href="javascript:void(0)">Next</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>

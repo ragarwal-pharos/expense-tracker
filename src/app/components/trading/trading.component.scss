@@ -1,0 +1,854 @@
+/* Trading Component Styles */
+
+.container-fluid {
+  overflow-x: hidden;
+  overflow-y: visible;
+  min-height: 100dvh;
+  height: auto;
+  max-height: none;
+  padding-bottom: 2rem;
+}
+
+/* Page Header */
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  color: white;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+  margin-bottom: 2rem;
+}
+
+.header-icon {
+  font-size: 3rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Statistics Cards */
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-value.profit {
+  color: #10b981;
+}
+
+.stat-value.loss {
+  color: #ef4444;
+}
+
+/* Search Card */
+.search-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+  border: none;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
+  font-size: 1.2rem;
+  color: #667eea;
+  margin: 0 0.75rem;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  padding: 0.75rem 0.5rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.clear-search-btn {
+  background: #ff6b6b;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  margin-right: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: #ee5a5a;
+  transform: scale(1.1);
+}
+
+/* Card Styles */
+.add-trade-card,
+.filters-card,
+.daily-summary-card,
+.trades-list-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.card-header-modern {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-icon-small {
+  font-size: 1.25rem;
+}
+
+.card-body-modern {
+  padding: 1.5rem;
+}
+
+.collapse-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.collapse-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.clear-filters-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #64748b;
+}
+
+.clear-filters-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #ef4444;
+  transform: translateY(-1px);
+}
+
+.clear-filters-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clear-icon {
+  font-size: 0.875rem;
+}
+
+.clear-text {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .clear-text {
+    display: none;
+  }
+  
+  .clear-filters-btn {
+    padding: 0.5rem;
+    min-width: 36px;
+  }
+}
+
+.collapse-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.collapse-icon.rotated {
+  transform: rotate(-90deg);
+}
+
+/* Form Styles */
+.form-label {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.form-control,
+.form-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+/* Remove number input arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  padding: 0.625rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+.btn-outline-primary,
+.btn-outline-danger {
+  border-width: 1px;
+  padding: 0.375rem 0.75rem;
+}
+
+.btn-outline-primary {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.btn-outline-primary:hover {
+  background: #667eea;
+  color: white;
+}
+
+.btn-outline-danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-outline-danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Daily Summary Table */
+.daily-summary-table {
+  margin-bottom: 0;
+}
+
+.daily-summary-table thead th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+}
+
+.daily-summary-row {
+  transition: all 0.2s ease;
+}
+
+.daily-summary-row:hover {
+  background: #f8fafc;
+}
+
+.daily-summary-row.expanded {
+  background: #f1f5f9;
+  border-left: 3px solid #667eea;
+}
+
+.daily-summary-table tbody td {
+  vertical-align: middle;
+}
+
+.daily-summary-table tbody td strong.profit {
+  color: #10b981;
+}
+
+.daily-summary-table tbody td strong.loss {
+  color: #ef4444;
+}
+
+.daily-summary-details-row {
+  background: #f8fafc;
+}
+
+.daily-summary-details-row td {
+  padding: 1rem !important;
+  border-top: none;
+}
+
+.daily-summary-trades-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trade-card-compact-desktop {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.trade-compact-header-desktop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.trade-compact-index-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.trade-compact-amount-desktop {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 1rem;
+}
+
+.trade-compact-actions-desktop {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trade-compact-details-desktop {
+  font-size: 0.875rem;
+  color: #64748b;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Table Styles */
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.875rem;
+  padding: 1rem;
+}
+
+.table tbody td {
+  padding: 1rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.table tbody tr.deleting {
+  opacity: 0.5;
+  background: #fee2e2;
+}
+
+.badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.bg-success {
+  background-color: #10b981 !important;
+}
+
+.bg-danger {
+  background-color: #ef4444 !important;
+}
+
+.bg-primary {
+  background-color: #667eea !important;
+}
+
+.bg-secondary {
+  background-color: #64748b !important;
+}
+
+.bg-info {
+  background-color: #0dcaf0 !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.profit {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.loss {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #64748b;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h5 {
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+/* Pagination */
+.pagination-container {
+  margin-top: 1.5rem;
+}
+
+.pagination {
+  margin-bottom: 0;
+}
+
+.page-item .page-link {
+  color: #667eea;
+  border-color: #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin: 0 0.25rem;
+}
+
+.page-item.active .page-link {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+
+.page-item.disabled .page-link {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.page-item .page-link:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Mobile Card Styles for Trades - Compact */
+.trades-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trade-card-mobile {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.875rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.trade-card-mobile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trade-card-mobile.deleting {
+  opacity: 0.5;
+  background: #fee2e2;
+}
+
+.trade-card-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.trade-card-left {
+  flex: 1;
+}
+
+.trade-card-date {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.trade-card-index {
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.trade-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.trade-card-amount {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.trade-card-actions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.25rem 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trade-card-body-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.trade-card-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trade-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trade-meta-item {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Mobile Card Styles for Daily Summary - Compact */
+.daily-summary-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.daily-summary-card-mobile {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.875rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.daily-summary-card-mobile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.daily-summary-card-mobile.expanded {
+  border-color: #667eea;
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);
+}
+
+.daily-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.daily-summary-left {
+  flex: 1;
+}
+
+.daily-summary-date {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+
+.daily-summary-count {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.daily-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.daily-summary-net {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.daily-summary-net strong.profit {
+  color: #10b981;
+}
+
+.daily-summary-net strong.loss {
+  color: #ef4444;
+}
+
+.daily-summary-net strong.profit {
+  color: #10b981;
+}
+
+.daily-summary-net strong.loss {
+  color: #ef4444;
+}
+
+.expand-icon {
+  font-size: 0.75rem;
+  color: #64748b;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.daily-summary-trades {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trade-card-compact {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.trade-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.trade-compact-index {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.trade-compact-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.trade-compact-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trade-compact-badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.trade-compact-value {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1.5rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .card-body-modern {
+    padding: 1rem;
+  }
+
+  .table {
+    font-size: 0.75rem;
+  }
+
+  .table thead th,
+  .table tbody td {
+    padding: 0.5rem;
+  }
+
+  /* Improve mobile spacing */
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Better mobile form layout */
+  .row {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+  }
+
+  .row > * {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Mobile search improvements */
+  .search-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Mobile filter improvements */
+  .filters-card .row {
+    margin-bottom: 0.5rem;
+  }
+}

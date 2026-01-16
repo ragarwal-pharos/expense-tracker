@@ -25,7 +25,11 @@ import { Subscription } from 'rxjs';
             <h3 class="dialog-title">{{ config.title }}</h3>
           </div>
           <div class="header-right">
-            <span class="total-amount" *ngIf="config.type === 'list' && config.totalAmount !== undefined">
+            <span 
+              class="total-amount" 
+              *ngIf="config.type === 'list' && config.totalAmount !== undefined"
+              [class.profit]="config.totalAmount >= 0"
+              [class.loss]="config.totalAmount < 0">
               {{ config.totalAmount | currency:'INR' }}
             </span>
             <button class="close-btn" (click)="onCancel()" *ngIf="config.type === 'confirm' && config.cancelText">
@@ -118,6 +122,17 @@ import { Subscription } from 'rxjs';
                 [(ngModel)]="fieldValues[field.name]"
                 (keyup.enter)="onConfirm()"
                 (keyup.escape)="onCancel()">
+              
+              <select
+                *ngIf="field.type === 'select'"
+                class="dialog-input"
+                [(ngModel)]="fieldValues[field.name]"
+                (keyup.enter)="onConfirm()"
+                (keyup.escape)="onCancel()">
+                <option *ngFor="let option of field.options" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
             </div>
           </div>
           
@@ -151,11 +166,40 @@ import { Subscription } from 'rxjs';
             </div>
           </div>
           
+          <!-- Trade List -->
+          <div class="trade-list-group" *ngIf="config.type === 'list' && config.trades && config.trades.length > 0">
+            <div class="trades-list">
+              <div class="trade-item" *ngFor="let trade of config.trades">
+                <div class="trade-main">
+                  <div class="trade-symbol">{{ trade.symbol.toUpperCase() }}</div>
+                  <div class="trade-badges">
+                    <span class="trade-badge" [class.bg-info]="trade.tradeType === 'call'" [class.bg-warning]="trade.tradeType === 'put'">
+                      {{ trade.tradeType.toUpperCase() }}
+                    </span>
+                    <span class="trade-badge" [class.bg-success]="trade.isProfit" [class.bg-danger]="!trade.isProfit">
+                      {{ trade.isProfit ? 'PROFIT' : 'LOSS' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="trade-details">
+                  <div class="trade-date">{{ trade.date }}</div>
+                  <div class="trade-amount" [class.profit]="trade.isProfit" [class.loss]="!trade.isProfit">
+                    {{ trade.amount | currency:'INR':'symbol':'1.0-0' }}
+                  </div>
+                </div>
+                <div class="trade-meta" *ngIf="trade.indexValue || trade.notes">
+                  <span *ngIf="trade.indexValue">Index: {{ trade.indexValue | number:'1.2-2' }}</span>
+                  <span *ngIf="trade.notes">• {{ trade.notes }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- Empty state for expense list -->
-          <div class="empty-expenses" *ngIf="config.type === 'list' && (!config.expenses || config.expenses.length === 0)">
+          <div class="empty-expenses" *ngIf="config.type === 'list' && (!config.expenses || config.expenses.length === 0) && (!config.trades || config.trades.length === 0)">
             <div class="empty-icon">📝</div>
-            <h6>No Expenses Found</h6>
-            <p>{{ config.message || 'No expenses found for this category.' }}</p>
+            <h6>No Items Found</h6>
+            <p>{{ config.message || 'No items found.' }}</p>
           </div>
         </div>
 
@@ -271,6 +315,16 @@ import { Subscription } from 'rxjs';
       padding: 4px 12px;
       background: #f3f4f6;
       border-radius: 6px;
+    }
+
+    .total-amount.profit {
+      color: #10b981;
+      background: #d1fae5;
+    }
+
+    .total-amount.loss {
+      color: #ef4444;
+      background: #fee2e2;
     }
 
     .close-btn {
@@ -630,6 +684,118 @@ import { Subscription } from 'rxjs';
       text-align: right;
     }
 
+    /* Trade List Styles */
+    .trade-list-group {
+      margin-bottom: 20px;
+      max-height: 500px;
+      overflow: hidden;
+    }
+
+    .dialog-container.list .trade-list-group {
+      max-height: 600px;
+    }
+
+    .trades-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .trades-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .trades-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    .trades-list::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+
+    .trades-list::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    .trade-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s;
+    }
+
+    .trade-item:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .trade-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .trade-symbol {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .trade-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .trade-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .trade-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .trade-date {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .trade-amount {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .trade-amount.profit {
+      color: #10b981;
+    }
+
+    .trade-amount.loss {
+      color: #ef4444;
+    }
+
+    .trade-meta {
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .empty-expenses {
       text-align: center;
       padding: 40px 20px;
@@ -886,10 +1052,13 @@ export class DialogComponent implements OnInit, OnDestroy {
           
           // Focus on input after dialog opens
           setTimeout(() => {
-            const input = document.querySelector('.dialog-input') as HTMLInputElement;
+            const input = document.querySelector('.dialog-input') as HTMLInputElement | HTMLSelectElement;
             if (input) {
               input.focus();
-              input.select();
+              // Only call select() on text input elements, not on select dropdowns
+              if (input instanceof HTMLInputElement && (input.type === 'text' || input.type === 'number' || input.type === 'email' || input.type === 'password')) {
+                input.select();
+              }
             }
           }, 100);
         } else {

@@ -18,6 +18,7 @@ import {
 import { Firestore } from '@angular/fire/firestore';
 import { Expense } from '../models/expense.model';
 import { Category } from '../models/category.model';
+import { Trade } from '../models/trade.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 
@@ -28,15 +29,18 @@ export class FirebaseService {
   private firestore = inject(Firestore);
   private expensesSubject = new BehaviorSubject<Expense[]>([]);
   private categoriesSubject = new BehaviorSubject<Category[]>([]);
+  private tradesSubject = new BehaviorSubject<Trade[]>([]);
   private userSettingsSubject = new BehaviorSubject<any>({});
   private loadingSubject = new BehaviorSubject<boolean>(false);
   
   // Store unsubscribe functions for real-time listeners
   private expensesUnsubscribe?: () => void;
   private categoriesUnsubscribe?: () => void;
+  private tradesUnsubscribe?: () => void;
 
   public expenses$ = this.expensesSubject.asObservable();
   public categories$ = this.categoriesSubject.asObservable();
+  public trades$ = this.tradesSubject.asObservable();
   public userSettings$ = this.userSettingsSubject.asObservable();
   public loading$ = this.loadingSubject.asObservable();
 
@@ -45,18 +49,23 @@ export class FirebaseService {
     this.authService.currentUser$.subscribe(user => {
       if (user) {
         // Only load data if we don't have any data yet (first time login)
+        // Note: Trades are independent from expenses/categories and load separately
         const hasData = this.expensesSubject.value.length > 0 || this.categoriesSubject.value.length > 0;
         if (!hasData) {
           this.loadData();
         } else {
           // If we have data, just set up real-time listeners
+          // This ensures trades are loaded even if expenses/categories already exist
           this.setupRealTimeListeners();
+          // Also load trades to ensure they're available immediately
+          this.loadTrades();
         }
       } else {
         // Clear data when user logs out
         this.cleanupListeners();
         this.expensesSubject.next([]);
         this.categoriesSubject.next([]);
+        this.tradesSubject.next([]);
         this.userSettingsSubject.next({});
       }
     });
@@ -69,6 +78,7 @@ export class FirebaseService {
       await Promise.all([
         this.loadExpenses(),
         this.loadCategories(),
+        this.loadTrades(),
         this.loadUserSettings()
       ]);
       
@@ -116,6 +126,51 @@ export class FirebaseService {
       this.categoriesSubject.next(categories);
       console.log(`Real-time update: ${categories.length} categories`);
     });
+
+    // Set up real-time listener for trades
+    const tradesRef = collection(this.firestore, 'trades');
+    const tradesQuery = query(
+      tradesRef, 
+      where('userId', '==', userId)
+      // Note: Removed orderBy to avoid requiring composite index
+      // Sorting is done in memory instead
+    );
+    
+    this.tradesUnsubscribe = onSnapshot(tradesQuery, (querySnapshot) => {
+      const trades: Trade[] = [];
+      querySnapshot.forEach((doc) => {
+        const tradeData = doc.data() as any;
+        // Ensure isProfit is properly converted to boolean
+        const isProfitValue = tradeData['isProfit'];
+        const isProfit = isProfitValue !== undefined 
+          ? (typeof isProfitValue === 'boolean' ? isProfitValue : isProfitValue === true || isProfitValue === 'true')
+          : true;
+        
+        trades.push({ 
+          id: doc.id, 
+          ...tradeData,
+          amount: tradeData['amount'] || 0,
+          indexValue: tradeData['indexValue'] || 0,
+          isProfit: isProfit
+        } as Trade);
+      });
+      
+      // Sort by date descending in memory
+      trades.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      console.log(`Real-time update: ${trades.length} trades`, trades.map(t => ({ 
+        symbol: t.symbol, 
+        amount: t.amount, 
+        isProfit: t.isProfit 
+      })));
+      this.tradesSubject.next(trades);
+    }, (error) => {
+      console.error('Error in trades snapshot listener:', error);
+    });
   }
 
   // Clean up real-time listeners
@@ -127,6 +182,10 @@ export class FirebaseService {
     if (this.categoriesUnsubscribe) {
       this.categoriesUnsubscribe();
       this.categoriesUnsubscribe = undefined;
+    }
+    if (this.tradesUnsubscribe) {
+      this.tradesUnsubscribe();
+      this.tradesUnsubscribe = undefined;
     }
   }
 
@@ -490,6 +549,167 @@ export class FirebaseService {
       return expenses;
     } catch (error) {
       console.error('Error getting expenses by date range:', error);
+      return [];
+    }
+  }
+
+  // Trades Operations
+  async loadTrades(): Promise<Trade[]> {
+    try {
+      const userId = this.authService.getCurrentUserId();
+      
+      if (!userId) {
+        this.tradesSubject.next([]);
+        return [];
+      }
+
+      // Ensure real-time listener is set up if not already
+      if (!this.tradesUnsubscribe) {
+        this.setupRealTimeListeners();
+      }
+
+      const tradesRef = collection(this.firestore, 'trades');
+      const q = query(
+        tradesRef, 
+        where('userId', '==', userId)
+        // Note: Removed orderBy to avoid requiring composite index
+        // Sorting is done in memory instead
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const trades: Trade[] = [];
+      querySnapshot.forEach((doc) => {
+        const tradeData = doc.data() as any;
+        // Ensure isProfit is properly converted to boolean
+        const isProfitValue = tradeData['isProfit'];
+        const isProfit = isProfitValue !== undefined 
+          ? (typeof isProfitValue === 'boolean' ? isProfitValue : isProfitValue === true || isProfitValue === 'true')
+          : true;
+        
+        trades.push({ 
+          id: doc.id, 
+          ...tradeData,
+          isProfit: isProfit
+        } as Trade);
+      });
+      
+      // Sort by date descending in memory
+      trades.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      this.tradesSubject.next(trades);
+      console.log(`Loaded ${trades.length} trades`);
+      return trades;
+    } catch (error) {
+      console.error('Error loading trades:', error);
+      return [];
+    }
+  }
+
+  async addTrade(trade: Omit<Trade, 'id'>): Promise<string> {
+    try {
+      const userId = this.authService.getCurrentUserId();
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const tradesRef = collection(this.firestore, 'trades');
+      const tradeWithUserId = { 
+        ...trade, 
+        userId,
+        createdAt: new Date().toISOString()
+      };
+      
+      const docRef = await addDoc(tradesRef, tradeWithUserId);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding trade:', error);
+      throw error;
+    }
+  }
+
+  async updateTrade(trade: Trade): Promise<void> {
+    try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const tradeRef = doc(this.firestore, 'trades', trade.id);
+      const docSnap = await getDoc(tradeRef);
+      if (!docSnap.exists()) {
+        const { id, ...tradeData } = trade;
+        const tradeWithUserId = { ...tradeData, userId };
+        await setDoc(tradeRef, tradeWithUserId);
+      } else {
+        const { id, ...tradeData } = trade;
+        const tradeWithUserId = { ...tradeData, userId };
+        await updateDoc(tradeRef, tradeWithUserId);
+      }
+    } catch (error) {
+      console.error('Error updating trade:', error);
+      throw error;
+    }
+  }
+
+  async deleteTrade(tradeId: string): Promise<void> {
+    try {
+      const tradeRef = doc(this.firestore, 'trades', tradeId);
+      await deleteDoc(tradeRef);
+    } catch (error) {
+      console.error('Error deleting trade:', error);
+      throw error;
+    }
+  }
+
+  async getTradesByDateRange(startDate: string, endDate: string): Promise<Trade[]> {
+    try {
+      const userId = this.authService.getCurrentUserId();
+      if (!userId) return [];
+
+      const tradesRef = collection(this.firestore, 'trades');
+      // Use only userId filter to avoid composite index requirement
+      // Date filtering and sorting will be done in memory
+      const q = query(
+        tradesRef, 
+        where('userId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const trades: Trade[] = [];
+      querySnapshot.forEach((doc) => {
+        const tradeData = doc.data() as any;
+        // Ensure isProfit is properly converted to boolean
+        const isProfitValue = tradeData['isProfit'];
+        const isProfit = isProfitValue !== undefined 
+          ? (typeof isProfitValue === 'boolean' ? isProfitValue : isProfitValue === true || isProfitValue === 'true')
+          : true;
+        
+        const trade = { 
+          id: doc.id, 
+          ...tradeData,
+          isProfit: isProfit
+        } as Trade;
+        // Filter by date range in memory
+        if (trade.date >= startDate && trade.date <= endDate) {
+          trades.push(trade);
+        }
+      });
+      
+      // Sort by date descending in memory
+      trades.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      return trades;
+    } catch (error) {
+      console.error('Error getting trades by date range:', error);
       return [];
     }
   }
