@@ -320,6 +320,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
     try {
       this.isSaving = true;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush
       if (this.isEditMode) {
         await this.saveExpenseChanges();
       } else {
@@ -327,6 +328,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
     } finally {
       this.isSaving = false;
+      this.cdr.markForCheck(); // Trigger change detection for OnPush to hide loader
     }
   }
 
