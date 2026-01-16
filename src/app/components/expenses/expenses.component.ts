@@ -604,6 +604,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }, 5000);
     
     this.expenseUndoTimeouts.set(expense.id, timeout);
+    
+    // Trigger change detection for OnPush to show undo button immediately
+    this.cdr.markForCheck();
 
     // Actually delete from backend
     try {
@@ -618,8 +621,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         this.expenseUndoTimeouts.delete(expense.id);
       }
       await this.dialogService.error('Error deleting expense. Please try again.');
+      this.cdr.markForCheck();
     } finally {
       this.deletingExpenseIds.delete(expense.id);
+      this.cdr.markForCheck();
     }
   }
 
@@ -646,9 +651,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       const { id, ...expenseData } = expense;
       await this.expenseService.add(expenseData);
       await this.dialogService.success('Expense restored successfully!');
+      // Trigger change detection for OnPush to update UI
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error undoing delete:', error);
       await this.dialogService.error('Error restoring expense. Please try again.');
+      this.cdr.markForCheck();
     }
   }
 
@@ -664,6 +672,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     
     // Expense is already deleted from backend, just remove from local state
     // The real-time listener will handle the removal, but we ensure it's gone immediately
+    
+    // Trigger change detection for OnPush to update UI and remove undo button
+    this.cdr.markForCheck();
   }
 
   isExpenseDeleted(expenseId: string): boolean {
@@ -1695,6 +1706,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       }
 
       this.selectedExpenseIds.clear();
+      
+      // Trigger change detection for OnPush to show undo buttons immediately
+      this.cdr.markForCheck();
       
       if (failCount === 0) {
         // Don't show success message for bulk delete - let users see undo buttons
