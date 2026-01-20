@@ -35,6 +35,19 @@
             ],
             "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "canvg",
+              "html2canvas",
+              "jspdf",
+              "core-js/modules/web.dom-collections.iterator.js",
+              "core-js/modules/es.array.reduce.js",
+              "core-js/modules/es.string.ends-with.js",
+              "core-js/modules/es.string.split.js",
+              "core-js/modules/es.string.trim.js",
+              "core-js/modules/es.array.index-of.js",
+              "raf",
+              "rgbcolor"
             ]
           },
           "configurations": {
