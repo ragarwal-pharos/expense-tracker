@@ -285,6 +285,155 @@
           </select>
         </div>
       </div>
+      <div class="row">
+        <div class="col-md-12 mb-3">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="filterByMonthYear"
+              [(ngModel)]="filterByMonthYear"
+              (change)="onMonthYearFilterChange()">
+            <label class="form-check-label" for="filterByMonthYear">
+              Filter by Month & Year
+            </label>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3" *ngIf="filterByMonthYear">
+          <label class="form-label">Month</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="selectedMonth"
+            (change)="onMonthYearFilterChange()">
+            <option value="">Select Month</option>
+            <option *ngFor="let month of availableMonths" [value]="month.value">
+              {{ month.label }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3" *ngIf="filterByMonthYear">
+          <label class="form-label">Year</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="selectedYear"
+            (change)="onMonthYearFilterChange()">
+            <option value="">Select Year</option>
+            <option *ngFor="let year of availableYears" [value]="year">
+              {{ year }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Summary -->
+  <div class="monthly-summary-card mb-4" *ngIf="!isLoading && getMonthlySummary().length > 0">
+    <div class="card-header-modern">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <span class="header-icon-small me-2">📆</span>
+          <h5 class="mb-0">Monthly Summary</h5>
+        </div>
+        <button class="collapse-toggle-btn" type="button" (click)="toggleMonthlySummarySection()">
+          <span class="collapse-icon" [class.rotated]="!isMonthlySummaryExpanded">▼</span>
+        </button>
+      </div>
+    </div>
+    <div class="card-body-modern" *ngIf="isMonthlySummaryExpanded">
+      <!-- Desktop Table View -->
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover monthly-summary-table">
+          <thead>
+            <tr>
+              <th style="width: 30px;"></th>
+              <th>Month & Year</th>
+              <th>Total Trades</th>
+              <th>Profit Trades</th>
+              <th>Loss Trades</th>
+              <th>Total Profit</th>
+              <th>Total Loss</th>
+              <th>Net P&L</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let month of getPaginatedMonthlySummary(); trackBy: trackByMonthYear"
+              class="monthly-summary-row"
+              (click)="showMonthlyTrades(month.month, month.year)"
+              style="cursor: pointer;">
+              <td>
+                <span class="expand-icon">👁️</span>
+              </td>
+              <td><strong>{{ month.monthYear }}</strong></td>
+              <td>{{ month.totalTrades }}</td>
+              <td>
+                <span class="badge bg-success">{{ month.profitCount }}</span>
+              </td>
+              <td>
+                <span class="badge bg-danger">{{ month.lossCount }}</span>
+              </td>
+              <td class="profit">{{ formatCurrency(month.totalProfit) }}</td>
+              <td class="loss">{{ formatCurrency(month.totalLoss) }}</td>
+              <td>
+                <strong [class]="getProfitLossClass(month.netPnl)">{{ formatCurrency(month.netPnl) }}</strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="monthly-summary-cards-mobile d-md-none">
+        <div
+          *ngFor="let month of getPaginatedMonthlySummary(); trackBy: trackByMonthYear"
+          class="monthly-summary-card-mobile"
+          (click)="showMonthlyTrades(month.month, month.year)">
+          <div class="monthly-summary-header">
+            <div class="monthly-summary-left">
+              <div class="monthly-summary-month">{{ month.monthYear }}</div>
+              <div class="monthly-summary-count">{{ month.totalTrades }} trade{{ month.totalTrades !== 1 ? 's' : '' }}</div>
+            </div>
+            <div class="monthly-summary-right">
+              <div class="monthly-summary-net">
+                <div class="net-pnl">
+                  <strong [class]="getProfitLossClass(month.netPnl)">{{ formatCurrency(month.netPnl) }}</strong>
+                </div>
+              </div>
+              <span class="expand-icon">👁️</span>
+            </div>
+          </div>
+          <div class="monthly-summary-details">
+            <div class="monthly-summary-badges">
+              <span class="badge bg-success">{{ month.profitCount }} Profit</span>
+              <span class="badge bg-danger">{{ month.lossCount }} Loss</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Monthly Summary Pagination -->
+      <div *ngIf="getMonthlyTotalPages() > 1" class="pagination-container mt-3">
+        <nav>
+          <ul class="pagination justify-content-center mb-0">
+            <li class="page-item" [class.disabled]="monthlyCurrentPage === 1">
+              <a class="page-link" (click)="previousMonthlyPage()" href="javascript:void(0)">Previous</a>
+            </li>
+            <li 
+              *ngFor="let page of getMonthlyPageNumbers()" 
+              class="page-item" 
+              [class.active]="page === monthlyCurrentPage">
+              <a class="page-link" (click)="goToMonthlyPage(page)" href="javascript:void(0)">{{ page }}</a>
+            </li>
+            <li class="page-item" [class.disabled]="monthlyCurrentPage === getMonthlyTotalPages()">
+              <a class="page-link" (click)="nextMonthlyPage()" href="javascript:void(0)">Next</a>
+            </li>
+          </ul>
+        </nav>
+        <div class="text-center mt-2 text-muted" style="font-size: 0.85rem;">
+          Page {{ monthlyCurrentPage }} of {{ getMonthlyTotalPages() }} ({{ getFilteredMonthlySummary().length }} month{{ getFilteredMonthlySummary().length !== 1 ? 's' : '' }})
+        </div>
+      </div>
     </div>
   </div>
 
@@ -316,14 +465,14 @@
           </thead>
           <tbody>
             <tr
-              *ngFor="let day of getFilteredDailySummary(); trackBy: trackByDate"
+              *ngFor="let day of getPaginatedDailySummary(); trackBy: trackByDate"
               class="daily-summary-row"
               (click)="showDailyTrades(day.date)"
               style="cursor: pointer;">
               <td>
                 <span class="expand-icon">👁️</span>
               </td>
-              <td><strong>{{ day.date }}</strong></td>
+              <td><strong>{{ formatDate(day.date) }}</strong></td>
               <td>{{ day.totalTrades }}</td>
               <td>
                 <span class="badge bg-success">{{ day.profitCount }}</span>
@@ -344,12 +493,12 @@
       <!-- Mobile Card View -->
       <div class="daily-summary-cards-mobile d-md-none">
           <div
-            *ngFor="let day of getFilteredDailySummary(); trackBy: trackByDate"
+            *ngFor="let day of getPaginatedDailySummary(); trackBy: trackByDate"
             class="daily-summary-card-mobile"
             (click)="showDailyTrades(day.date)">
           <div class="daily-summary-header">
             <div class="daily-summary-left">
-              <div class="daily-summary-date">{{ day.date }}</div>
+              <div class="daily-summary-date">{{ formatDate(day.date) }}</div>
               <div class="daily-summary-count">{{ day.totalTrades }} trade{{ day.totalTrades !== 1 ? 's' : '' }}</div>
             </div>
             <div class="daily-summary-right">
@@ -359,6 +508,29 @@
               <span class="expand-icon">👁️</span>
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- Daily Summary Pagination -->
+      <div *ngIf="getDailyTotalPages() > 1" class="pagination-container mt-3">
+        <nav>
+          <ul class="pagination justify-content-center mb-0">
+            <li class="page-item" [class.disabled]="dailyCurrentPage === 1">
+              <a class="page-link" (click)="previousDailyPage()" href="javascript:void(0)">Previous</a>
+            </li>
+            <li 
+              *ngFor="let page of getDailyPageNumbers()" 
+              class="page-item" 
+              [class.active]="page === dailyCurrentPage">
+              <a class="page-link" (click)="goToDailyPage(page)" href="javascript:void(0)">{{ page }}</a>
+            </li>
+            <li class="page-item" [class.disabled]="dailyCurrentPage === getDailyTotalPages()">
+              <a class="page-link" (click)="nextDailyPage()" href="javascript:void(0)">Next</a>
+            </li>
+          </ul>
+        </nav>
+        <div class="text-center mt-2 text-muted" style="font-size: 0.85rem;">
+          Page {{ dailyCurrentPage }} of {{ getDailyTotalPages() }} ({{ getFilteredDailySummary().length }} day{{ getFilteredDailySummary().length !== 1 ? 's' : '' }})
         </div>
       </div>
     </div>
@@ -403,8 +575,8 @@
           </thead>
           <tbody>
             <tr *ngFor="let trade of getPaginatedTrades(); trackBy: trackByTradeId" [class.deleting]="deletingTradeIds.has(trade.id)">
-              <td>{{ trade.date }}</td>
-              <td><strong>{{ trade.symbol.toUpperCase() }}</strong></td>
+              <td><strong>{{ formatDate(trade.date) }}</strong></td>
+              <td>{{ trade.symbol.toUpperCase() }}</td>
               <td>{{ trade.indexValue || 0 | number:'1.2-2' }}</td>
               <td>
                 <span class="badge" [class.bg-info]="trade.tradeType === 'call'" [class.bg-warning]="trade.tradeType === 'put'">
@@ -416,8 +588,10 @@
                   {{ trade.isProfit ? 'PROFIT' : 'LOSS' }}
                 </span>
               </td>
-              <td [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
-                <strong>{{ formatCurrency(trade.amount || 0) }}</strong>
+              <td>
+                <strong [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
+                  {{ formatCurrency(trade.amount || 0) }}
+                </strong>
               </td>
               <td>{{ trade.notes || '-' }}</td>
               <td>
@@ -450,12 +624,14 @@
           [class.deleting]="deletingTradeIds.has(trade.id)">
           <div class="trade-card-header-compact">
             <div class="trade-card-left">
-              <div class="trade-card-date">{{ trade.date }}</div>
-              <div class="trade-card-index"><strong>{{ trade.symbol.toUpperCase() }}</strong></div>
+              <div class="trade-card-date"><strong>{{ formatDate(trade.date) }}</strong></div>
+              <div class="trade-card-index">{{ trade.symbol.toUpperCase() }}</div>
             </div>
             <div class="trade-card-right">
-              <div class="trade-card-amount" [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
-                <strong>{{ formatCurrency(trade.amount || 0) }}</strong>
+              <div class="trade-card-amount">
+                <strong [class]="getProfitLossClass(trade.isProfit ? trade.amount : -trade.amount)">
+                  {{ formatCurrency(trade.amount || 0) }}
+                </strong>
               </div>
               <div class="trade-card-actions">
                 <button 
@@ -491,24 +667,51 @@
         </div>
       </div>
 
-      <!-- Pagination -->
-      <div *ngIf="getTotalPages() > 1" class="pagination-container mt-3">
-        <nav>
-          <ul class="pagination justify-content-center">
-            <li class="page-item" [class.disabled]="currentPage === 1">
-              <a class="page-link" (click)="previousPage()" href="javascript:void(0)">Previous</a>
-            </li>
-            <li 
-              *ngFor="let page of getPageNumbers()" 
-              class="page-item" 
-              [class.active]="page === currentPage">
-              <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">{{ page }}</a>
-            </li>
-            <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
-              <a class="page-link" (click)="nextPage()" href="javascript:void(0)">Next</a>
-            </li>
-          </ul>
-        </nav>
+      <!-- Trades List Pagination -->
+      <div *ngIf="getFilteredTrades().length > 0 && getTotalPages() > 1" class="pagination-container mt-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <!-- Items per page selector -->
+          <div class="d-flex align-items-center gap-2">
+            <label class="mb-0" style="font-size: 0.9rem; color: #64748b; font-weight: 500;">
+              Show:
+            </label>
+            <select 
+              class="form-select form-select-sm" 
+              style="width: auto; min-width: 80px;"
+              [(ngModel)]="itemsPerPage"
+              (change)="onItemsPerPageChange()">
+              <option *ngFor="let option of itemsPerPageOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+            <span class="text-muted" style="font-size: 0.85rem;">
+              of {{ getFilteredTrades().length }} trade{{ getFilteredTrades().length !== 1 ? 's' : '' }}
+            </span>
+          </div>
+          
+          <!-- Page navigation -->
+          <nav>
+            <ul class="pagination justify-content-center mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <a class="page-link" (click)="previousPage()" href="javascript:void(0)">Previous</a>
+              </li>
+              <li 
+                *ngFor="let page of getPageNumbers()" 
+                class="page-item" 
+                [class.active]="page === currentPage">
+                <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">{{ page }}</a>
+              </li>
+              <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
+                <a class="page-link" (click)="nextPage()" href="javascript:void(0)">Next</a>
+              </li>
+            </ul>
+          </nav>
+          
+          <!-- Page info -->
+          <div class="text-muted" style="font-size: 0.85rem;">
+            Page {{ currentPage }} of {{ getTotalPages() }}
+          </div>
+        </div>
       </div>
     </div>
   </div>

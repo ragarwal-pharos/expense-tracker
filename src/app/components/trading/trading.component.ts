@@ -52,10 +52,25 @@ export class TradingComponent implements OnInit, OnDestroy {
   filterTradeType: '' | 'call' | 'put' = ''; // Filter by trade type
   sortBy: 'date' | 'symbol' | 'tradeType' = 'date';
   sortOrder: 'asc' | 'desc' = 'desc';
+  
+  // Month/Year filter properties
+  selectedMonth: string = '';
+  selectedYear: string = '';
+  filterByMonthYear: boolean = false; // Toggle to enable month/year filtering
 
-  // Pagination properties
+  // Pagination properties - separate for each table
+  // Trades List pagination
   currentPage: number = 1;
-  itemsPerPage: number = 10;
+  itemsPerPage: number = 10; // Default to 10 records per page
+  itemsPerPageOptions: number[] = [10, 25, 50, 100, 200];
+  
+  // Monthly Summary pagination
+  monthlyCurrentPage: number = 1;
+  monthlyItemsPerPage: number = 10;
+  
+  // Daily Summary pagination
+  dailyCurrentPage: number = 1;
+  dailyItemsPerPage: number = 10;
 
   // Loading states
   isLoading: boolean = true;
@@ -67,6 +82,24 @@ export class TradingComponent implements OnInit, OnDestroy {
   isAddTradeExpanded: boolean = true;
   isFiltersExpanded: boolean = true;
   isTradesListExpanded: boolean = true;
+  isMonthlySummaryExpanded: boolean = true;
+  
+  // Available months and years for filtering
+  availableMonths: { value: string; label: string }[] = [
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' }
+  ];
+  availableYears: string[] = [];
 
   // Cached computed values for performance
   private _cachedFilteredTrades: Trade[] = [];
@@ -101,6 +134,12 @@ export class TradingComponent implements OnInit, OnDestroy {
     // Trading component is completely independent from Expenses
     // It only subscribes to trades$ observable, not expenses$ or categories$
     // All trading data is stored in separate 'trades' collection in Firebase
+    
+    // Initialize available years
+    const currentYear = new Date().getFullYear();
+    for (let year = 2020; year <= currentYear + 1; year++) {
+      this.availableYears.push(year.toString());
+    }
     
     // Ensure trades are loaded and real-time listener is set up
     this.firebaseService.loadTrades().then(() => {
@@ -161,7 +200,13 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.filterTradeType = '';
     this.sortBy = 'date';
     this.sortOrder = 'desc';
-    this.currentPage = 1; // Reset to first page
+    this.selectedMonth = '';
+    this.selectedYear = '';
+    this.filterByMonthYear = false;
+    // Reset pagination for all tables
+    this.currentPage = 1;
+    this.monthlyCurrentPage = 1;
+    this.dailyCurrentPage = 1;
     this.cdr.markForCheck();
   }
 
@@ -173,9 +218,44 @@ export class TradingComponent implements OnInit, OnDestroy {
       this.filterDateTo ||
       this.filterProfitLoss ||
       this.filterTradeType ||
+      this.filterByMonthYear ||
+      this.selectedMonth ||
+      this.selectedYear ||
       this.sortBy !== 'date' ||
       this.sortOrder !== 'desc'
     );
+  }
+  
+  // Handle month/year filter change
+  onMonthYearFilterChange() {
+    if (this.filterByMonthYear && this.selectedMonth && this.selectedYear) {
+      const monthIndex = parseInt(this.selectedMonth);
+      const year = parseInt(this.selectedYear);
+      
+      // Set date range to the selected month
+      const startDate = new Date(Date.UTC(year, monthIndex, 1));
+      const endDate = new Date(Date.UTC(year, monthIndex + 1, 0));
+      
+      const formatDate = (date: Date) => {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+      
+      this.filterDateFrom = formatDate(startDate);
+      this.filterDateTo = formatDate(endDate);
+    } else {
+      // Clear date filters if month/year filter is disabled
+      if (!this.filterByMonthYear) {
+        this.filterDateFrom = '';
+        this.filterDateTo = '';
+        this.selectedMonth = '';
+        this.selectedYear = '';
+      }
+    }
+    this.currentPage = 1; // Reset to first page
+    this.cdr.markForCheck();
   }
 
   // Add new trade
@@ -215,6 +295,7 @@ export class TradingComponent implements OnInit, OnDestroy {
       
       // Force reload trades to ensure UI updates immediately
       await this.firebaseService.loadTrades();
+      this.cdr.markForCheck();
       
       await this.dialogService.success('Trade added successfully!');
       
@@ -229,7 +310,7 @@ export class TradingComponent implements OnInit, OnDestroy {
       await this.dialogService.error('Error adding trade. Please try again.');
     } finally {
       this.isSaving = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 
@@ -423,7 +504,18 @@ export class TradingComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       
       try {
+        // Optimistically update UI
+        this.trades = this.trades.filter(t => t.id !== trade.id);
+        this._cachedFilteredTrades = [];
+        this._cachedFilteredTradesKey = '';
+        this._cachedDailySummary = [];
+        this._cachedStatistics = null;
+        this.cdr.markForCheck();
+
         await this.tradingService.delete(trade.id);
+        // Refresh from backend to stay in sync
+        await this.firebaseService.loadTrades();
+        this.cdr.markForCheck();
         await this.dialogService.success('Trade deleted successfully!');
       } catch (error) {
         console.error('Error deleting trade:', error);
@@ -453,6 +545,8 @@ export class TradingComponent implements OnInit, OnDestroy {
       const currentFilters = cacheKey.split('|').slice(0, -1).join('|');
       if (previousFilters !== currentFilters) {
         this.currentPage = 1;
+        this.monthlyCurrentPage = 1;
+        this.dailyCurrentPage = 1;
       }
     }
     
@@ -524,6 +618,17 @@ export class TradingComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(trade => trade.tradeType === this.filterTradeType);
     }
     
+    // Filter by month/year if enabled
+    if (this.filterByMonthYear && this.selectedMonth && this.selectedYear) {
+      const monthIndex = parseInt(this.selectedMonth);
+      const year = parseInt(this.selectedYear);
+      filtered = filtered.filter(trade => {
+        const tradeDate = new Date(trade.date);
+        return tradeDate.getMonth() === monthIndex && 
+               tradeDate.getFullYear() === year;
+      });
+    }
+    
     // Filter by date range
     if (this.filterDateFrom) {
       filtered = filtered.filter(trade => trade.date >= this.filterDateFrom);
@@ -573,6 +678,144 @@ export class TradingComponent implements OnInit, OnDestroy {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     return filtered.slice(startIndex, startIndex + this.itemsPerPage);
   }
+  
+  // Handle items per page change
+  onItemsPerPageChange() {
+    this.currentPage = 1; // Reset to first page when changing page size
+    this.cdr.markForCheck();
+  }
+  
+  // Monthly Summary Pagination Methods
+  getPaginatedMonthlySummary() {
+    const filtered = this.getFilteredMonthlySummary();
+    const totalPages = Math.ceil(filtered.length / this.monthlyItemsPerPage);
+    
+    if (this.monthlyCurrentPage > totalPages && totalPages > 0) {
+      this.monthlyCurrentPage = totalPages;
+    } else if (this.monthlyCurrentPage < 1) {
+      this.monthlyCurrentPage = 1;
+    }
+    
+    const startIndex = (this.monthlyCurrentPage - 1) * this.monthlyItemsPerPage;
+    return filtered.slice(startIndex, startIndex + this.monthlyItemsPerPage);
+  }
+  
+  getMonthlyTotalPages(): number {
+    return Math.ceil(this.getFilteredMonthlySummary().length / this.monthlyItemsPerPage);
+  }
+  
+  getMonthlyPageNumbers(): number[] {
+    const totalPages = this.getMonthlyTotalPages();
+    const pages: number[] = [];
+    const maxPages = 5;
+    
+    if (totalPages <= maxPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (this.monthlyCurrentPage <= 3) {
+        for (let i = 1; i <= maxPages; i++) {
+          pages.push(i);
+        }
+      } else if (this.monthlyCurrentPage >= totalPages - 2) {
+        for (let i = totalPages - maxPages + 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        for (let i = this.monthlyCurrentPage - 2; i <= this.monthlyCurrentPage + 2; i++) {
+          pages.push(i);
+        }
+      }
+    }
+    
+    return pages;
+  }
+  
+  goToMonthlyPage(page: number) {
+    this.monthlyCurrentPage = page;
+    this.cdr.markForCheck();
+  }
+  
+  previousMonthlyPage() {
+    if (this.monthlyCurrentPage > 1) {
+      this.monthlyCurrentPage--;
+      this.cdr.markForCheck();
+    }
+  }
+  
+  nextMonthlyPage() {
+    if (this.monthlyCurrentPage < this.getMonthlyTotalPages()) {
+      this.monthlyCurrentPage++;
+      this.cdr.markForCheck();
+    }
+  }
+  
+  // Daily Summary Pagination Methods
+  getPaginatedDailySummary() {
+    const filtered = this.getFilteredDailySummary();
+    const totalPages = Math.ceil(filtered.length / this.dailyItemsPerPage);
+    
+    if (this.dailyCurrentPage > totalPages && totalPages > 0) {
+      this.dailyCurrentPage = totalPages;
+    } else if (this.dailyCurrentPage < 1) {
+      this.dailyCurrentPage = 1;
+    }
+    
+    const startIndex = (this.dailyCurrentPage - 1) * this.dailyItemsPerPage;
+    return filtered.slice(startIndex, startIndex + this.dailyItemsPerPage);
+  }
+  
+  getDailyTotalPages(): number {
+    return Math.ceil(this.getFilteredDailySummary().length / this.dailyItemsPerPage);
+  }
+  
+  getDailyPageNumbers(): number[] {
+    const totalPages = this.getDailyTotalPages();
+    const pages: number[] = [];
+    const maxPages = 5;
+    
+    if (totalPages <= maxPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (this.dailyCurrentPage <= 3) {
+        for (let i = 1; i <= maxPages; i++) {
+          pages.push(i);
+        }
+      } else if (this.dailyCurrentPage >= totalPages - 2) {
+        for (let i = totalPages - maxPages + 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        for (let i = this.dailyCurrentPage - 2; i <= this.dailyCurrentPage + 2; i++) {
+          pages.push(i);
+        }
+      }
+    }
+    
+    return pages;
+  }
+  
+  goToDailyPage(page: number) {
+    this.dailyCurrentPage = page;
+    this.cdr.markForCheck();
+  }
+  
+  previousDailyPage() {
+    if (this.dailyCurrentPage > 1) {
+      this.dailyCurrentPage--;
+      this.cdr.markForCheck();
+    }
+  }
+  
+  nextDailyPage() {
+    if (this.dailyCurrentPage < this.getDailyTotalPages()) {
+      this.dailyCurrentPage++;
+      this.cdr.markForCheck();
+    }
+  }
 
   // Get total pages
   getTotalPages(): number {
@@ -582,17 +825,20 @@ export class TradingComponent implements OnInit, OnDestroy {
   // Pagination methods
   goToPage(page: number) {
     this.currentPage = page;
+    this.cdr.markForCheck();
   }
 
   previousPage() {
     if (this.currentPage > 1) {
       this.currentPage--;
+      this.cdr.markForCheck();
     }
   }
 
   nextPage() {
     if (this.currentPage < this.getTotalPages()) {
       this.currentPage++;
+      this.cdr.markForCheck();
     }
   }
 
@@ -842,6 +1088,16 @@ export class TradingComponent implements OnInit, OnDestroy {
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   }
 
+  // Format date as "20 Jan 2026"
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
   // Get profit/loss color class
   getProfitLossClass(value: number | undefined): string {
     if (value === undefined || value === null) return '';
@@ -884,5 +1140,216 @@ export class TradingComponent implements OnInit, OnDestroy {
 
   trackByDate(index: number, day: { date: string }): string {
     return day.date;
+  }
+  
+  trackByMonthYear(index: number, month: { month: string; year: number }): string {
+    return `${month.month}-${month.year}`;
+  }
+  
+  // Monthly Summary Methods
+  getMonthlySummary(): Array<{
+    month: string;
+    year: number;
+    monthYear: string;
+    totalTrades: number;
+    profitCount: number;
+    lossCount: number;
+    totalProfit: number;
+    totalLoss: number;
+    netPnl: number;
+    averageProfitLoss: number;
+  }> {
+    const monthlyMap = new Map<string, {
+      month: string;
+      year: number;
+      totalTrades: number;
+      profitCount: number;
+      lossCount: number;
+      totalProfit: number;
+      totalLoss: number;
+    }>();
+
+    // Group trades by month and year
+    for (const trade of this.trades) {
+      const tradeDate = new Date(trade.date);
+      const month = tradeDate.getMonth();
+      const year = tradeDate.getFullYear();
+      const monthKey = `${year}-${month}`;
+      const monthName = tradeDate.toLocaleDateString('en-US', { month: 'long' });
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          month: monthName,
+          year: year,
+          totalTrades: 0,
+          profitCount: 0,
+          lossCount: 0,
+          totalProfit: 0,
+          totalLoss: 0
+        });
+      }
+
+      const monthData = monthlyMap.get(monthKey)!;
+      monthData.totalTrades++;
+
+      if (trade.isProfit === true) {
+        monthData.profitCount++;
+        monthData.totalProfit += trade.amount || 0;
+      } else {
+        monthData.lossCount++;
+        monthData.totalLoss += trade.amount || 0;
+      }
+    }
+
+    // Convert to array and calculate net P&L and average
+    const summary = Array.from(monthlyMap.entries()).map(([monthKey, data]) => {
+      const netPnl = data.totalProfit - data.totalLoss;
+      const averageProfitLoss = data.totalTrades > 0 ? netPnl / data.totalTrades : 0;
+      // Extract month index from monthKey (format: "year-month")
+      const monthIndex = parseInt(monthKey.split('-')[1]);
+      
+      return {
+        ...data,
+        monthYear: `${data.month} ${data.year}`,
+        netPnl: netPnl,
+        averageProfitLoss: averageProfitLoss,
+        monthIndex: monthIndex // Store for sorting
+      };
+    });
+
+    // Sort by year and month descending (most recent first)
+    summary.sort((a: any, b: any) => {
+      if (a.year !== b.year) {
+        return b.year - a.year;
+      }
+      // Use stored monthIndex for comparison
+      return b.monthIndex - a.monthIndex;
+    });
+
+    // Remove monthIndex from final result
+    return summary.map(({ monthIndex, ...rest }) => rest);
+  }
+  
+  // Get filtered monthly summary (based on current filters)
+  getFilteredMonthlySummary(): Array<{
+    month: string;
+    year: number;
+    monthYear: string;
+    totalTrades: number;
+    profitCount: number;
+    lossCount: number;
+    totalProfit: number;
+    totalLoss: number;
+    netPnl: number;
+    averageProfitLoss: number;
+  }> {
+    const filteredTrades = this.getFilteredTrades();
+    const monthlyMap = new Map<string, {
+      month: string;
+      year: number;
+      totalTrades: number;
+      profitCount: number;
+      lossCount: number;
+      totalProfit: number;
+      totalLoss: number;
+    }>();
+
+    // Group filtered trades by month and year
+    for (const trade of filteredTrades) {
+      const tradeDate = new Date(trade.date);
+      const month = tradeDate.getMonth();
+      const year = tradeDate.getFullYear();
+      const monthKey = `${year}-${month}`;
+      const monthName = tradeDate.toLocaleDateString('en-US', { month: 'long' });
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          month: monthName,
+          year: year,
+          totalTrades: 0,
+          profitCount: 0,
+          lossCount: 0,
+          totalProfit: 0,
+          totalLoss: 0
+        });
+      }
+
+      const monthData = monthlyMap.get(monthKey)!;
+      monthData.totalTrades++;
+
+      if (trade.isProfit === true) {
+        monthData.profitCount++;
+        monthData.totalProfit += trade.amount || 0;
+      } else {
+        monthData.lossCount++;
+        monthData.totalLoss += trade.amount || 0;
+      }
+    }
+
+    // Convert to array and calculate net P&L and average
+    const summary = Array.from(monthlyMap.entries()).map(([monthKey, data]) => {
+      const netPnl = data.totalProfit - data.totalLoss;
+      const averageProfitLoss = data.totalTrades > 0 ? netPnl / data.totalTrades : 0;
+      // Extract month index from monthKey (format: "year-month")
+      const monthIndex = parseInt(monthKey.split('-')[1]);
+      
+      return {
+        ...data,
+        monthYear: `${data.month} ${data.year}`,
+        netPnl: netPnl,
+        averageProfitLoss: averageProfitLoss,
+        monthIndex: monthIndex // Store for sorting
+      };
+    });
+
+    // Sort by year and month descending (most recent first)
+    summary.sort((a: any, b: any) => {
+      if (a.year !== b.year) {
+        return b.year - a.year;
+      }
+      // Use stored monthIndex for comparison
+      return b.monthIndex - a.monthIndex;
+    });
+
+    // Remove monthIndex from final result
+    return summary.map(({ monthIndex, ...rest }) => rest);
+  }
+  
+  // Get trades for a specific month
+  getTradesByMonth(month: string, year: number): Trade[] {
+    return this.trades.filter(trade => {
+      const tradeDate = new Date(trade.date);
+      return tradeDate.getMonth() === this.availableMonths.findIndex(m => m.label === month) &&
+             tradeDate.getFullYear() === year;
+    });
+  }
+  
+  // Show monthly trades in modal
+  async showMonthlyTrades(month: string, year: number) {
+    const trades = this.getTradesByMonth(month, year);
+    const monthSummary = this.getMonthlySummary().find(s => s.month === month && s.year === year);
+    
+    if (!monthSummary) return;
+
+    const tradesData = trades.map(trade => ({
+      id: trade.id,
+      symbol: trade.symbol,
+      indexValue: trade.indexValue || 0,
+      tradeType: trade.tradeType || 'call',
+      isProfit: trade.isProfit !== undefined ? trade.isProfit : true,
+      amount: trade.amount || 0,
+      date: trade.date,
+      notes: trade.notes
+    }));
+
+    const title = `${month} ${year} - ${monthSummary.totalTrades} trade${monthSummary.totalTrades !== 1 ? 's' : ''}`;
+    const message = `Net P&L: ${this.formatCurrency(monthSummary.netPnl)} | Avg P&L: ${this.formatCurrency(monthSummary.averageProfitLoss)}`;
+    
+    await this.dialogService.showTradeList(tradesData, title, message, monthSummary.netPnl);
+  }
+  
+  // Toggle monthly summary section
+  toggleMonthlySummarySection() {
+    this.isMonthlySummaryExpanded = !this.isMonthlySummaryExpanded;
   }
 }

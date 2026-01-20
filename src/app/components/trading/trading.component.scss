@@ -244,6 +244,7 @@
 .add-trade-card,
 .filters-card,
 .daily-summary-card,
+.monthly-summary-card,
 .trades-list-card {
   background: white;
   border-radius: 20px;
@@ -258,6 +259,7 @@
 .add-trade-card:hover,
 .filters-card:hover,
 .daily-summary-card:hover,
+.monthly-summary-card:hover,
 .trades-list-card:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   border-color: #cbd5e1;
@@ -288,6 +290,7 @@
 .add-trade-card:hover .card-header-modern::after,
 .filters-card:hover .card-header-modern::after,
 .daily-summary-card:hover .card-header-modern::after,
+.monthly-summary-card:hover .card-header-modern::after,
 .trades-list-card:hover .card-header-modern::after {
   transform: scaleX(1);
 }
@@ -513,6 +516,110 @@ input[type="number"] {
 .btn-outline-danger:hover {
   background: #ef4444;
   color: white;
+}
+
+/* Monthly Summary Table */
+.monthly-summary-table {
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: white;
+  border: 1px solid #e2e8f0;
+}
+
+.monthly-summary-table thead th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 700;
+  border: none;
+  padding: 1.5rem 1.25rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.monthly-summary-table thead th:first-child {
+  border-top-left-radius: 16px;
+  padding-left: 1.5rem;
+}
+
+.monthly-summary-table thead th:last-child {
+  border-top-right-radius: 16px;
+  padding-right: 1.5rem;
+}
+
+.monthly-summary-table thead th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.monthly-summary-table tbody td {
+  padding: 1.5rem 1.25rem;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-weight: 500;
+  background: white;
+}
+
+.monthly-summary-table tbody td:first-child {
+  padding-left: 1.5rem;
+}
+
+.monthly-summary-table tbody td:last-child {
+  padding-right: 1.5rem;
+}
+
+.monthly-summary-row {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid #f1f5f9;
+  border-left: 4px solid transparent;
+  background: white;
+  position: relative;
+}
+
+.monthly-summary-row:nth-child(even) {
+  background: #fafbfc;
+}
+
+.monthly-summary-row:hover {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  border-left-color: #667eea;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+  transform: translateX(3px);
+  z-index: 1;
+}
+
+.monthly-summary-row:last-child td {
+  border-bottom: none;
+}
+
+.monthly-summary-row:last-child td:first-child {
+  border-bottom-left-radius: 16px;
+}
+
+.monthly-summary-row:last-child td:last-child {
+  border-bottom-right-radius: 16px;
+}
+
+.monthly-summary-table tbody td strong.profit {
+  color: #10b981;
+}
+
+.monthly-summary-table tbody td strong.loss {
+  color: #ef4444;
 }
 
 /* Daily Summary Table */
@@ -1072,6 +1179,114 @@ input[type="number"] {
   line-height: 1.5;
 }
 
+/* Mobile Card Styles for Monthly Summary */
+.monthly-summary-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.monthly-summary-card-mobile {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid transparent;
+}
+
+.monthly-summary-card-mobile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+  border-radius: 16px 0 0 16px;
+}
+
+.monthly-summary-card-mobile:active {
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+  transform: translateY(-2px) scale(0.98);
+  border-left-color: #667eea;
+}
+
+.monthly-summary-card-mobile:active::before {
+  transform: scaleY(1);
+}
+
+.monthly-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.monthly-summary-left {
+  flex: 1;
+}
+
+.monthly-summary-month {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.3px;
+}
+
+.monthly-summary-count {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.monthly-summary-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.monthly-summary-net {
+  text-align: right;
+}
+
+.net-pnl {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.avg-pnl {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.monthly-summary-details {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.monthly-summary-badges {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 /* Mobile Card Styles for Daily Summary - Compact */
 .daily-summary-cards-mobile {
   display: flex;
@@ -1337,6 +1552,7 @@ input[type="number"] {
   .add-trade-card,
   .filters-card,
   .daily-summary-card,
+  .monthly-summary-card,
   .trades-list-card {
     border-radius: 16px;
     margin-bottom: 1.5rem;
