@@ -258,8 +258,18 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
   
+  // Custom date range state
+  showCustomDatePicker: boolean = false;
+  
   // Preset date range methods
-  setPresetDateRange(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth') {
+  setPresetDateRange(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom') {
+    if (preset === 'custom') {
+      this.showCustomDatePicker = true;
+      // Don't clear existing dates if custom is selected
+      return;
+    }
+    
+    this.showCustomDatePicker = false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -326,7 +336,17 @@ export class TradingComponent implements OnInit, OnDestroy {
   }
   
   // Check if a preset is currently active
-  isPresetActive(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth'): boolean {
+  isPresetActive(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom'): boolean {
+    if (preset === 'custom') {
+      // Custom is active if dates are set but don't match any preset
+      if (!this.filterDateFrom || !this.filterDateTo) return false;
+      return !this.isPresetActive('today') && 
+             !this.isPresetActive('yesterday') && 
+             !this.isPresetActive('thisWeek') && 
+             !this.isPresetActive('lastWeek') && 
+             !this.isPresetActive('thisMonth') && 
+             !this.isPresetActive('lastMonth');
+    }
     if (!this.filterDateFrom || !this.filterDateTo) return false;
     
     const today = new Date();
@@ -382,12 +402,29 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.filterByMonthYear = false;
     this.selectedMonth = '';
     this.selectedYear = '';
+    this.showCustomDatePicker = false;
     
     // Reset pagination
     this.currentPage = 1;
     this.monthlyCurrentPage = 1;
     this.dailyCurrentPage = 1;
     
+    this.cdr.markForCheck();
+  }
+  
+  // Handle custom date range change
+  onCustomDateRangeChange() {
+    if (this.filterDateFrom && this.filterDateTo) {
+      this.showCustomDatePicker = true;
+      this.filterByMonthYear = false;
+      this.selectedMonth = '';
+      this.selectedYear = '';
+      
+      // Reset pagination
+      this.currentPage = 1;
+      this.monthlyCurrentPage = 1;
+      this.dailyCurrentPage = 1;
+    }
     this.cdr.markForCheck();
   }
 
