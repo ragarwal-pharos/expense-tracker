@@ -257,6 +257,139 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.currentPage = 1; // Reset to first page
     this.cdr.markForCheck();
   }
+  
+  // Preset date range methods
+  setPresetDateRange(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let startDate: Date;
+    let endDate: Date;
+    
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
+    switch (preset) {
+      case 'today':
+        startDate = new Date(today);
+        endDate = new Date(today);
+        break;
+        
+      case 'yesterday':
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 1);
+        endDate = new Date(startDate);
+        break;
+        
+      case 'thisWeek':
+        // Start of week (Sunday)
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay());
+        endDate = new Date(today);
+        break;
+        
+      case 'lastWeek':
+        // Last week (Sunday to Saturday)
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay() - 7);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        break;
+        
+      case 'thisMonth':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(today);
+        break;
+        
+      case 'lastMonth':
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+    }
+    
+    this.filterDateFrom = formatDate(startDate);
+    this.filterDateTo = formatDate(endDate);
+    this.filterByMonthYear = false; // Disable month/year filter when using preset
+    this.selectedMonth = '';
+    this.selectedYear = '';
+    
+    // Reset pagination
+    this.currentPage = 1;
+    this.monthlyCurrentPage = 1;
+    this.dailyCurrentPage = 1;
+    
+    this.cdr.markForCheck();
+  }
+  
+  // Check if a preset is currently active
+  isPresetActive(preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth'): boolean {
+    if (!this.filterDateFrom || !this.filterDateTo) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const fromDate = new Date(this.filterDateFrom);
+    const toDate = new Date(this.filterDateTo);
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(0, 0, 0, 0);
+    
+    let expectedStart: Date;
+    let expectedEnd: Date;
+    
+    switch (preset) {
+      case 'today':
+        expectedStart = new Date(today);
+        expectedEnd = new Date(today);
+        break;
+      case 'yesterday':
+        expectedStart = new Date(today);
+        expectedStart.setDate(today.getDate() - 1);
+        expectedEnd = new Date(expectedStart);
+        break;
+      case 'thisWeek':
+        expectedStart = new Date(today);
+        expectedStart.setDate(today.getDate() - today.getDay());
+        expectedEnd = new Date(today);
+        break;
+      case 'lastWeek':
+        expectedStart = new Date(today);
+        expectedStart.setDate(today.getDate() - today.getDay() - 7);
+        expectedEnd = new Date(expectedStart);
+        expectedEnd.setDate(expectedStart.getDate() + 6);
+        break;
+      case 'thisMonth':
+        expectedStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        expectedEnd = new Date(today);
+        break;
+      case 'lastMonth':
+        expectedStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        expectedEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+    }
+    
+    return fromDate.getTime() === expectedStart.getTime() && 
+           toDate.getTime() === expectedEnd.getTime();
+  }
+  
+  // Clear preset date range
+  clearPresetDateRange() {
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterByMonthYear = false;
+    this.selectedMonth = '';
+    this.selectedYear = '';
+    
+    // Reset pagination
+    this.currentPage = 1;
+    this.monthlyCurrentPage = 1;
+    this.dailyCurrentPage = 1;
+    
+    this.cdr.markForCheck();
+  }
 
   // Add new trade
   async addTrade() {

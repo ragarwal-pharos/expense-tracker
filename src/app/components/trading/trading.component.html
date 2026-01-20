@@ -221,6 +221,68 @@
       </div>
     </div>
     <div class="card-body-modern" *ngIf="isFiltersExpanded">
+      <!-- Preset Date Range Quick Filters -->
+      <div class="mb-4">
+        <label class="form-label mb-2">Quick Date Filters</label>
+        <div class="d-flex flex-wrap gap-2">
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('today')"
+            [class.btn-outline-secondary]="!isPresetActive('today')"
+            (click)="setPresetDateRange('today')">
+            Today
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('yesterday')"
+            [class.btn-outline-secondary]="!isPresetActive('yesterday')"
+            (click)="setPresetDateRange('yesterday')">
+            Yesterday
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('thisWeek')"
+            [class.btn-outline-secondary]="!isPresetActive('thisWeek')"
+            (click)="setPresetDateRange('thisWeek')">
+            This Week
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('lastWeek')"
+            [class.btn-outline-secondary]="!isPresetActive('lastWeek')"
+            (click)="setPresetDateRange('lastWeek')">
+            Last Week
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('thisMonth')"
+            [class.btn-outline-secondary]="!isPresetActive('thisMonth')"
+            (click)="setPresetDateRange('thisMonth')">
+            This Month
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="isPresetActive('lastMonth')"
+            [class.btn-outline-secondary]="!isPresetActive('lastMonth')"
+            (click)="setPresetDateRange('lastMonth')">
+            Last Month
+          </button>
+          <button 
+            type="button"
+            class="btn btn-sm btn-outline-danger"
+            *ngIf="filterDateFrom || filterDateTo"
+            (click)="clearPresetDateRange()">
+            Clear Dates
+          </button>
+        </div>
+      </div>
+      
       <div class="row">
         <div class="col-md-3 mb-3">
           <label class="form-label">Index</label>
