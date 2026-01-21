@@ -188,7 +188,7 @@ import { Subscription } from 'rxjs';
                   </div>
                 </div>
                 <div class="trade-meta" *ngIf="trade.indexValue || trade.notes">
-                  <span *ngIf="trade.indexValue">Index: {{ trade.indexValue | number:'1.2-2' }}</span>
+                  <span *ngIf="trade.indexValue">Index: {{ trade.indexValue | number:'1.0-0' }}</span>
                   <span *ngIf="trade.notes">• {{ trade.notes }}</span>
                 </div>
               </div>

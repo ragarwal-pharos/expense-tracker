@@ -123,8 +123,12 @@
               class="form-control" 
               [(ngModel)]="indexValueInput"
               placeholder="Enter index value"
-              step="0.01"
-              min="0.01"
+              step="1"
+              min="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              (keydown)="preventNonInteger($event)"
+              (input)="sanitizeIntegerInput('indexValueInput')"
               name="indexValue"
               required>
           </div>
@@ -160,8 +164,12 @@
               class="form-control" 
               [(ngModel)]="amountInput"
               placeholder="Enter amount"
-              step="0.01"
-              min="0.01"
+              step="1"
+              min="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              (keydown)="preventNonInteger($event)"
+              (input)="sanitizeIntegerInput('amountInput')"
               name="amount"
               required>
           </div>
@@ -670,7 +678,7 @@
             <tr *ngFor="let trade of getPaginatedTrades(); trackBy: trackByTradeId" [class.deleting]="deletingTradeIds.has(trade.id)">
               <td><strong>{{ formatDate(trade.date) }}</strong></td>
               <td>{{ trade.symbol.toUpperCase() }}</td>
-              <td>{{ trade.indexValue || 0 | number:'1.2-2' }}</td>
+              <td>{{ trade.indexValue || 0 | number:'1.0-0' }}</td>
               <td>
                 <span class="badge" [class.bg-info]="trade.tradeType === 'call'" [class.bg-warning]="trade.tradeType === 'put'">
                   {{ (trade.tradeType || 'N/A').toUpperCase() }}
@@ -753,7 +761,7 @@
               </span>
             </div>
             <div class="trade-card-meta">
-              <span class="trade-meta-item">Index Value: {{ trade.indexValue || 0 | number:'1.2-2' }}</span>
+              <span class="trade-meta-item">Index Value: {{ trade.indexValue || 0 | number:'1.0-0' }}</span>
               <span class="trade-meta-item" *ngIf="trade.notes">{{ trade.notes }}</span>
             </div>
           </div>

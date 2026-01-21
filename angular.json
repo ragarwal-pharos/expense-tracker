@@ -64,19 +64,31 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "3MB"
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "100kB",
-                  "maximumError": "200kB"
+                  "maximumWarning": "50kB",
+                  "maximumError": "100kB"
+                },
+                {
+                  "type": "bundle",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
                 }
               ],
               "outputHashing": "all",
               "baseHref": "/expense-tracker/",
               "serviceWorker": "ngsw-config.json",
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
               "extractLicenses": true,
               "sourceMap": false,
               "namedChunks": false

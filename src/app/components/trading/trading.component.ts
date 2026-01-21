@@ -436,8 +436,8 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      const amount = parseFloat(this.amountInput) || 0;
-      const indexValue = parseFloat(this.indexValueInput) || 0;
+      const amount = parseInt(this.amountInput, 10) || 0;
+      const indexValue = parseInt(this.indexValueInput, 10) || 0;
       
       // Ensure isProfit is explicitly a boolean
       const isProfit = typeof this.newTrade.isProfit === 'boolean' 
@@ -477,6 +477,21 @@ export class TradingComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Prevent non-integer key entries (dot, minus, exponent, plus)
+  preventNonInteger(event: KeyboardEvent) {
+    const invalidKeys = ['.', ',', '-', 'e', 'E', '+'];
+    if (invalidKeys.includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  // Sanitize input to keep only digits for integer fields
+  sanitizeIntegerInput(field: 'indexValueInput' | 'amountInput') {
+    const current = this[field] || '';
+    const cleaned = current.replace(/\D+/g, '');
+    this[field] = cleaned;
+  }
+
   // Validate trade
   validateTrade(): boolean {
     if (!this.newTrade.symbol || this.newTrade.symbol.trim() === '') {
@@ -484,7 +499,7 @@ export class TradingComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    const indexValue = parseFloat(this.indexValueInput);
+    const indexValue = parseInt(this.indexValueInput, 10);
     if (isNaN(indexValue) || indexValue <= 0) {
       this.dialogService.error('Please enter a valid index value greater than 0.');
       return false;
@@ -500,7 +515,7 @@ export class TradingComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    const amount = parseFloat(this.amountInput);
+    const amount = parseInt(this.amountInput, 10);
     if (isNaN(amount) || amount <= 0) {
       this.dialogService.error('Please enter a valid amount greater than 0.');
       return false;
@@ -1269,7 +1284,25 @@ export class TradingComponent implements OnInit, OnDestroy {
 
   // Show daily summary trades in modal
   async showDailyTrades(date: string) {
-    const trades = this.getFilteredTrades().filter(trade => trade.date === date);
+    const trades = this.getFilteredTrades()
+      .filter(trade => trade.date === date)
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+
+        if (dateA !== dateB) {
+          return dateB - dateA;
+        }
+
+        const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+        if (createdA !== createdB) {
+          return createdB - createdA;
+        }
+
+        return b.id.localeCompare(a.id);
+      });
     const daySummary = this.getFilteredDailySummary().find(day => day.date === date);
     
     if (!daySummary) return;
@@ -1489,7 +1522,26 @@ export class TradingComponent implements OnInit, OnDestroy {
   
   // Show monthly trades in modal
   async showMonthlyTrades(month: string, year: number) {
-    const trades = this.getTradesByMonth(month, year);
+    // Sort trades so the most recent (including time) appear first
+    const trades = this.getTradesByMonth(month, year).sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+
+      if (dateA !== dateB) {
+        return dateB - dateA; // Newer date first
+      }
+
+      // If same day, use createdAt timestamp when available
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      if (createdA !== createdB) {
+        return createdB - createdA; // Newer createdAt first
+      }
+
+      // Final tie-breaker: id descending (more recent IDs usually sort last)
+      return b.id.localeCompare(a.id);
+    });
     const monthSummary = this.getMonthlySummary().find(s => s.month === month && s.year === year);
     
     if (!monthSummary) return;
