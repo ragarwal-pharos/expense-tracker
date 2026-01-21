@@ -42,9 +42,6 @@ export class ExpenseCategoryMapperService {
     };
 
     try {
-      console.log('🔄 Starting bulk category mapping...');
-      console.log(`📋 Processing ${mappings.length} category mappings`);
-
       // Get all expenses and categories
       const expenses = await this.expenseService.getAll();
       const categories = await this.categoryService.getAll();
@@ -52,8 +49,6 @@ export class ExpenseCategoryMapperService {
       // Process each mapping
       for (const mapping of mappings) {
         try {
-          console.log(`\n📌 Processing mapping: "${mapping.orphanedCategoryId}" → "${mapping.targetCategoryName}"`);
-          
           // Find target category
           const targetCategory = categories.find(c => c.id === mapping.targetCategoryId);
           if (!targetCategory) {
@@ -69,10 +64,7 @@ export class ExpenseCategoryMapperService {
             expense.categoryId === mapping.orphanedCategoryId
           );
 
-          console.log(`🔍 Found ${orphanedExpenses.length} orphaned expenses for category ID: "${mapping.orphanedCategoryId}"`);
-
           if (orphanedExpenses.length === 0) {
-            console.log(`⚠️ No orphaned expenses found for category ID: "${mapping.orphanedCategoryId}"`);
             continue;
           }
 
@@ -88,7 +80,6 @@ export class ExpenseCategoryMapperService {
               result.updatedExpenses.push(updatedExpense);
               result.success++;
 
-              console.log(`✅ Updated expense: "${expense.description || 'No description'}" (₹${expense.amount}) → ${mapping.targetCategoryName}`);
             } catch (error) {
               const errorMsg = `Failed to update expense ${expense.id}: ${error}`;
               console.error(`❌ ${errorMsg}`);
@@ -105,10 +96,6 @@ export class ExpenseCategoryMapperService {
         }
       }
 
-      console.log(`\n🎉 Bulk mapping completed!`);
-      console.log(`✅ Successfully updated: ${result.success} expenses`);
-      console.log(`❌ Failed updates: ${result.failed} expenses`);
-      console.log(`📊 Total errors: ${result.errors.length}`);
 
       return result;
 

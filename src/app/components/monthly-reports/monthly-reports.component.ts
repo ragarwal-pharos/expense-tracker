@@ -708,7 +708,6 @@ export class MonthlyReportsComponent implements OnInit, OnDestroy {
     } else {
       // Fallback for older browsers
       await this.dialogService.warning('Download not supported in this browser. Copy the data manually.');
-      console.log('CSV Content:', content);
     }
   }
 

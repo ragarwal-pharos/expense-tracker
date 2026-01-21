@@ -111,7 +111,6 @@ export class FirebaseService {
         expenses.push({ id: doc.id, ...doc.data() } as Expense);
       });
       this.expensesSubject.next(expenses);
-      console.log(`Real-time update: ${expenses.length} expenses`);
     });
 
     // Set up real-time listener for categories
@@ -124,7 +123,6 @@ export class FirebaseService {
         categories.push({ id: doc.id, ...doc.data() } as Category);
       });
       this.categoriesSubject.next(categories);
-      console.log(`Real-time update: ${categories.length} categories`);
     });
 
     // Set up real-time listener for trades
@@ -161,12 +159,6 @@ export class FirebaseService {
         const dateB = new Date(b.date).getTime();
         return dateB - dateA; // Descending order
       });
-      
-      console.log(`Real-time update: ${trades.length} trades`, trades.map(t => ({ 
-        symbol: t.symbol, 
-        amount: t.amount, 
-        isProfit: t.isProfit 
-      })));
       this.tradesSubject.next(trades);
     }, (error) => {
       console.error('Error in trades snapshot listener:', error);
@@ -254,7 +246,6 @@ export class FirebaseService {
         throw new Error('User not authenticated');
       }
 
-      console.log(`Attempting to update expense with ID: ${expense.id}`);
       const expenseRef = doc(this.firestore, 'expenses', expense.id);
       
       // Check if document exists first
@@ -265,12 +256,10 @@ export class FirebaseService {
         const { id, ...expenseData } = expense;
         const expenseWithUserId = { ...expenseData, userId };
         await setDoc(expenseRef, expenseWithUserId);
-        console.log(`Created new expense with ID: ${expense.id}`);
       } else {
         const { id, ...expenseData } = expense; // Remove id from the update data
         const expenseWithUserId = { ...expenseData, userId };
         await updateDoc(expenseRef, expenseWithUserId);
-        console.log(`Expense ${expense.id} updated successfully`);
       }
       
       // Real-time listener will automatically update the cache
@@ -284,12 +273,10 @@ export class FirebaseService {
 
   async deleteExpense(expenseId: string): Promise<void> {
     try {
-      console.log(`Attempting to delete expense with ID: ${expenseId}`);
       const expenseRef = doc(this.firestore, 'expenses', expenseId);
       
       // Delete the document directly - Firebase handles non-existent documents gracefully
       await deleteDoc(expenseRef);
-      console.log(`Expense ${expenseId} deleted successfully`);
       
       // Real-time listener will automatically update the cache
       // No need to manually update cache here to avoid duplicates
@@ -308,22 +295,16 @@ export class FirebaseService {
   // Helper method to migrate local expenses to Firebase
   async migrateLocalExpenses(localExpenses: any[]): Promise<void> {
     try {
-      console.log('Starting migration of local expenses to Firebase...');
-      
       for (const expense of localExpenses) {
         // Skip if expense already has a Firebase ID (starts with Firebase-generated pattern)
         if (expense.id && expense.id.length > 20) {
-          console.log(`Expense ${expense.id} already migrated, skipping...`);
           continue;
         }
         
         // Create new expense in Firebase
         const { id, ...expenseData } = expense;
-        const newId = await this.addExpense(expenseData);
-        console.log(`Migrated expense from local ID ${id} to Firebase ID ${newId}`);
+        await this.addExpense(expenseData);
       }
-      
-      console.log('Migration completed successfully');
     } catch (error) {
       console.error('Error during migration:', error);
       throw error;
@@ -340,7 +321,6 @@ export class FirebaseService {
     try {
       const userId = this.authService.getCurrentUserId();
       if (!userId) {
-        console.log('No user authenticated, returning empty categories');
         this.categoriesSubject.next([]);
         return [];
       }
@@ -390,7 +370,6 @@ export class FirebaseService {
         throw new Error('User not authenticated');
       }
 
-      console.log(`Attempting to update category with ID: ${category.id}`);
       const categoryRef = doc(this.firestore, 'categories', category.id);
       
       // Check if document exists first
@@ -401,12 +380,10 @@ export class FirebaseService {
         const { id, ...categoryData } = category;
         const categoryWithUserId = { ...categoryData, userId };
         await setDoc(categoryRef, categoryWithUserId);
-        console.log(`Created new category with ID: ${category.id}`);
       } else {
         const { id, ...categoryData } = category; // Remove id from the update data
         const categoryWithUserId = { ...categoryData, userId };
         await updateDoc(categoryRef, categoryWithUserId);
-        console.log(`Category ${category.id} updated successfully`);
       }
       
       // Real-time listener will automatically update the cache
@@ -420,22 +397,17 @@ export class FirebaseService {
 
   async deleteCategory(categoryId: string): Promise<void> {
     try {
-      console.log(`Attempting to delete category with ID: ${categoryId} (length: ${categoryId.length})`);
       const categoryRef = doc(this.firestore, 'categories', categoryId);
       
       // Check if document exists first
       const docSnap = await getDoc(categoryRef);
-      console.log(`Document exists: ${docSnap.exists()}`);
       
       if (!docSnap.exists()) {
-        console.warn(`Category with ID ${categoryId} does not exist in Firebase. This might be a local-only category.`);
-        // Don't throw error, just log warning and continue
+        // Don't throw error, just return
         return;
       }
       
-      console.log('Document found, proceeding with deletion...');
       await deleteDoc(categoryRef);
-      console.log(`Category ${categoryId} deleted successfully`);
       
       // Real-time listener will automatically update the cache
       // No need to manually update cache here to avoid duplicates
@@ -601,7 +573,6 @@ export class FirebaseService {
       });
       
       this.tradesSubject.next(trades);
-      console.log(`Loaded ${trades.length} trades`);
       return trades;
     } catch (error) {
       console.error('Error loading trades:', error);

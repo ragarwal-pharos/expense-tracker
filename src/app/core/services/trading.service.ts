@@ -13,9 +13,7 @@ export class TradingService {
 
   async add(trade: Omit<Trade, 'id'>): Promise<string> {
     try {
-      console.log('Adding trade to Firebase...');
       const id = await this.firebaseService.addTrade(trade);
-      console.log(`Trade added with ID: ${id}`);
       return id;
     } catch (error) {
       console.error('Error adding trade:', error);
@@ -25,9 +23,7 @@ export class TradingService {
 
   async update(trade: Trade): Promise<void> {
     try {
-      console.log(`Updating trade with ID: ${trade.id}`);
       await this.firebaseService.updateTrade(trade);
-      console.log('Trade updated successfully');
     } catch (error) {
       console.error('Error updating trade:', error);
       throw error;
@@ -36,9 +32,7 @@ export class TradingService {
 
   async delete(id: string): Promise<void> {
     try {
-      console.log(`Deleting trade with ID: ${id}`);
       await this.firebaseService.deleteTrade(id);
-      console.log('Trade deleted successfully');
     } catch (error) {
       console.error('Error deleting trade:', error);
       throw error;

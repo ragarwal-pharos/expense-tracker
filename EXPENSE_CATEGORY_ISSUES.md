@@ -120,7 +120,7 @@ async deleteCategory(id: string): Promise<void> {
     // 3. Only delete category if all expenses were deleted successfully
     await this.firebaseService.deleteCategory(id);
     
-    console.log(`Category and ${expensesToDelete.length} associated expenses deleted successfully`);
+    // Success: Category and associated expenses deleted
   } catch (error) {
     console.error('Error deleting category:', error);
     throw error;

@@ -14,9 +14,7 @@ export class ExpenseService {
 
   async add(expense: Omit<Expense, 'id'>): Promise<string> {
     try {
-      console.log('Adding expense to Firebase...');
       const id = await this.firebaseService.addExpense(expense);
-      console.log(`Expense added with ID: ${id}`);
       return id;
     } catch (error) {
       console.error('Error adding expense:', error);
@@ -26,9 +24,7 @@ export class ExpenseService {
 
   async update(expense: Expense): Promise<void> {
     try {
-      console.log(`Updating expense with ID: ${expense.id}`);
       await this.firebaseService.updateExpense(expense);
-      console.log('Expense updated successfully');
     } catch (error) {
       console.error('Error updating expense:', error);
       throw error;
@@ -37,9 +33,7 @@ export class ExpenseService {
 
   async delete(id: string): Promise<void> {
     try {
-      console.log(`Deleting expense with ID: ${id}`);
       await this.firebaseService.deleteExpense(id);
-      console.log('Expense deleted successfully');
     } catch (error) {
       console.error('Error deleting expense:', error);
       throw error;

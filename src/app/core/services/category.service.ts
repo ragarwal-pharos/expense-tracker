@@ -21,12 +21,10 @@ export class CategoryService {
   }
 
   async forceInitializeDefaultCategories(): Promise<void> {
-    console.log('Force initializing default categories...');
     const defaultCategories = this.getDefaultCategories();
     for (const category of defaultCategories) {
       await this.firebaseService.addCategory(category);
     }
-    console.log('Default categories initialized successfully');
   }
 
   private getDefaultCategories(): Omit<Category, 'id'>[] {
@@ -128,7 +126,6 @@ export class CategoryService {
     
     // If we found duplicates, update the Firebase collection
     if (uniqueCategories.length !== categories.length) {
-      console.log(`Found ${categories.length - uniqueCategories.length} duplicate categories. Cleaning up...`);
       await this.cleanupDuplicateCategories(uniqueCategories);
     }
     
@@ -145,7 +142,6 @@ export class CategoryService {
         seen.add(normalizedName);
         uniqueCategories.push(category);
       } else {
-        console.log(`Duplicate category found: "${category.name}" (ID: ${category.id})`);
       }
     }
     
@@ -165,7 +161,6 @@ export class CategoryService {
         const normalizedName = category.name.toLowerCase().trim();
         if (seen.has(normalizedName)) {
           duplicatesToDelete.push(category.id);
-          console.log(`Marking duplicate for deletion: "${category.name}" (ID: ${category.id})`);
         } else {
           seen.add(normalizedName);
         }
@@ -175,7 +170,6 @@ export class CategoryService {
       for (const duplicateId of duplicatesToDelete) {
         try {
           await this.firebaseService.deleteCategory(duplicateId);
-          console.log(`Deleted duplicate category with ID: ${duplicateId}`);
         } catch (error) {
           console.error(`Error deleting duplicate category ${duplicateId}:`, error);
         }
@@ -199,9 +193,7 @@ export class CategoryService {
 
   async update(category: Category): Promise<void> {
     try {
-      console.log(`Updating category with ID: ${category.id}`);
       await this.firebaseService.updateCategory(category);
-      console.log('Category updated successfully');
     } catch (error) {
       console.error('Error updating category:', error);
       throw error;
@@ -210,19 +202,15 @@ export class CategoryService {
 
   async delete(id: string): Promise<void> {
     try {
-      console.log(`Deleting category with ID: ${id}`);
-      
       // Delete all expenses associated with this category first
       const expenses = await this.firebaseService.loadExpenses();
       const expensesToDelete = expenses.filter(e => e.categoryId === id);
-      console.log(`Found ${expensesToDelete.length} expenses to delete for category ${id}`);
       
       for (const expense of expensesToDelete) {
         await this.firebaseService.deleteExpense(expense.id);
       }
       
       await this.firebaseService.deleteCategory(id);
-      console.log('Category deleted successfully');
     } catch (error) {
       console.error('Error deleting category:', error);
       throw error;
@@ -235,13 +223,10 @@ export class CategoryService {
   }
 
   async triggerDuplicateCleanup(): Promise<void> {
-    console.log('Manual duplicate cleanup triggered...');
-    const categories = await this.getAll();
-    console.log(`Categories after cleanup: ${categories.length}`);
+    await this.getAll();
   }
 
   async updateCategoryIcons(): Promise<number> {
-    console.log('Updating category icons...');
     const categories = await this.getAll();
     
     // Define the new icon mappings
@@ -277,7 +262,6 @@ export class CategoryService {
     let updatedCount = 0;
     
     for (const category of categories) {
-      console.log(`Checking category: "${category.name}" with current icon: "${category.icon}"`);
       const newIcon = iconMappings[category.name];
       if (newIcon && category.icon !== newIcon) {
         try {
@@ -287,18 +271,12 @@ export class CategoryService {
           };
           await this.update(updatedCategory);
           updatedCount++;
-          console.log(`✅ Updated icon for "${category.name}" from "${category.icon}" to "${newIcon}"`);
         } catch (error) {
           console.error(`❌ Error updating icon for "${category.name}":`, error);
         }
-      } else if (newIcon) {
-        console.log(`⏭️ Category "${category.name}" already has the correct icon: "${category.icon}"`);
-      } else {
-        console.log(`❓ No icon mapping found for category: "${category.name}"`);
       }
     }
     
-    console.log(`Updated ${updatedCount} category icons`);
     return updatedCount;
   }
 } 

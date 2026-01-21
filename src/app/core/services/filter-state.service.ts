@@ -36,7 +36,6 @@ export class FilterStateService {
   updateFilterState(newState: Partial<FilterState>): void {
     const currentState = this.filterStateSubject.value;
     const updatedState = { ...currentState, ...newState };
-    console.log('Updating filter state:', { currentState, newState, updatedState });
     this.filterStateSubject.next(updatedState);
     this.saveFilterState(updatedState);
   }
@@ -44,7 +43,6 @@ export class FilterStateService {
   // Get current filter state
   getFilterState(): FilterState {
     const state = this.filterStateSubject.value;
-    console.log('Getting filter state:', state);
     return state;
   }
 
@@ -65,7 +63,6 @@ export class FilterStateService {
   private saveFilterState(state: FilterState): void {
     try {
       localStorage.setItem('expenseTracker_filterState', JSON.stringify(state));
-      console.log('Filter state saved to localStorage:', state);
     } catch (error) {
       console.error('Error saving filter state to localStorage:', error);
     }
@@ -75,13 +72,9 @@ export class FilterStateService {
   private loadFilterState(): void {
     try {
       const savedState = localStorage.getItem('expenseTracker_filterState');
-      console.log('Loading filter state from localStorage:', savedState);
       if (savedState) {
         const state = JSON.parse(savedState);
-        console.log('Parsed filter state:', state);
         this.filterStateSubject.next(state);
-      } else {
-        console.log('No saved filter state found in localStorage');
       }
     } catch (error) {
       console.error('Error loading filter state from localStorage:', error);

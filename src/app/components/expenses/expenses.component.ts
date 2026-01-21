@@ -131,13 +131,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       if (editId && mode === 'edit') {
         this.isEditMode = true;
         this.editingExpenseId = editId;
-        console.log('Edit mode activated for expense:', editId);
       }
       
       // Handle category filter from dashboard
       if (categoryFilter && filterType === 'category') {
         this.filterCategory = categoryFilter;
-        console.log('Category filter applied:', categoryFilter);
       }
     });
 
@@ -147,7 +145,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     // Subscribe to filter state changes
     this.subscription.add(
       this.filterStateService.filterState$.subscribe(filterState => {
-        console.log('Filter state changed in expenses component:', filterState);
         this.loadDashboardFilterState();
       })
     );
@@ -206,7 +203,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   // Load dashboard filter state from FilterStateService
   private loadDashboardFilterState() {
     const filterState = this.filterStateService.getFilterState();
-    console.log('Loading dashboard filter state from service:', filterState);
     
     this.dashboardPeriod = filterState.selectedPeriod;
     this.dashboardMonth = filterState.selectedMonth;
@@ -220,10 +216,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     if (this.dashboardPeriod === 'custom' && this.dashboardStartDate && this.dashboardEndDate) {
       this.filterDateFrom = this.dashboardStartDate;
       this.filterDateTo = this.dashboardEndDate;
-      console.log('Populated expenses page date filters with dashboard custom range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     } else if (this.dashboardPeriod === 'monthly' && this.dashboardMonth && this.dashboardYear) {
       const monthIndex = parseInt(this.dashboardMonth);
       const year = parseInt(this.dashboardYear);
@@ -231,40 +223,24 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       const endDate = new Date(year, monthIndex + 1, 0);
       this.filterDateFrom = startDate.toISOString().split('T')[0];
       this.filterDateTo = endDate.toISOString().split('T')[0];
-      console.log('Populated expenses page date filters with dashboard monthly range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     } else if (this.dashboardPeriod === 'yearly' && this.dashboardYear) {
       const year = parseInt(this.dashboardYear);
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31);
       this.filterDateFrom = startDate.toISOString().split('T')[0];
       this.filterDateTo = endDate.toISOString().split('T')[0];
-      console.log('Populated expenses page date filters with dashboard yearly range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     } else if (this.dashboardPeriod === 'last30') {
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - 30);
       this.filterDateFrom = startDate.toISOString().split('T')[0];
       this.filterDateTo = endDate.toISOString().split('T')[0];
-      console.log('Populated expenses page date filters with dashboard last 30 days range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     } else if (this.dashboardPeriod === 'last7') {
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - 7);
       this.filterDateFrom = startDate.toISOString().split('T')[0];
       this.filterDateTo = endDate.toISOString().split('T')[0];
-      console.log('Populated expenses page date filters with dashboard last 7 days range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     } else if (this.dashboardPeriod === 'monthOnly' && this.dashboardMonthOnly && this.dashboardYearOnly) {
       const monthIndex = parseInt(this.dashboardMonthOnly);
       const year = parseInt(this.dashboardYearOnly);
@@ -272,21 +248,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       const endDate = new Date(Date.UTC(year, monthIndex + 1, 0));
       this.filterDateFrom = startDate.toISOString().split('T')[0];
       this.filterDateTo = endDate.toISOString().split('T')[0];
-      console.log('Populated expenses page date filters with dashboard month only range:', {
-        filterDateFrom: this.filterDateFrom,
-        filterDateTo: this.filterDateTo
-      });
     }
-    
-    console.log('Dashboard filter state loaded into expenses component:', {
-      period: this.dashboardPeriod,
-      month: this.dashboardMonth,
-      year: this.dashboardYear,
-      startDate: this.dashboardStartDate,
-      endDate: this.dashboardEndDate,
-      monthOnly: this.dashboardMonthOnly,
-      yearOnly: this.dashboardYearOnly
-    });
   }
 
   // loadData() method removed - Firebase observables handle data loading automatically
@@ -304,7 +266,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         // Category will be validated when user tries to save
       }
       
-      console.log('Loaded expense for editing:', expense);
     } else {
       console.error('Expense not found for editing:', this.editingExpenseId);
       // Clear edit mode if expense not found
@@ -373,7 +334,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       };
 
       const id = await this.expenseService.add(expenseData);
-      console.log(`Expense added with Firebase ID: ${id}`);
       
       this.resetForm();
       await this.dialogService.success('Expense added successfully!');
@@ -425,7 +385,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       };
 
       await this.expenseService.update(updatedExpense);
-      console.log('Expense updated successfully');
       
       // Exit edit mode
       this.isEditMode = false;
@@ -1297,8 +1256,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     // Apply dashboard filter state only if no manual date filters are set
     if (!this.filterDateFrom && !this.filterDateTo && !this.filterDate) {
       filtered = this.applyDashboardFilters(filtered);
-    } else {
-      console.log('Manual date filters active, skipping dashboard filters');
     }
 
     // Sort
@@ -1333,19 +1290,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   // Apply dashboard filter state to expenses
   private applyDashboardFilters(expenses: Expense[]): Expense[] {
-    console.log('Applying dashboard filters:', {
-      period: this.dashboardPeriod,
-      month: this.dashboardMonth,
-      year: this.dashboardYear,
-      startDate: this.dashboardStartDate,
-      endDate: this.dashboardEndDate,
-      monthOnly: this.dashboardMonthOnly,
-      yearOnly: this.dashboardYearOnly,
-      totalExpenses: expenses.length
-    });
-
     if (!this.dashboardPeriod || this.dashboardPeriod === 'all') {
-      console.log('No dashboard filter active, returning all expenses');
       return expenses;
     }
 
@@ -1356,96 +1301,70 @@ export class ExpensesComponent implements OnInit, OnDestroy {
         if (this.dashboardMonth && this.dashboardYear) {
           const selectedMonthIndex = parseInt(this.dashboardMonth);
           const selectedYear = parseInt(this.dashboardYear);
-          console.log('Applying monthly filter:', {
-            month: selectedMonthIndex,
-            year: selectedYear
-          });
           const filtered = expenses.filter(expense => {
             const expenseDate = new Date(expense.date);
             return expenseDate.getMonth() === selectedMonthIndex && 
                    expenseDate.getFullYear() === selectedYear;
           });
-          console.log(`Monthly filter: ${expenses.length} -> ${filtered.length} expenses`);
           return filtered;
         }
-        console.log('Monthly filter: missing month or year');
         break;
         
       case 'yearly':
         if (this.dashboardYear) {
           const selectedYear = parseInt(this.dashboardYear);
-          console.log('Applying yearly filter:', { year: selectedYear });
           const filtered = expenses.filter(expense => {
             const expenseDate = new Date(expense.date);
             return expenseDate.getFullYear() === selectedYear;
           });
-          console.log(`Yearly filter: ${expenses.length} -> ${filtered.length} expenses`);
           return filtered;
         }
-        console.log('Yearly filter: missing year');
         break;
         
       case 'last30':
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(now.getDate() - 30);
-        console.log('Applying last 30 days filter:', { thirtyDaysAgo });
         const filtered30 = expenses.filter(expense => {
           const expenseDate = new Date(expense.date);
           return expenseDate >= thirtyDaysAgo;
         });
-        console.log(`Last 30 days filter: ${expenses.length} -> ${filtered30.length} expenses`);
         return filtered30;
         
       case 'last7':
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(now.getDate() - 7);
-        console.log('Applying last 7 days filter:', { sevenDaysAgo });
         const filtered7 = expenses.filter(expense => {
           const expenseDate = new Date(expense.date);
           return expenseDate >= sevenDaysAgo;
         });
-        console.log(`Last 7 days filter: ${expenses.length} -> ${filtered7.length} expenses`);
         return filtered7;
         
       case 'custom':
         if (this.dashboardStartDate && this.dashboardEndDate) {
-          console.log('Applying custom date range filter:', {
-            startDate: this.dashboardStartDate,
-            endDate: this.dashboardEndDate
-          });
           const filtered = expenses.filter(expense => {
             const expenseDate = new Date(expense.date);
             const start = new Date(this.dashboardStartDate);
             const end = new Date(this.dashboardEndDate);
             return expenseDate >= start && expenseDate <= end;
           });
-          console.log(`Custom filter: ${expenses.length} -> ${filtered.length} expenses`);
           return filtered;
         }
-        console.log('Custom date range filter: missing start or end date');
         break;
         
       case 'monthOnly':
         if (this.dashboardMonthOnly && this.dashboardYearOnly) {
           const selectedMonthIndex = parseInt(this.dashboardMonthOnly);
           const selectedYear = parseInt(this.dashboardYearOnly);
-          console.log('Applying month only filter:', {
-            month: selectedMonthIndex,
-            year: selectedYear
-          });
           const filtered = expenses.filter(expense => {
             const expenseDate = new Date(expense.date);
             return expenseDate.getMonth() === selectedMonthIndex && 
                    expenseDate.getFullYear() === selectedYear;
           });
-          console.log(`Month only filter: ${expenses.length} -> ${filtered.length} expenses`);
           return filtered;
         }
-        console.log('Month only filter: missing month or year');
         break;
     }
     
-    console.log('No matching dashboard filter, returning all expenses');
     return expenses;
   }
 
@@ -1735,81 +1654,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   // Log detailed information about orphaned expenses
   logOrphanedExpensesDetails(): void {
-    if (!this.expenses || !this.categories) {
-      console.log('⏳ Data not loaded yet, skipping orphaned expenses check');
-      return;
-    }
-
-    const orphanedExpenses = this.expenses.filter(expense => 
-      !this.categories.find(c => c.id === expense.categoryId)
-    );
-    
-    if (orphanedExpenses.length === 0) {
-      console.log('✅ No orphaned expenses found - all expenses have valid categories!');
-      return;
-    }
-
-    console.group('🚨 ORPHANED EXPENSES DETECTED (Expenses Page)');
-    console.log(`📊 Total orphaned expenses: ${orphanedExpenses.length}`);
-    
-    const orphanedAmount = orphanedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    console.log(`💰 Total orphaned amount: ₹${orphanedAmount.toLocaleString()}`);
-    
-    // Group by category ID
-    const orphanedByCategoryId = new Map<string, Expense[]>();
-    orphanedExpenses.forEach(expense => {
-      if (!orphanedByCategoryId.has(expense.categoryId)) {
-        orphanedByCategoryId.set(expense.categoryId, []);
-      }
-      orphanedByCategoryId.get(expense.categoryId)!.push(expense);
-    });
-
-    console.log(`🏷️ Unique orphaned category IDs: ${orphanedByCategoryId.size}`);
-    
-    // Log details for each orphaned category ID
-    orphanedByCategoryId.forEach((expenses, categoryId) => {
-      const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-      console.group(`📌 Category ID: "${categoryId}" (${expenses.length} expenses, ₹${totalAmount.toLocaleString()})`);
-      
-      expenses.forEach((expense, index) => {
-        console.log(`${index + 1}. ${expense.description || 'No description'} - ₹${expense.amount.toLocaleString()} (${expense.date})`);
-        console.log(`   ID: ${expense.id}`);
-        console.log(`   Category ID: "${expense.categoryId}"`);
-        console.log(`   Payment Method: ${expense.paymentMethod || 'Not specified'}`);
-        console.log(`   Priority: ${expense.priority || 'Not specified'}`);
-        if (expense.notes) console.log(`   Notes: ${expense.notes}`);
-        if (expense.location) console.log(`   Location: ${expense.location}`);
-        console.log('---');
-      });
-      
-      console.groupEnd();
-    });
-
-    // Log available categories for reference
-    console.group('🏷️ Available Categories (for reference)');
-    this.categories.forEach(category => {
-      console.log(`ID: "${category.id}" | Name: ${category.name} | Icon: ${category.icon} | Color: ${category.color}`);
-    });
-    console.groupEnd();
-
-    // Log summary statistics
-    console.group('📈 Summary Statistics');
-    console.log(`📊 Total expenses: ${this.expenses.length}`);
-    console.log(`✅ Valid expenses: ${this.expenses.length - orphanedExpenses.length}`);
-    console.log(`❌ Orphaned expenses: ${orphanedExpenses.length}`);
-    console.log(`📊 Orphaned percentage: ${((orphanedExpenses.length / this.expenses.length) * 100).toFixed(2)}%`);
-    
-    const validExpensesAmount = this.expenses.reduce((sum, expense) => {
-      const isValid = this.categories.find(c => c.id === expense.categoryId);
-      return isValid ? sum + expense.amount : sum;
-    }, 0);
-    
-    console.log(`💰 Valid expenses amount: ₹${validExpensesAmount.toLocaleString()}`);
-    console.log(`💰 Orphaned expenses amount: ₹${orphanedAmount.toLocaleString()}`);
-    console.log(`📊 Orphaned amount percentage: ${((orphanedAmount / (validExpensesAmount + orphanedAmount)) * 100).toFixed(2)}%`);
-    console.groupEnd();
-
-    console.groupEnd();
+    // Method kept for potential future use, but console.log statements removed
   }
 
   // Amount input validation methods
@@ -2200,7 +2045,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   // Clear dashboard filter state when manual filters are applied
   clearDashboardFilterState(): void {
-    console.log('Clearing dashboard filter state due to manual date filter');
     this.dashboardPeriod = 'all';
     this.dashboardMonth = '';
     this.dashboardYear = '';

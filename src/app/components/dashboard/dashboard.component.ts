@@ -374,7 +374,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Load filter state from service
   loadFilterState() {
     const filterState = this.filterStateService.getFilterState();
-    console.log('Loading filter state from service:', filterState);
     
     this.selectedPeriod = filterState.selectedPeriod;
     this.selectedMonth = filterState.selectedMonth;
@@ -389,7 +388,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const now = new Date();
       this.selectedMonth = now.getMonth().toString();
       this.selectedYear = now.getFullYear().toString();
-      console.log('Auto-selected current month and year for monthly filter on load:', { month: this.selectedMonth, year: this.selectedYear });
     }
     
     // Auto-select current month and year if "Month Only" is selected but no month/year is set
@@ -397,38 +395,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const now = new Date();
       this.selectedMonthOnly = now.getMonth().toString();
       this.selectedYearOnly = now.getFullYear().toString();
-      console.log('Auto-selected current month and year on load:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
       
       // Trigger the month only change to set the date range
       this.onMonthOnlyChange();
     }
-    
-    console.log('Filter state loaded into component:', {
-      selectedPeriod: this.selectedPeriod,
-      selectedMonth: this.selectedMonth,
-      selectedYear: this.selectedYear,
-      customStartDate: this.customStartDate,
-      customEndDate: this.customEndDate,
-      selectedMonthOnly: this.selectedMonthOnly,
-      selectedYearOnly: this.selectedYearOnly
-    });
   }
 
   onFilterChange() {
-    console.log('Filter changed, saving state:', {
-      selectedPeriod: this.selectedPeriod,
-      selectedMonth: this.selectedMonth,
-      selectedYear: this.selectedYear,
-      customStartDate: this.customStartDate,
-      customEndDate: this.customEndDate
-    });
-    
     // Auto-select current month and year when "This Month" is selected
     if (this.selectedPeriod === 'monthly') {
       const now = new Date();
       this.selectedMonth = now.getMonth().toString();
       this.selectedYear = now.getFullYear().toString();
-      console.log('Auto-selected current month and year for monthly filter:', { month: this.selectedMonth, year: this.selectedYear });
     }
     
     // Auto-select current month and year when "Month Only" is selected
@@ -436,7 +414,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const now = new Date();
       this.selectedMonthOnly = now.getMonth().toString();
       this.selectedYearOnly = now.getFullYear().toString();
-      console.log('Auto-selected current month and year:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
       
       // Trigger the month only change to set the date range
       this.onMonthOnlyChange();
@@ -457,17 +434,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Custom date range methods
   onCustomDateChange() {
     // This method is called when either start or end date changes
-    console.log('Custom date changed:', { start: this.customStartDate, end: this.customEndDate });
-    
     // Automatically apply the filter when both dates are selected and valid
     if (this.customStartDate && this.customEndDate && this.isCustomDateRangeValid()) {
-      console.log('Auto-applying custom date range filter');
       this.onFilterChange();
     }
   }
 
   onMonthOnlyChange() {
-    console.log('Month only changed:', { month: this.selectedMonthOnly, year: this.selectedYearOnly });
     if (this.selectedMonthOnly && this.selectedYearOnly) {
       // Set the custom date range to the selected month
       const monthIndex = parseInt(this.selectedMonthOnly);
@@ -487,28 +460,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return `${year}-${month}-${day}`;
       };
       
-      // Debug the date calculations
-      console.log('Date calculations:', {
-        monthIndex,
-        year,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        startDateMonth: startDate.getUTCMonth(),
-        startDateDate: startDate.getUTCDate(),
-        endDateMonth: endDate.getUTCMonth(),
-        endDateDate: endDate.getUTCDate()
-      });
-      
       this.customStartDate = formatDate(startDate);
       this.customEndDate = formatDate(endDate);
-      
-      console.log('Month only filter applied:', { 
-        month: monthIndex, 
-        year: year, 
-        startDate: this.customStartDate, 
-        endDate: this.customEndDate 
-      });
-      
       // Save filter state directly without calling onFilterChange to avoid recursion
       this.filterStateService.updateFilterState({
         selectedPeriod: this.selectedPeriod,
@@ -520,16 +473,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         selectedYearOnly: this.selectedYearOnly
       });
       
-      // Force a small delay to ensure state is synchronized
-      setTimeout(() => {
-        console.log('Month only filter state after delay:', {
-          selectedPeriod: this.selectedPeriod,
-          selectedMonthOnly: this.selectedMonthOnly,
-          selectedYearOnly: this.selectedYearOnly,
-          customStartDate: this.customStartDate,
-          customEndDate: this.customEndDate
-        });
-      }, 100);
     }
   }
 
@@ -549,7 +492,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   clearCustomDateRange() {
     this.customStartDate = '';
     this.customEndDate = '';
-    console.log('Custom date range cleared');
     
     // Trigger change detection
     this.onFilterChange();
@@ -590,9 +532,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     this.customStartDate = startDate.toISOString().split('T')[0];
     this.customEndDate = today.toISOString().split('T')[0];
-    
-    console.log(`Default date range set (${range}):`, { start: this.customStartDate, end: this.customEndDate });
-    
     // Apply the filter
     this.onFilterChange();
   }
@@ -655,14 +594,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Debug logging to verify sorting
     if (sortedExpenses.length > 0) {
-      console.log('Recent expenses sorted by date and creation time (latest first):', 
-        sortedExpenses.map(e => ({ 
-          date: e.date, 
-          description: e.description, 
-          amount: e.amount, 
-          createdAt: e.createdAt ? new Date(e.createdAt).toLocaleTimeString() : 'N/A',
-          id: e.id.substring(0, 8) + '...' 
-        })));
     }
     
     return sortedExpenses;

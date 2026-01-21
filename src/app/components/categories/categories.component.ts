@@ -158,7 +158,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       };
 
       const id = await this.categoryService.add(categoryData);
-      console.log(`Category added with Firebase ID: ${id}`);
       
       this.resetForm();
       await this.dialogService.success('Category added successfully!');
@@ -225,7 +224,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
     try {
       await this.categoryService.delete(category.id);
-      console.log('Category deleted successfully');
       await this.dialogService.success('Category deleted successfully!');
     } catch (error) {
       console.error('Error deleting category:', error);

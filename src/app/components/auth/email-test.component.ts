@@ -211,7 +211,6 @@ export class EmailTestComponent {
     this.testing = true;
     
     try {
-      console.log('Testing password reset for:', this.testEmail);
       await this.authService.sendPasswordResetEmail(this.testEmail);
       this.addResult(true, `Password reset email sent successfully to ${this.testEmail}`);
     } catch (error: any) {

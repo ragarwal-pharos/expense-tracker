@@ -29,7 +29,6 @@ export class AuthService {
   constructor(private auth: Auth) {
     // Listen to authentication state changes
     onAuthStateChanged(this.auth, (user) => {
-      console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
       this.currentUserSubject.next(user);
     });
   }
@@ -66,7 +65,6 @@ export class AuthService {
         await updateProfile(userCredential.user, { displayName });
       }
       
-      console.log('User registered successfully:', userCredential.user.email);
       return userCredential.user;
     } catch (error) {
       console.error('Registration error:', error);
@@ -78,7 +76,6 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<User> {
     try {
       const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
-      console.log('User signed in successfully:', userCredential.user.email);
       return userCredential.user;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -89,20 +86,12 @@ export class AuthService {
   // Send password reset email
   async sendPasswordResetEmail(email: string): Promise<void> {
     try {
-      console.log('Attempting to send password reset email to:', email);
-      console.log('Auth instance:', this.auth);
-      
       // Validate email format
       if (!email || !email.includes('@')) {
         throw new Error('Invalid email address');
       }
       
       await sendPasswordResetEmail(this.auth, email);
-      console.log('Password reset email sent successfully to:', email);
-      
-      // Additional logging for debugging
-      console.log('Firebase Auth state:', this.auth.currentUser);
-      console.log('Firebase config:', this.auth.app.options);
       
     } catch (error: any) {
       console.error('Password reset error details:', {
@@ -133,7 +122,6 @@ export class AuthService {
   async signOut(): Promise<void> {
     try {
       await signOut(this.auth);
-      console.log('User signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

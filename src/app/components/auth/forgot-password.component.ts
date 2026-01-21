@@ -403,12 +403,8 @@ export class ForgotPasswordComponent {
     this.success = '';
 
     try {
-      console.log('Sending reset email to:', this.email);
-      console.log('Current auth state:', this.authService.getCurrentUser());
-      
       await this.authService.sendPasswordResetEmail(this.email);
       this.emailSent = true;
-      console.log('Reset email sent successfully');
       
       // Show additional helpful information
       this.success = `Reset link sent to ${this.email}. Please check your email (including spam folder).`;

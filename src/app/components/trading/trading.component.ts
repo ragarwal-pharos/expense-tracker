@@ -143,7 +143,6 @@ export class TradingComponent implements OnInit, OnDestroy {
     
     // Ensure trades are loaded and real-time listener is set up
     this.firebaseService.loadTrades().then(() => {
-      console.log('Trades loaded initially');
       // Real-time listener will handle updates
     }).catch(error => {
       console.error('Error loading trades:', error);
@@ -152,7 +151,6 @@ export class TradingComponent implements OnInit, OnDestroy {
     // Subscribe to Firebase observables for real-time updates
     this.subscription.add(
       this.firebaseService.trades$.subscribe((trades) => {
-        console.log('Trades updated in component:', trades.length, trades);
         this.trades = [...trades]; // Create new array reference to trigger change detection
         // Clear caches when data changes
         this._cachedFilteredTrades = [];
@@ -455,13 +453,8 @@ export class TradingComponent implements OnInit, OnDestroy {
         date: this.newTrade.date,
         notes: this.newTrade.notes || ''
       };
-
-      console.log('Form isProfit value:', this.newTrade.isProfit, 'Type:', typeof this.newTrade.isProfit);
-      console.log('Saving isProfit as:', isProfit, 'Type:', typeof isProfit);
       
       const tradeId = await this.tradingService.add(tradeData);
-      console.log('Trade added with ID:', tradeId);
-      console.log('Trade data saved:', tradeData);
       
       // Force reload trades to ensure UI updates immediately
       await this.firebaseService.loadTrades();

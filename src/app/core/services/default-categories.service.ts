@@ -26,7 +26,6 @@ export class DefaultCategoriesService {
       for (const category of defaultCategories) {
         await this.firebaseService.addCategory(category);
       }
-      console.log('Default categories created successfully');
     } catch (error) {
       console.error('Error creating default categories:', error);
     }

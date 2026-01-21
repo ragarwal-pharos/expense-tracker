@@ -12,11 +12,9 @@ const urlsToCache = [
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache:', CACHE_NAME);
         return cache.addAll(urlsToCache);
       })
       .then(() => {
@@ -62,13 +60,11 @@ self.addEventListener('fetch', (event) => {
 
 // Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -97,7 +93,6 @@ self.addEventListener('sync', (event) => {
 async function doBackgroundSync() {
   try {
     // Sync offline data when connection is restored
-    console.log('Background sync triggered');
     // Add your sync logic here
   } catch (error) {
     console.error('Background sync failed:', error);

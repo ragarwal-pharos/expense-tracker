@@ -530,7 +530,6 @@ export class App implements OnInit, OnDestroy {
   }
 
   toggleSidebar() {
-    console.log('Toggle sidebar called');
     this.sidebarOpen = !this.sidebarOpen;
     
     if (this.sidebarOpen) {
@@ -541,7 +540,6 @@ export class App implements OnInit, OnDestroy {
   }
 
   closeSidebar() {
-    console.log('Close sidebar called');
     this.sidebarOpen = false;
     document.body.style.overflow = '';
   }
