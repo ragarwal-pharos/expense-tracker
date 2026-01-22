@@ -110,7 +110,6 @@ export class TradingComponent implements OnInit, OnDestroy {
   showCharts = false;
   monthlyPnlChartData: any = null;
   profitLossPieChartData: any = null;
-  cumulativePnlChartData: any = null;
   tradeTypeChartData: any = null;
 
   // Cached computed values for performance
@@ -1614,7 +1613,6 @@ export class TradingComponent implements OnInit, OnDestroy {
     if (this.trades.length === 0) {
       this.monthlyPnlChartData = null;
       this.profitLossPieChartData = null;
-      this.cumulativePnlChartData = null;
       this.tradeTypeChartData = null;
       return;
     }
@@ -1625,10 +1623,7 @@ export class TradingComponent implements OnInit, OnDestroy {
     // 2. Profit vs Loss Pie Chart
     this.generateProfitLossPieChart();
     
-    // 3. Cumulative P&L Chart (Area Chart)
-    this.generateCumulativePnlChart();
-    
-    // 4. Trade Type Distribution (Doughnut Chart)
+    // 3. Trade Type Distribution (Doughnut Chart)
     this.generateTradeTypeChart();
   }
 
@@ -1688,39 +1683,6 @@ export class TradingComponent implements OnInit, OnDestroy {
         borderColor: ['#059669', '#dc2626'],
         borderWidth: 2,
         hoverOffset: 4
-      }]
-    };
-  }
-
-  generateCumulativePnlChart() {
-    const sortedTrades = [...this.trades].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    let cumulative = 0;
-    const labels: string[] = [];
-    const cumulativeData: number[] = [];
-
-    sortedTrades.forEach(trade => {
-      const pnl = trade.isProfit ? (trade.amount || 0) : -(trade.amount || 0);
-      cumulative += pnl;
-      const date = new Date(trade.date);
-      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-      cumulativeData.push(cumulative);
-    });
-
-    this.cumulativePnlChartData = {
-      labels: labels,
-      datasets: [{
-        label: 'Cumulative P&L',
-        data: cumulativeData,
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.2)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-        pointHoverRadius: 4
       }]
     };
   }
@@ -1800,46 +1762,6 @@ export class TradingComponent implements OnInit, OnDestroy {
               return `${label}: ₹${value.toLocaleString('en-IN')}`;
             }
           }
-        }
-      }
-    };
-  }
-
-  getCumulativePnlChartOptions() {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top' as const,
-        },
-        tooltip: {
-          callbacks: {
-            label: (context: any) => {
-              const value = context.parsed.y;
-              const sign = value >= 0 ? '+' : '';
-              return `Cumulative: ${sign}₹${Math.abs(value).toLocaleString('en-IN')}`;
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: false,
-          ticks: {
-            callback: (value: any) => {
-              return `₹${Number(value).toLocaleString('en-IN')}`;
-            }
-          },
-          grid: {
-            color: (context: any) => {
-              return context.tick.value === 0 ? '#ef4444' : '#e5e7eb';
-            }
-          }
-        },
-        x: {
-          display: false
         }
       }
     };

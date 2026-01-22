@@ -488,21 +488,6 @@
         </div>
       </div>
 
-      <!-- Cumulative P&L Chart -->
-      <div class="chart-card" *ngIf="cumulativePnlChartData">
-        <div class="chart-header">
-          <h4>📊 Cumulative P&L</h4>
-          <p>Running total of profit/loss over time</p>
-        </div>
-        <div class="chart-container">
-          <canvas baseChart
-                  [data]="cumulativePnlChartData"
-                  [options]="getCumulativePnlChartOptions()"
-                  type="line">
-          </canvas>
-        </div>
-      </div>
-
       <!-- Trade Type Distribution -->
       <div class="chart-card" *ngIf="tradeTypeChartData">
         <div class="chart-header">
