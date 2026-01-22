@@ -442,6 +442,84 @@
     </div>
   </div>
 
+  <!-- Trading Charts Section -->
+  <div class="trading-charts-section mb-4" *ngIf="!isLoading && trades.length > 0">
+    <div class="charts-header">
+      <div class="charts-title">
+        <h3>📊 Trading Analytics</h3>
+        <p>Visual insights into your trading performance and patterns</p>
+      </div>
+      <div class="charts-controls">
+        <button class="btn-charts" (click)="toggleCharts()" [class.active]="showCharts">
+          <span class="chart-icon">{{ showCharts ? '📊' : '📈' }}</span>
+          {{ showCharts ? 'Hide Charts' : 'Show Charts' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="charts-grid" *ngIf="showCharts">
+      <!-- Monthly P&L Trend Chart -->
+      <div class="chart-card" *ngIf="monthlyPnlChartData">
+        <div class="chart-header">
+          <h4>📈 Monthly P&L Trend</h4>
+          <p>Net profit/loss by month</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="monthlyPnlChartData"
+                  [options]="getMonthlyPnlChartOptions()"
+                  type="line">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Profit vs Loss Pie Chart -->
+      <div class="chart-card" *ngIf="profitLossPieChartData">
+        <div class="chart-header">
+          <h4>🥧 Profit vs Loss</h4>
+          <p>Total profit and loss comparison</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="profitLossPieChartData"
+                  [options]="getPieChartOptions()"
+                  type="pie">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Cumulative P&L Chart -->
+      <div class="chart-card" *ngIf="cumulativePnlChartData">
+        <div class="chart-header">
+          <h4>📊 Cumulative P&L</h4>
+          <p>Running total of profit/loss over time</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="cumulativePnlChartData"
+                  [options]="getCumulativePnlChartOptions()"
+                  type="line">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Trade Type Distribution -->
+      <div class="chart-card" *ngIf="tradeTypeChartData">
+        <div class="chart-header">
+          <h4>🔄 Trade Type Distribution</h4>
+          <p>Call vs Put trades breakdown</p>
+        </div>
+        <div class="chart-container">
+          <canvas baseChart
+                  [data]="tradeTypeChartData"
+                  [options]="getDoughnutChartOptions()"
+                  type="doughnut">
+          </canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Monthly Summary -->
   <div class="monthly-summary-card mb-4" *ngIf="!isLoading && getMonthlySummary().length > 0">
     <div class="card-header-modern">

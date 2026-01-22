@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { BaseChartDirective } from 'ng2-charts';
+import { Chart, registerables } from 'chart.js';
 import { TradingService } from '../../core/services/trading.service';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { DialogService } from '../../core/services/dialog.service';
@@ -8,10 +10,13 @@ import { LoadingComponent } from '../../shared/components/loading/loading.compon
 import { Subscription, combineLatest } from 'rxjs';
 import { Trade } from '../../core/models/trade.model';
 
+// Register Chart.js components
+Chart.register(...registerables);
+
 @Component({
   selector: 'app-trading',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingComponent],
+  imports: [CommonModule, FormsModule, LoadingComponent, BaseChartDirective],
   templateUrl: './trading.component.html',
   styleUrls: ['./trading.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -100,6 +105,13 @@ export class TradingComponent implements OnInit, OnDestroy {
     { value: '11', label: 'December' }
   ];
   availableYears: string[] = [];
+
+  // Chart data
+  showCharts = false;
+  monthlyPnlChartData: any = null;
+  profitLossPieChartData: any = null;
+  cumulativePnlChartData: any = null;
+  tradeTypeChartData: any = null;
 
   // Cached computed values for performance
   private _cachedFilteredTrades: Trade[] = [];
@@ -1587,5 +1599,273 @@ export class TradingComponent implements OnInit, OnDestroy {
   // Toggle monthly summary section
   toggleMonthlySummarySection() {
     this.isMonthlySummaryExpanded = !this.isMonthlySummaryExpanded;
+  }
+
+  // Chart methods
+  toggleCharts() {
+    this.showCharts = !this.showCharts;
+    if (this.showCharts) {
+      this.generateChartData();
+    }
+    this.cdr.markForCheck();
+  }
+
+  generateChartData() {
+    if (this.trades.length === 0) {
+      this.monthlyPnlChartData = null;
+      this.profitLossPieChartData = null;
+      this.cumulativePnlChartData = null;
+      this.tradeTypeChartData = null;
+      return;
+    }
+
+    // 1. Monthly P&L Trend (Line Chart)
+    this.generateMonthlyPnlChart();
+    
+    // 2. Profit vs Loss Pie Chart
+    this.generateProfitLossPieChart();
+    
+    // 3. Cumulative P&L Chart (Area Chart)
+    this.generateCumulativePnlChart();
+    
+    // 4. Trade Type Distribution (Doughnut Chart)
+    this.generateTradeTypeChart();
+  }
+
+  generateMonthlyPnlChart() {
+    const monthlyData = this.getMonthlySummary();
+    const sortedData = [...monthlyData].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                         'July', 'August', 'September', 'October', 'November', 'December'];
+      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+    });
+
+    const labels = sortedData.map(m => `${m.month.substring(0, 3)} ${m.year}`);
+    const netPnl = sortedData.map(m => m.netPnl);
+
+    this.monthlyPnlChartData = {
+      labels: labels,
+      datasets: [{
+        label: 'Net P&L',
+        data: netPnl,
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: (ctx: any) => {
+          const value = ctx.parsed.y;
+          return value >= 0 ? '#10b981' : '#ef4444';
+        },
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2
+      }]
+    };
+  }
+
+  generateProfitLossPieChart() {
+    const totalProfit = this.trades
+      .filter(t => t.isProfit === true)
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    
+    const totalLoss = this.trades
+      .filter(t => t.isProfit === false)
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    if (totalProfit === 0 && totalLoss === 0) {
+      this.profitLossPieChartData = null;
+      return;
+    }
+
+    this.profitLossPieChartData = {
+      labels: ['Total Profit', 'Total Loss'],
+      datasets: [{
+        data: [totalProfit, totalLoss],
+        backgroundColor: ['#10b981', '#ef4444'],
+        borderColor: ['#059669', '#dc2626'],
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    };
+  }
+
+  generateCumulativePnlChart() {
+    const sortedTrades = [...this.trades].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    let cumulative = 0;
+    const labels: string[] = [];
+    const cumulativeData: number[] = [];
+
+    sortedTrades.forEach(trade => {
+      const pnl = trade.isProfit ? (trade.amount || 0) : -(trade.amount || 0);
+      cumulative += pnl;
+      const date = new Date(trade.date);
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      cumulativeData.push(cumulative);
+    });
+
+    this.cumulativePnlChartData = {
+      labels: labels,
+      datasets: [{
+        label: 'Cumulative P&L',
+        data: cumulativeData,
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 4
+      }]
+    };
+  }
+
+  generateTradeTypeChart() {
+    const callCount = this.trades.filter(t => t.tradeType === 'call').length;
+    const putCount = this.trades.filter(t => t.tradeType === 'put').length;
+
+    if (callCount === 0 && putCount === 0) {
+      this.tradeTypeChartData = null;
+      return;
+    }
+
+    this.tradeTypeChartData = {
+      labels: ['Call', 'Put'],
+      datasets: [{
+        data: [callCount, putCount],
+        backgroundColor: ['#3b82f6', '#f59e0b'],
+        borderColor: ['#2563eb', '#d97706'],
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    };
+  }
+
+  getMonthlyPnlChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top' as const,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const value = context.parsed.y;
+              const sign = value >= 0 ? '+' : '';
+              return `Net P&L: ${sign}₹${Math.abs(value).toLocaleString('en-IN')}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: (value: any) => {
+              return `₹${Number(value).toLocaleString('en-IN')}`;
+            }
+          },
+          grid: {
+            color: (context: any) => {
+              return context.tick.value === 0 ? '#ef4444' : '#e5e7eb';
+            }
+          }
+        }
+      }
+    };
+  }
+
+  getPieChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom' as const,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.parsed;
+              return `${label}: ₹${value.toLocaleString('en-IN')}`;
+            }
+          }
+        }
+      }
+    };
+  }
+
+  getCumulativePnlChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top' as const,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const value = context.parsed.y;
+              const sign = value >= 0 ? '+' : '';
+              return `Cumulative: ${sign}₹${Math.abs(value).toLocaleString('en-IN')}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: (value: any) => {
+              return `₹${Number(value).toLocaleString('en-IN')}`;
+            }
+          },
+          grid: {
+            color: (context: any) => {
+              return context.tick.value === 0 ? '#ef4444' : '#e5e7eb';
+            }
+          }
+        },
+        x: {
+          display: false
+        }
+      }
+    };
+  }
+
+  getDoughnutChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom' as const,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${label}: ${value} trades (${percentage}%)`;
+            }
+          }
+        }
+      }
+    };
   }
 }
