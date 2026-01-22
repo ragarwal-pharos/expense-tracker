@@ -506,6 +506,8 @@ export class ExpenseAnalysisComponent implements OnInit, OnDestroy {
     if (this.showCharts) {
       this.generateChartData();
     }
+    // Trigger change detection for OnPush strategy
+    this.cdr.markForCheck();
   }
 
   // Clear all filters
