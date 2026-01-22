@@ -100,13 +100,14 @@
         </button>
       </div>
     </div>
-    <div class="card-body-modern" *ngIf="isAddTradeExpanded">
+    <div class="card-body-modern collapsible-content" [class.collapsed]="!isAddTradeExpanded">
       <form (ngSubmit)="addTrade()">
-        <div class="row">
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Index</label>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tradeIndex" class="form-label-modern">Index</label>
             <select 
-              class="form-select" 
+              class="form-control-modern" 
+              id="tradeIndex"
               [(ngModel)]="newTrade.symbol"
               name="symbol"
               required>
@@ -116,11 +117,12 @@
               </option>
             </select>
           </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Index Value</label>
+          <div class="form-group">
+            <label for="tradeIndexValue" class="form-label-modern">Index Value</label>
             <input 
               type="number" 
-              class="form-control" 
+              class="form-control-modern" 
+              id="tradeIndexValue"
               [(ngModel)]="indexValueInput"
               placeholder="Enter index value"
               step="1"
@@ -132,10 +134,11 @@
               name="indexValue"
               required>
           </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Trade Type</label>
+          <div class="form-group">
+            <label for="tradeType" class="form-label-modern">Trade Type</label>
             <select 
-              class="form-select" 
+              class="form-control-modern" 
+              id="tradeType"
               [(ngModel)]="newTrade.tradeType"
               name="tradeType"
               required>
@@ -145,10 +148,11 @@
               </option>
             </select>
           </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Profit/Loss</label>
+          <div class="form-group">
+            <label for="tradeProfitLoss" class="form-label-modern">Profit/Loss</label>
             <select 
-              class="form-select" 
+              class="form-control-modern" 
+              id="tradeProfitLoss"
               [(ngModel)]="newTrade.isProfit"
               name="isProfit"
               required>
@@ -157,49 +161,59 @@
               <option [ngValue]="false">Loss</option>
             </select>
           </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Amount</label>
-            <input 
-              type="number" 
-              class="form-control" 
-              [(ngModel)]="amountInput"
-              placeholder="Enter amount"
-              step="1"
-              min="1"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              (keydown)="preventNonInteger($event)"
-              (input)="sanitizeIntegerInput('amountInput')"
-              name="amount"
-              required>
+          <div class="form-group">
+            <label for="tradeAmount" class="form-label-modern">Amount</label>
+            <div class="input-group-modern">
+              <span class="input-group-text-modern">₹</span>
+              <input 
+                type="number" 
+                class="form-control-modern" 
+                id="tradeAmount"
+                [(ngModel)]="amountInput"
+                placeholder="0"
+                step="1"
+                min="1"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                (keydown)="preventNonInteger($event)"
+                (input)="sanitizeIntegerInput('amountInput')"
+                name="amount"
+                required>
+            </div>
           </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Trade Date</label>
+          <div class="form-group">
+            <label for="tradeDate" class="form-label-modern">Trade Date</label>
             <input 
               type="date" 
-              class="form-control" 
+              class="form-control-modern" 
+              id="tradeDate"
               [(ngModel)]="newTrade.date"
               name="date"
               required>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="form-label">Notes</label>
-            <textarea 
-              class="form-control" 
+          <div class="form-group">
+            <label for="tradeNotes" class="form-label-modern">Notes</label>
+            <input 
+              type="text" 
+              class="form-control-modern" 
+              id="tradeNotes"
               [(ngModel)]="newTrade.notes"
-              rows="2"
               placeholder="Additional notes about this trade..."
-              name="notes"></textarea>
+              name="notes">
           </div>
-        </div>
-        <div class="d-flex gap-2">
-          <button
-            type="submit"
-            class="btn btn-primary"
-            [disabled]="isSaving || !isAddTradeFormValid()">
-            <span *ngIf="!isSaving">Add Trade</span>
-            <span *ngIf="isSaving">Saving...</span>
-          </button>
+          <div class="form-group button-group">
+            <label class="form-label-modern">&nbsp;</label>
+            <button
+              type="submit"
+              class="btn-add-trade"
+              [disabled]="isSaving || !isAddTradeFormValid()">
+              <span class="btn-icon-wrapper" *ngIf="!isSaving">
+                <span class="btn-icon">➕</span>
+              </span>
+              <span class="btn-text" *ngIf="!isSaving">Add Trade</span>
+              <span class="btn-text" *ngIf="isSaving">Saving...</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -676,7 +690,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let trade of getPaginatedTrades(); trackBy: trackByTradeId" [class.deleting]="deletingTradeIds.has(trade.id)">
-              <td><strong>{{ formatDate(trade.date) }}</strong></td>
+              <td class="date-cell"><strong>{{ formatDate(trade.date) }}</strong></td>
               <td>{{ trade.symbol.toUpperCase() }}</td>
               <td>{{ trade.indexValue || 0 | number:'1.0-0' }}</td>
               <td>
@@ -769,45 +783,35 @@
       </div>
 
       <!-- Trades List Pagination -->
-      <div *ngIf="getFilteredTrades().length > 0 && getTotalPages() > 1" class="pagination-container mt-3">
-        <div class="pagination-wrapper">
-          <!-- Items per page selector -->
-          <div class="pagination-items-per-page">
-            <label class="pagination-label">Show:</label>
-            <select 
-              class="form-select form-select-sm pagination-select" 
-              [(ngModel)]="itemsPerPage"
-              (change)="onItemsPerPageChange()">
-              <option *ngFor="let option of itemsPerPageOptions" [value]="option">
-                {{ option }}
-              </option>
-            </select>
-            <span class="pagination-count">
-              of {{ getFilteredTrades().length }} trade{{ getFilteredTrades().length !== 1 ? 's' : '' }}
+      <div *ngIf="getFilteredTrades().length > itemsPerPage" class="pagination-controls mb-3">
+        <div class="pagination-layout">
+          <div class="pagination-info">
+            <span class="text-muted">
+              Showing {{getStartIndex() + 1}} to {{getEndIndex()}} of {{getFilteredTrades().length}} trade{{ getFilteredTrades().length !== 1 ? 's' : '' }}
             </span>
           </div>
-          
-          <!-- Page navigation -->
-          <nav class="pagination-nav">
-            <ul class="pagination justify-content-center mb-0">
-              <li class="page-item" [class.disabled]="currentPage === 1">
-                <a class="page-link" (click)="previousPage()" href="javascript:void(0)">Previous</a>
-              </li>
-              <li 
-                *ngFor="let page of getPageNumbers()" 
-                class="page-item" 
-                [class.active]="page === currentPage">
-                <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">{{ page }}</a>
-              </li>
-              <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
-                <a class="page-link" (click)="nextPage()" href="javascript:void(0)">Next</a>
-              </li>
-            </ul>
-          </nav>
-          
-          <!-- Page info -->
-          <div class="pagination-info">
-            Page {{ currentPage }} of {{ getTotalPages() }}
+          <div class="pagination-navigation">
+            <div class="pagination-buttons">
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary btn-sm" 
+                [disabled]="currentPage === 1"
+                (click)="goToPage(currentPage - 1)"
+                title="Previous page">
+                ← Previous
+              </button>
+              <span class="page-info">
+                Page {{currentPage}} of {{getTotalPages()}}
+              </span>
+              <button 
+                type="button" 
+                class="btn btn-outline-secondary btn-sm" 
+                [disabled]="currentPage === getTotalPages()"
+                (click)="goToPage(currentPage + 1)"
+                title="Next page">
+                Next →
+              </button>
+            </div>
           </div>
         </div>
       </div>

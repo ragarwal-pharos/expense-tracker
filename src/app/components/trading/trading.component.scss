@@ -241,7 +241,22 @@
 }
 
 /* Card Styles */
-.add-trade-card,
+.add-trade-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fff8f0 100%);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ffe4b3;
+  overflow: visible;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.add-trade-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
 .filters-card,
 .daily-summary-card,
 .monthly-summary-card,
@@ -266,9 +281,10 @@
 }
 
 .card-header-modern {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 1.5rem 1.75rem;
-  border-bottom: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -302,9 +318,10 @@
 
 .card-header-modern h5 {
   font-weight: 700;
-  color: #1e293b;
+  color: white;
   font-size: 1.15rem;
   letter-spacing: -0.3px;
+  margin: 0;
 }
 
 .card-body-modern {
@@ -319,10 +336,11 @@
   padding: 0.5rem;
   border-radius: 8px;
   transition: background 0.2s ease;
+  color: white;
 }
 
 .collapse-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .clear-filters-btn {
@@ -373,7 +391,18 @@
   display: inline-block;
   transition: transform 0.3s ease;
   font-size: 0.875rem;
-  color: #64748b;
+  color: white;
+}
+
+.collapsible-content {
+  max-height: 2000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0;
+  padding: 0 2rem;
 }
 
 .collapse-icon.rotated {
@@ -389,6 +418,142 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Form Layout - Matching Expenses */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label-modern {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-control-modern {
+  height: 50px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-control-modern:focus {
+  border-color: var(--primary, #667eea);
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  outline: none;
+}
+
+select.form-control-modern {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  appearance: none;
+}
+
+/* Button Group */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.input-group-modern {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.input-group-modern:focus-within {
+  border-color: var(--primary, #667eea);
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.input-group-text-modern {
+  background: #f8f9fa;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #666;
+  border-right: 2px solid #e9ecef;
+}
+
+.input-group-modern .form-control-modern {
+  border: none;
+  border-radius: 0;
+  flex-grow: 1;
+}
+
+.btn-add-trade {
+  background: linear-gradient(135deg, #e0d5ff 0%, #ffe4b3 100%);
+  color: #666;
+  border: none;
+  border-radius: 12px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  height: 50px;
+  white-space: nowrap;
+}
+
+.btn-add-trade:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn-add-trade:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon-wrapper {
+  background: white;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  color: #9b6b9b;
+  font-weight: bold;
+}
+
+.btn-text {
+  color: #666;
+  font-weight: 600;
 }
 
 .form-control,
@@ -846,6 +1011,10 @@ input[type="number"] {
   font-weight: 500;
 }
 
+.table tbody td.date-cell {
+  white-space: nowrap;
+}
+
 .table tbody td:first-child {
   padding-left: 1.5rem;
 }
@@ -1045,6 +1214,62 @@ input[type="number"] {
 }
 
 /* Pagination */
+.pagination-controls {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
+}
+
+.pagination-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.pagination-navigation {
+  flex-shrink: 0;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-info {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.pagination-buttons .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+.pagination-buttons .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-buttons .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Old pagination styles - keeping for monthly/daily summaries */
 .pagination-container {
   margin-top: 1.5rem;
 }
@@ -1794,6 +2019,44 @@ input[type="number"] {
   .pagination-info {
     font-size: 0.8rem;
     width: 100%;
+  }
+
+  .pagination-controls {
+    padding: 0.75rem;
+  }
+
+  .pagination-layout {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .pagination-info {
+    text-align: center;
+    order: 1;
+  }
+  
+  .pagination-navigation {
+    order: 2;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .pagination-buttons .btn {
+    min-width: 100px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .page-info {
+    order: 2;
+    text-align: center;
+    width: 100%;
+    margin: 0.5rem 0;
   }
 
   /* Trade cards mobile improvements */

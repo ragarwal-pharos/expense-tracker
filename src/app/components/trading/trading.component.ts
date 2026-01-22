@@ -157,7 +157,8 @@ export class TradingComponent implements OnInit, OnDestroy {
         this._cachedFilteredTradesKey = '';
         this._cachedDailySummary = [];
         this._cachedStatistics = null;
-        // Force change detection to update statistics and list
+        // Force change detection to update statistics, list, and monthly summary
+        this.cdr.markForCheck();
         this.cdr.detectChanges();
       })
     );
@@ -458,16 +459,24 @@ export class TradingComponent implements OnInit, OnDestroy {
       
       // Force reload trades to ensure UI updates immediately
       await this.firebaseService.loadTrades();
+      
+      // Wait a bit for the subscription to update this.trades
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Clear any cached summaries to force recalculation
+      this._cachedDailySummary = [];
+      
+      // Force change detection to update UI immediately
       this.cdr.markForCheck();
+      this.cdr.detectChanges();
       
       await this.dialogService.success('Trade added successfully!');
       
       this.resetForm();
       
-      // Force change detection after a short delay to ensure Firebase listener has updated
-      setTimeout(() => {
-        this.cdr.detectChanges();
-      }, 100);
+      // Force change detection again after form reset to ensure monthly summary updates
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error adding trade:', error);
       await this.dialogService.error('Error adding trade. Please try again.');
@@ -1000,10 +1009,22 @@ export class TradingComponent implements OnInit, OnDestroy {
     return Math.ceil(this.getFilteredTrades().length / this.itemsPerPage);
   }
 
+  getStartIndex(): number {
+    return (this.currentPage - 1) * this.itemsPerPage;
+  }
+
+  getEndIndex(): number {
+    const filteredTrades = this.getFilteredTrades();
+    return Math.min(this.currentPage * this.itemsPerPage, filteredTrades.length);
+  }
+
   // Pagination methods
   goToPage(page: number) {
-    this.currentPage = page;
-    this.cdr.markForCheck();
+    const totalPages = this.getTotalPages();
+    if (page >= 1 && page <= totalPages) {
+      this.currentPage = page;
+      this.cdr.markForCheck();
+    }
   }
 
   previousPage() {
